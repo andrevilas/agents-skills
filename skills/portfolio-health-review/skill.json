@@ -1,0 +1,15 @@
+{
+  "id": "portfolio-health-review",
+  "name": "Portfolio Health Review",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/portfolio-health-review",
+    "antigravity": "targets/antigravity/portfolio-health-review"
+  },
+  "description": "Executive portfolio and project health review over the LPM MCP."
+}

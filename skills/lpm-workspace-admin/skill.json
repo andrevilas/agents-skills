@@ -1,0 +1,15 @@
+{
+  "id": "lpm-workspace-admin",
+  "name": "LPM Workspace Admin",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/lpm-workspace-admin",
+    "antigravity": "targets/antigravity/lpm-workspace-admin"
+  },
+  "description": "Workspace governance and structural administration over the LPM MCP."
+}

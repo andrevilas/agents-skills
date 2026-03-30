@@ -1,0 +1,9 @@
+{
+  "id": "portfolio-health-review",
+  "name": "Portfolio Health Review",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for executive project and portfolio health reviews over the LPM MCP."
+}

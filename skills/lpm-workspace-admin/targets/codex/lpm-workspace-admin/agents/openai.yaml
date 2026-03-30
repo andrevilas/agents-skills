@@ -1,0 +1,4 @@
+interface:
+  display_name: "LPM Workspace Admin"
+  short_description: "Govern LPM workspace structure and hygiene"
+  default_prompt: "Use $lpm-workspace-admin to organize projects, teams, labels, and workspace hygiene with the LPM MCP."

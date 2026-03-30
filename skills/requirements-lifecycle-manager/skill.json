@@ -1,0 +1,15 @@
+{
+  "id": "requirements-lifecycle-manager",
+  "name": "Requirements Lifecycle Manager",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/requirements-lifecycle-manager",
+    "antigravity": "targets/antigravity/requirements-lifecycle-manager"
+  },
+  "description": "Requirements and baseline operations over the LPM MCP with traceability-aware workflows."
+}

@@ -1,0 +1,9 @@
+{
+  "id": "requirements-lifecycle-manager",
+  "name": "Requirements Lifecycle Manager",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for requirements and baseline workflows over the LPM MCP."
+}
