@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dependency Resolution Operator"
+  short_description: "Resolve blockers and critical-path pressure over LPM"
+  default_prompt: "Use $dependency-resolution-operator to inspect blocked work and drive the next unblock action with the LPM MCP."

@@ -1,7 +1,7 @@
 {
   "id": "software-project-orchestrator",
   "name": "Software Project Orchestrator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "supported_agents": [
     "codex",
     "antigravity"
@@ -11,5 +11,5 @@
     "codex": "targets/codex/software-project-orchestrator",
     "antigravity": "targets/antigravity/software-project-orchestrator"
   },
-  "description": "Multi-agent SDLC orchestration skill published with agent-specific adapters."
+  "description": "Multi-agent SDLC execution and delivery orchestration skill published with agent-specific adapters."
 }

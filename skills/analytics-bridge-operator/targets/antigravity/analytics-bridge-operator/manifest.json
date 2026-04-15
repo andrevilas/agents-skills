@@ -1,0 +1,9 @@
+{
+  "id": "analytics-bridge-operator",
+  "name": "Analytics Bridge Operator",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for analytics bridge operation and observability over the LPM MCP."
+}

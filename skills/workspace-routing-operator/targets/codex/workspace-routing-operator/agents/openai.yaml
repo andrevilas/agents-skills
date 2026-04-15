@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workspace Routing Operator"
+  short_description: "Triage intake and route work across the LPM workspace"
+  default_prompt: "Use $workspace-routing-operator to preview routing candidates and resolve project ownership with the LPM MCP."

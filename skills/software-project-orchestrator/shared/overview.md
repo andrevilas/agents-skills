@@ -1,6 +1,6 @@
 # Software Project Orchestrator
 
-Skill canônica para orquestração de ciclo de vida de software sobre o MCP `lpm`.
+Skill canônica para orquestração de execução e saúde de entrega sobre o MCP `lpm`.
 
 ## Objetivo
 
@@ -11,6 +11,12 @@ Transformar o agente em um orquestrador operacional capaz de:
 - coordenar execução com issues, links e comentários
 - monitorar saúde do projeto com analytics
 - agir proativamente quando houver bloqueios, risco de prazo ou desequilíbrio de carga
+
+Esta skill não é o lugar principal para governança de requisitos ou administração ampla do workspace.
+
+- use `requirements-lifecycle-manager` para requisitos, grupos e baselines
+- use `lpm-workspace-admin` para governança estrutural e hygiene administrativa
+- use `portfolio-health-review` para leitura executiva, revisão semanal e diagnóstico sistêmico com analytics
 
 ## Capacidades Centrais
 

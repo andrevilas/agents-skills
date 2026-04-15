@@ -1,0 +1,4 @@
+interface:
+  display_name: "Workspace Executive Context Operator"
+  short_description: "Review and evolve workspace executive context over LPM"
+  default_prompt: "Use $workspace-executive-context-operator to inspect readiness, governance gaps, and controlled workspace context changes with the LPM MCP."

@@ -1,0 +1,15 @@
+{
+  "id": "governance-decision-operator",
+  "name": "Governance Decision Operator",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/governance-decision-operator",
+    "antigravity": "targets/antigravity/governance-decision-operator"
+  },
+  "description": "Operate governance threads, decision inbox triage, and structured outcomes over the LPM MCP."
+}

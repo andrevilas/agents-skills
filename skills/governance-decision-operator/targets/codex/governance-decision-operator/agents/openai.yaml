@@ -1,0 +1,4 @@
+interface:
+  display_name: "Governance Decision Operator"
+  short_description: "Resolve governance threads and decision inbox over LPM"
+  default_prompt: "Use $governance-decision-operator to process governance threads and produce structured decision outcomes with the LPM MCP."

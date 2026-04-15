@@ -1,0 +1,9 @@
+{
+  "id": "lpm-workspace-admin",
+  "name": "LPM Workspace Admin",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for LPM workspace governance and administrative workflows."
+}

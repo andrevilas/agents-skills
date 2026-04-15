@@ -1,0 +1,4 @@
+interface:
+  display_name: "Requirements Lifecycle Manager"
+  short_description: "Operate requirements and baselines over LPM"
+  default_prompt: "Use $requirements-lifecycle-manager to manage requirement baselines, groups, and traceability with the LPM MCP."

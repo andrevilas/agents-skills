@@ -1,0 +1,9 @@
+{
+  "id": "governance-decision-operator",
+  "name": "Governance Decision Operator",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for governance decision handling over the LPM MCP."
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Portfolio Health Review"
+  short_description: "Review delivery health and portfolio risk over LPM"
+  default_prompt: "Use $portfolio-health-review to assess project or portfolio health with the LPM MCP."

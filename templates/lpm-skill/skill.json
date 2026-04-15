@@ -1,0 +1,15 @@
+{
+  "id": "__SKILL_ID__",
+  "name": "__DISPLAY_NAME__",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/__SKILL_ID__",
+    "antigravity": "targets/antigravity/__SKILL_ID__"
+  },
+  "description": "__ONE_LINE_DESCRIPTION__"
+}

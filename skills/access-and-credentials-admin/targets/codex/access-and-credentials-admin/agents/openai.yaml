@@ -1,0 +1,4 @@
+interface:
+  display_name: "Access and Credentials Admin"
+  short_description: "Administer API keys and AI credentials over LPM"
+  default_prompt: "Use $access-and-credentials-admin to review or mutate API keys and workspace AI credentials with the LPM MCP."

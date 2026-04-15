@@ -1,0 +1,4 @@
+interface:
+  display_name: "Scope Baseline Publisher"
+  short_description: "Review scope drift and publish baselines over LPM"
+  default_prompt: "Use $scope-baseline-publisher to review working scope, manage change sets, and publish baselines with the LPM MCP."

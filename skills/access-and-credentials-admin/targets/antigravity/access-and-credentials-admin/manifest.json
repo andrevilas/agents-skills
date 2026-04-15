@@ -1,0 +1,9 @@
+{
+  "id": "access-and-credentials-admin",
+  "name": "Access and Credentials Admin",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for API key and AI credential administration over the LPM MCP."
+}
