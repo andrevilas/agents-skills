@@ -1,0 +1,15 @@
+{
+  "id": "scope-baseline-publisher",
+  "name": "Scope Baseline Publisher",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/scope-baseline-publisher",
+    "antigravity": "targets/antigravity/scope-baseline-publisher"
+  },
+  "description": "Operate working scope review, change sets, and baseline publication over the LPM MCP."
+}

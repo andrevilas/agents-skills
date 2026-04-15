@@ -1,0 +1,9 @@
+{
+  "id": "scope-baseline-publisher",
+  "name": "Scope Baseline Publisher",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for working scope review and baseline publication over the LPM MCP."
+}

@@ -1,0 +1,15 @@
+{
+  "id": "knowledge-and-publication-operator",
+  "name": "Knowledge and Publication Operator",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/knowledge-and-publication-operator",
+    "antigravity": "targets/antigravity/knowledge-and-publication-operator"
+  },
+  "description": "Operate project knowledge items, help articles, files, and publication-oriented content over the LPM MCP."
+}

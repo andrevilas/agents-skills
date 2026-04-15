@@ -1,0 +1,15 @@
+{
+  "id": "webhook-integration-operator",
+  "name": "Webhook Integration Operator",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/webhook-integration-operator",
+    "antigravity": "targets/antigravity/webhook-integration-operator"
+  },
+  "description": "Operate webhook subscriptions, tests, and delivery review over the LPM MCP."
+}

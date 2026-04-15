@@ -1,0 +1,9 @@
+{
+  "id": "knowledge-and-publication-operator",
+  "name": "Knowledge and Publication Operator",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for project knowledge curation and publication-oriented documentation over the LPM MCP."
+}

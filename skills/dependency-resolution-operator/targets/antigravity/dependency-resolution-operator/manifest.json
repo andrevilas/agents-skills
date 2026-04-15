@@ -1,0 +1,9 @@
+{
+  "id": "dependency-resolution-operator",
+  "name": "Dependency Resolution Operator",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for blocker resolution and critical-path follow-up over the LPM MCP."
+}

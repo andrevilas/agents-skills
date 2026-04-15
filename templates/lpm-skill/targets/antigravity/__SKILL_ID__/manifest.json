@@ -1,0 +1,9 @@
+{
+  "id": "__SKILL_ID__",
+  "name": "__DISPLAY_NAME__",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for __WORKFLOW_SCOPE__ over the LPM MCP."
+}

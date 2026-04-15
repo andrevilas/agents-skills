@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analytics Bridge Operator"
+  short_description: "Operate analytics bridge runs and observability over LPM"
+  default_prompt: "Use $analytics-bridge-operator to inspect bridge health and run targeted analytics synchronization with the LPM MCP."

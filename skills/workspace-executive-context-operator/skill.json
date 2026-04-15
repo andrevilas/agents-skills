@@ -1,0 +1,15 @@
+{
+  "id": "workspace-executive-context-operator",
+  "name": "Workspace Executive Context Operator",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/workspace-executive-context-operator",
+    "antigravity": "targets/antigravity/workspace-executive-context-operator"
+  },
+  "description": "Operate workspace executive context review, validation, and controlled updates over the LPM MCP."
+}

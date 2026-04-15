@@ -1,0 +1,15 @@
+{
+  "id": "access-and-credentials-admin",
+  "name": "Access and Credentials Admin",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/access-and-credentials-admin",
+    "antigravity": "targets/antigravity/access-and-credentials-admin"
+  },
+  "description": "Administer API keys, workspace AI credentials, and access-oriented technical controls over the LPM MCP."
+}

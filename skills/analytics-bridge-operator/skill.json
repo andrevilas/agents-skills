@@ -1,0 +1,15 @@
+{
+  "id": "analytics-bridge-operator",
+  "name": "Analytics Bridge Operator",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/analytics-bridge-operator",
+    "antigravity": "targets/antigravity/analytics-bridge-operator"
+  },
+  "description": "Operate analytics bridge runs, observability, and entity sync workflows over the LPM MCP."
+}

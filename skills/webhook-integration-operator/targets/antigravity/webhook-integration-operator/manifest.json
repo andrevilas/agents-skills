@@ -1,0 +1,9 @@
+{
+  "id": "webhook-integration-operator",
+  "name": "Webhook Integration Operator",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for webhook subscription management and delivery review over the LPM MCP."
+}

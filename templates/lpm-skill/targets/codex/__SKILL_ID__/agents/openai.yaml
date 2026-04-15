@@ -1,0 +1,4 @@
+interface:
+  display_name: "__DISPLAY_NAME__"
+  short_description: "__ONE_LINE_DESCRIPTION__"
+  default_prompt: "Use $__SKILL_ID__ to operate __WORKFLOW_SCOPE__ with the LPM MCP."

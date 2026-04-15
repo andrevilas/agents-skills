@@ -1,0 +1,4 @@
+interface:
+  display_name: "Knowledge and Publication Operator"
+  short_description: "Curate project knowledge and governed guidance over LPM"
+  default_prompt: "Use $knowledge-and-publication-operator to inspect knowledge items, project files, and help-article guidance with the LPM MCP."

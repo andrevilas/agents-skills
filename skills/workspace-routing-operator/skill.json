@@ -1,0 +1,15 @@
+{
+  "id": "workspace-routing-operator",
+  "name": "Workspace Routing Operator",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/workspace-routing-operator",
+    "antigravity": "targets/antigravity/workspace-routing-operator"
+  },
+  "description": "Operate intake triage and cross-project routing decisions over the LPM workspace context."
+}

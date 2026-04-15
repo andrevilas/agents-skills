@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$REPO_ROOT/scripts/lib/skills.sh"
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -52,27 +55,31 @@ if [[ -z "$AGENT" || -z "$SKILL" ]]; then
   exit 1
 fi
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SOURCE_DIR="$REPO_ROOT/skills/$SKILL/targets/$AGENT/$SKILL"
+if ! skill_exists "$REPO_ROOT" "$SKILL"; then
+  echo "Unknown skill: $SKILL" >&2
+  exit 1
+fi
+
+if ! skill_supports_agent "$REPO_ROOT" "$SKILL" "$AGENT"; then
+  echo "Skill $SKILL does not declare support for agent: $AGENT" >&2
+  exit 1
+fi
+
+if ! SOURCE_DIR="$(skill_target_dir "$REPO_ROOT" "$SKILL" "$AGENT")"; then
+  echo "Could not resolve target directory for $SKILL/$AGENT" >&2
+  exit 1
+fi
 
 if [[ ! -d "$SOURCE_DIR" ]]; then
-  echo "Skill target not found: $SOURCE_DIR" >&2
+  echo "Skill target not found for $SKILL/$AGENT: $SOURCE_DIR" >&2
   exit 1
 fi
 
 if [[ -z "$DEST" ]]; then
-  case "$AGENT" in
-    codex)
-      DEST="${CODEX_SKILLS_DIR:-$HOME/.codex/skills}"
-      ;;
-    antigravity)
-      DEST="${ANTIGRAVITY_SKILLS_DIR:-$HOME/.antigravity/skills}"
-      ;;
-    *)
-      echo "Unsupported agent: $AGENT" >&2
-      exit 1
-      ;;
-  esac
+  if ! DEST="$(default_agent_dest "$AGENT")"; then
+    echo "Unsupported agent: $AGENT" >&2
+    exit 1
+  fi
 fi
 
 TARGET_DIR="$DEST/$SKILL"

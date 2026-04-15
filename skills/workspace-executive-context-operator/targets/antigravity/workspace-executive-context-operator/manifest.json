@@ -1,0 +1,9 @@
+{
+  "id": "workspace-executive-context-operator",
+  "name": "Workspace Executive Context Operator",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for executive context review and controlled workspace policy changes over the LPM MCP."
+}

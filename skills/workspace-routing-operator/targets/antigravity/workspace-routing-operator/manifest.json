@@ -1,0 +1,9 @@
+{
+  "id": "workspace-routing-operator",
+  "name": "Workspace Routing Operator",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for intake routing and project fit decisions over the LPM workspace context."
+}

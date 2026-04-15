@@ -1,0 +1,4 @@
+interface:
+  display_name: "Webhook Integration Operator"
+  short_description: "Operate webhook subscriptions and deliveries over LPM"
+  default_prompt: "Use $webhook-integration-operator to create, test, and diagnose webhook integrations with the LPM MCP."

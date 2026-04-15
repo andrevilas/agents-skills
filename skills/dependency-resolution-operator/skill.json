@@ -1,0 +1,15 @@
+{
+  "id": "dependency-resolution-operator",
+  "name": "Dependency Resolution Operator",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/dependency-resolution-operator",
+    "antigravity": "targets/antigravity/dependency-resolution-operator"
+  },
+  "description": "Resolve blockers, dependency chains, and critical-path follow-up over the LPM MCP."
+}
