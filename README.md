@@ -105,6 +105,21 @@ Esse template explicita a base reutilizável do repositório:
 - target `Codex` com `SKILL.md`, `agents/openai.yaml` e `references/`
 - target `Antigravity` com `manifest.json` e `PLAYBOOK.md`
 
+## Cobertura LPM
+
+A matriz de cobertura entre skills e capacidades do LPM está em:
+
+```text
+docs/lpm-coverage-matrix.md
+```
+
+Ela documenta:
+
+- quais workflows do LPM cada skill cobre
+- quais tools MCP aparecem explicitamente em cada skill
+- onde existe sobreposição intencional entre skills
+- como interpretar cobertura funcional versus cobertura 1:1 por endpoint
+
 ## Validação
 
 Valide a estrutura do catálogo com:
