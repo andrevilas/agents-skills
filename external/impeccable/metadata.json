@@ -1,0 +1,16 @@
+{
+  "id": "impeccable",
+  "source_type": "external-fork",
+  "status": "planned",
+  "upstream_repo": "git@github.com:pbakaus/impeccable.git",
+  "fork_repo": "git@github.com:<org-ou-user>/impeccable.git",
+  "default_branch": "main",
+  "upstream_ref": "<set-me>",
+  "fork_ref": "<set-me>",
+  "imported_path": "dist/agents/.agents/skills/impeccable",
+  "bundle_target_path": "external/impeccable/codex/impeccable",
+  "synced_at": "<set-me>",
+  "synced_by": "<set-me>",
+  "local_patch_policy": "patch-in-fork",
+  "notes": "Replace placeholders after the first real sync."
+}

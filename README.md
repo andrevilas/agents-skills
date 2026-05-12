@@ -120,6 +120,28 @@ Ela documenta:
 - onde existe sobreposição intencional entre skills
 - como interpretar cobertura funcional versus cobertura 1:1 por endpoint
 
+## Skills externas
+
+Este repositório pode distribuir bundles externos quando fizer sentido operacional, mas sem misturar esses bundles ao catálogo canônico em `skills/`.
+
+O primeiro caso documentado é `impeccable`. A proposta de integração, versionamento e atualização está em:
+
+```text
+docs/impeccable-integration.md
+docs/impeccable-fork-runbook.md
+```
+
+Princípio adotado:
+
+- `skills/`: catálogo autoral e canônico deste repositório
+- `external/`: bundles importados de projetos externos mantidos via fork e sincronização controlada
+
+Instalação de bundle externo no Codex:
+
+```bash
+scripts/install-external-codex-skill.sh impeccable
+```
+
 ## Validação
 
 Valide a estrutura do catálogo com:
