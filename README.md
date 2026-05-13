@@ -142,6 +142,25 @@ Instalação de bundle externo no Codex:
 scripts/install-external-codex-skill.sh impeccable
 ```
 
+Bundles externos adicionais já preparados:
+
+- `caveman`
+- `grill-me`
+
+Instalação no Codex:
+
+```bash
+scripts/install-external-codex-skill.sh caveman
+scripts/install-external-codex-skill.sh grill-me
+```
+
+Sincronização a partir do repositório `mattpocock/skills`:
+
+```bash
+scripts/sync-external-mattpocock-skill.sh caveman --source-repo ../skills
+scripts/sync-external-mattpocock-skill.sh grill-me --source-repo ../skills
+```
+
 ## Validação
 
 Valide a estrutura do catálogo com:
