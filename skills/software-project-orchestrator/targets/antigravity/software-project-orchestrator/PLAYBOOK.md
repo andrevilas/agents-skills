@@ -18,6 +18,8 @@ Use this playbook when the agent needs to coordinate SDLC work over the `lpm` MC
 - Use scoped membership tools for assignment context: `list_project_assignable_members` or `list_workspace_members`.
 - Do not use or request `list_users`; global user enumeration is intentionally unavailable.
 - Prefer least-privilege MCP API key presets. Use `read-only` for analysis and escalate to broader scopes only when the user explicitly asks for mutation.
+- Use `upload_activity_attachment` for new activity evidence files. Do not bypass LPM with direct Storage uploads.
+- Use `list_activity_attachments` to confirm evidence and avoid duplicates; use `delete_activity_attachment` only for explicit cleanup.
 - Treat Workspace AI and Gen App Builder as cost-governed capabilities. Check runtime flags, daily caps, and governance summaries before recommending enablement.
 
 ## Operator Prompt
@@ -45,8 +47,9 @@ Use this playbook when the agent needs to coordinate SDLC work over the `lpm` MC
 
 1. Inspect `in-progress` work.
 2. Read issue history and comments.
-3. Comment on stalled work.
-4. Notify for deadline or blocker escalation.
+3. Attach operational proof with `upload_activity_attachment` when the user provides evidence for the activity trail.
+4. Comment on stalled work.
+5. Notify for deadline or blocker escalation.
 
 ### Monitoring
 
@@ -62,6 +65,7 @@ Use this playbook when the agent needs to coordinate SDLC work over the `lpm` MC
 - If no cycle is marked `active`, infer the working batch from open issues and nearest planned cycle.
 - Normalize mixed dependency labels before reasoning about blocker topology.
 - Treat global user lookup as an anti-pattern; keep all people discovery scoped to project or workspace context.
+- Treat activity evidence as a backend-mediated LPM operation: resolve the activity first, upload through MCP, then verify with `list_activity_attachments`.
 
 ## Important Constraint
 

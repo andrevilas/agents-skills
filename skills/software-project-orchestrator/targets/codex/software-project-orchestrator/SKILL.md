@@ -46,6 +46,7 @@ The current LPM MCP exposes these tool groups:
 - Planning: `create_cycle`, `update_cycle`, `create_milestone`, `update_milestone`, `list_labels`, `create_label`
 - Execution: `list_issues`, `get_issue`, `update_issue`, `create_issue_link`, `list_issue_links`
 - Communication: `list_comments`, `create_comment`, `create_notification`
+- Activity evidence: `list_workspace_activities`, `list_activity_attachments`, `upload_activity_attachment`, `delete_activity_attachment`
 - Analytics: `get_project_analytics`, `get_project_dependency_graph`, `get_project_dependency_summary`
 - AI governance: `list_workspace_ai_credentials`, `upsert_workspace_ai_credential`, `delete_workspace_ai_credential`
 - Access: `list_api_keys`, `create_api_key`, `update_api_key`, `delete_api_key`
@@ -150,9 +151,10 @@ Default label categories when the user wants a starter taxonomy:
 1. Query active work with `list_issues` using `status: "in-progress"`.
 2. For each risky item, inspect `get_issue` and `list_comments`.
 3. If the issue looks stale, use `create_comment` to ask for status, blocker detail, or scope reduction.
-4. If the due date is close or a blocker affects another owner, use `create_notification`.
-5. Move a task to `done` with `update_issue` only after checking comments and dependency links.
-6. If the issue was blocking others, inspect `list_issue_links` and notify impacted owners when the blocker clears.
+4. If the user provides operational proof for the activity trail, resolve the activity and attach it with `upload_activity_attachment`.
+5. If the due date is close or a blocker affects another owner, use `create_notification`.
+6. Move a task to `done` with `update_issue` only after checking comments and dependency links.
+7. If the issue was blocking others, inspect `list_issue_links` and notify impacted owners when the blocker clears.
 
 Use [references/operating-templates.md](./references/operating-templates.md) for concise, reusable follow-up text.
 
@@ -202,6 +204,7 @@ Escalate from issue-level action to project-level analysis when three or more ac
 - Normalize dependency types such as `blocks`, `related-to`, `relates_to`, and `parent-child` before analyzing blocker topology.
 - If an assignment requires a user ID, resolve it through scoped membership tools; do not infer IDs from global user lists.
 - If a task involves AI enablement, report cost guardrails and feature flags before recommending rollout.
+- If an activity requires evidence, use `list_workspace_activities` to identify the activity, `list_activity_attachments` to avoid duplicates, and `upload_activity_attachment` for the file. Treat `delete_activity_attachment` as a deliberate cleanup action only.
 
 ## Reporting Style
 
@@ -216,6 +219,8 @@ Preferred pattern:
 - Do not create duplicate labels.
 - Do not close issues without checking history and blockers.
 - Do not claim blockers were cleared unless dependency links or comments support that conclusion.
+- Do not claim evidence was registered unless the upload tool returned an ID or a follow-up list confirms it.
+- Do not bypass LPM with direct Firebase Storage uploads for activity evidence.
 - Do not delete active project structures when archival is the safer option.
 - Do not infer analytics when `get_project_analytics` is available; use the source tool first.
 - Do not use global user enumeration. `list_users` is intentionally absent from LPM.

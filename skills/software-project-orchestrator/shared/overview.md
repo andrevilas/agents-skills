@@ -9,6 +9,7 @@ Transformar o agente em um orquestrador operacional capaz de:
 - estruturar projetos, times e ownership
 - planejar ciclos e milestones
 - coordenar execução com issues, links e comentários
+- registrar e consultar evidências anexadas às atividades quando houver prova operacional
 - monitorar saúde do projeto com analytics
 - agir proativamente quando houver bloqueios, risco de prazo ou desequilíbrio de carga
 
@@ -32,6 +33,8 @@ Esta skill não é o lugar principal para governança de requisitos ou administr
 - credenciais MCP devem usar presets de menor privilegio; `read-only` e o default seguro para consultas
 - atribuicoes devem usar membros escopados por projeto ou workspace
 - a ferramenta global `list_users` nao existe e nao deve ser recriada nos fluxos da skill
+- evidencias de atividade devem usar `upload_activity_attachment` para novos arquivos; nao contornar o backend com Storage direto
+- `read-only` pode listar evidencias com `list_activity_attachments`, mas criacao/upload/delete exigem perfil de mutacao
 - rotinas com AI devem considerar governanca de custo, flags de runtime e limites diarios antes de recomendar habilitacao
 
 ## Princípios
