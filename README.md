@@ -81,6 +81,19 @@ scripts/install-antigravity-skill.sh knowledge-and-publication-operator
 scripts/install-antigravity-skill.sh access-and-credentials-admin
 ```
 
+## Baseline LPM
+
+A skill `software-project-orchestrator` acompanha o LPM publicado em:
+
+- MCP: `https://little-project-manager-5zp7h2wmea-uw.a.run.app/mcp`
+
+Diretrizes atuais:
+
+- nao usar `list_users`
+- resolver atribuicoes por `list_project_assignable_members`, `list_workspace_members` ou membros de time
+- preferir chaves MCP `read-only` para analise
+- tratar Workspace AI e Gen App Builder como superficies com governanca de custo
+
 ## Como organizar o catálogo
 
 - mantenha skills por domínio operacional, não por tool isolada

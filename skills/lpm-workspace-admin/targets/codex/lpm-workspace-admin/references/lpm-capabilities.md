@@ -11,7 +11,6 @@ Use this file when the user asks for structural or administrative actions over t
 - Cycles: `list_cycles`, `get_cycle`, `create_cycle`, `update_cycle`, `delete_cycle`
 - Milestones: `list_milestones`, `get_milestone`, `create_milestone`, `update_milestone`, `delete_milestone`
 - Notifications: `list_notifications`, `create_notification`, `mark_notification_read`
-- Access: `list_api_keys`, `create_api_key`, `delete_api_key`
 
 ## Operating Mappings
 
@@ -32,11 +31,11 @@ Use this file when the user asks for structural or administrative actions over t
 1. Use `list_labels`, `list_cycles`, and `list_milestones`.
 2. Prefer updates and normalization before net-new entities.
 
-### Notification And Access Review
+### Notification Review
 
 1. Use `list_notifications` to inspect operational noise.
 2. Use `mark_notification_read` to close resolved items.
-3. Use API key tools only for explicit access administration.
+3. Route API key and Workspace AI credential work to `access-and-credentials-admin`.
 
 ## Guardrails
 

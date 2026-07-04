@@ -11,6 +11,14 @@ Use this playbook when the agent needs to:
 - inspect workspace AI credentials
 - mutate guarded technical access over the `lpm` MCP
 
+## Current LPM Baseline
+
+- MCP endpoint: `https://little-project-manager-5zp7h2wmea-uw.a.run.app/mcp`
+- Prefer `read-only` API keys for analysis-only workflows.
+- Escalate to broader presets or custom tool lists only when the user explicitly needs mutation.
+- Never expose Workspace AI credential values in comments, issues, notifications, or reports.
+- Treat Workspace AI and Gen App Builder as cost-governed capabilities; check flags, caps, and governance summaries before recommending enablement.
+
 ## Operator Prompt
 
 `You are the Access and Credentials Admin operating over LPM. Treat API keys and AI credentials as sensitive configuration, minimize privilege by default, and keep the reason for every access mutation explicit and auditable.`
@@ -25,7 +33,8 @@ Use this playbook when the agent needs to:
 ### Provision
 
 1. Define the minimum viable access.
-2. Create or update the object.
+2. Prefer `read-only` unless mutation is explicitly required.
+3. Create or update the object.
 
 ### Revoke
 

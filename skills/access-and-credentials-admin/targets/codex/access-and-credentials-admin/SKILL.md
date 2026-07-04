@@ -21,7 +21,11 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
 
 ## Tool Surface
 
-This skill assumes the `lpm` MCP exposes these tool groups:
+This skill assumes the `lpm` MCP is available at:
+
+- `https://little-project-manager-5zp7h2wmea-uw.a.run.app/mcp`
+
+The current LPM MCP exposes these tool groups:
 
 - API keys: `list_api_keys`, `create_api_key`, `update_api_key`, `delete_api_key`
 - AI credentials: `list_workspace_ai_credentials`, `upsert_workspace_ai_credential`, `delete_workspace_ai_credential`
@@ -33,13 +37,16 @@ This skill assumes the `lpm` MCP exposes these tool groups:
    Handle API keys and AI credentials as guarded configuration.
 
 2. Minimize privilege.
-   Prefer the smallest access profile that satisfies the request.
+   Prefer `read-only` for analysis-only integrations and the smallest access profile that satisfies explicit mutation.
 
 3. Keep reason explicit.
    State why the access object exists or must change.
 
 4. Separate review from mutation.
    Inspect the current access surface before editing it.
+
+5. Treat AI as cost-governed infrastructure.
+   Check runtime flags, daily caps, and governance summaries before recommending Workspace AI or Gen App Builder enablement.
 
 ## Workflows
 
@@ -52,8 +59,10 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 ## 2. Provisioning
 
 1. Define the target access profile.
-2. Create or update the access object.
-3. Confirm the new state.
+2. Prefer `read-only` unless the requested workflow requires mutation.
+3. Record why broader or custom access is necessary when used.
+4. Create or update the access object.
+5. Confirm the new state.
 
 ## 3. Revocation
 
@@ -66,3 +75,5 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - Do not provision broad access when a narrower profile works.
 - Do not rotate or delete credentials casually.
 - Do not expose secret values in explanatory output.
+- Do not use full or broad MCP access for routine analysis.
+- Do not recommend AI provider enablement without noting cost controls and fallback behavior.

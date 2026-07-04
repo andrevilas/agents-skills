@@ -34,13 +34,26 @@ Read [references/weekly-health-review.md](./references/weekly-health-review.md) 
 
 ## Tool Surface
 
-This skill assumes the `lpm` MCP exposes these tool groups:
+This skill assumes the `lpm` MCP is available at:
+
+- `https://little-project-manager-5zp7h2wmea-uw.a.run.app/mcp`
+
+The current LPM MCP exposes these tool groups:
 
 - Structure: `list_projects`, `create_project`, `update_project`, `archive_project`, `unarchive_project`, `create_team`, `add_team_member`
-- Planning: `create_cycle`, `create_milestone`, `list_labels`, `create_label`
+- Workspace: `list_workspaces`, `get_workspace`, `list_workspace_projects`, `list_workspace_members`, `add_workspace_member`, `remove_workspace_member`
+- People: `list_project_assignable_members`, `list_team_members`, `get_user`
+- Planning: `create_cycle`, `update_cycle`, `create_milestone`, `update_milestone`, `list_labels`, `create_label`
 - Execution: `list_issues`, `get_issue`, `update_issue`, `create_issue_link`, `list_issue_links`
 - Communication: `list_comments`, `create_comment`, `create_notification`
-- Analytics: `get_project_analytics`
+- Analytics: `get_project_analytics`, `get_project_dependency_graph`, `get_project_dependency_summary`
+- AI governance: `list_workspace_ai_credentials`, `upsert_workspace_ai_credential`, `delete_workspace_ai_credential`
+- Access: `list_api_keys`, `create_api_key`, `update_api_key`, `delete_api_key`
+
+The global `list_users` tool is intentionally unavailable. Never ask for it and
+do not design workflows that require global user enumeration. For assignments,
+resolve people through `list_project_assignable_members`, `list_workspace_members`,
+or a team-scoped membership query.
 
 If a requested action needs adjacent tools from the same MCP, use them after first confirming they fit the user's intent and preserve traceability.
 
@@ -69,6 +82,12 @@ If a requested action needs adjacent tools from the same MCP, use them after fir
 
 8. Tolerate operational data inconsistency.
    If the tool surface returns mixed cycle states or inconsistent link type spellings, normalize them in your reasoning before making recommendations.
+
+9. Preserve least privilege.
+   Use `read-only` access for analysis. Recommend or create broader MCP API key presets only when the user explicitly needs mutation, and document why the broader scope is necessary.
+
+10. Treat AI as cost-governed infrastructure.
+    Before recommending Workspace AI or Gen App Builder enablement, check feature flags, daily caps, fallback behavior, and available governance summaries.
 
 ## System Prompt
 
@@ -117,13 +136,14 @@ Default label categories when the user wants a starter taxonomy:
 
 1. Create the cycle with `create_cycle`.
 2. Pull backlog candidates with `list_issues`.
-3. Rank work in this order unless the user says otherwise:
+3. Resolve assignable owners with `list_project_assignable_members` or `list_workspace_members` before writing `assigneeId`.
+4. Rank work in this order unless the user says otherwise:
    - blockers and dependency-critical work
    - urgent or high-priority delivery items
    - quick wins that reduce queue pressure
-4. Use `update_issue` to set `cycleId`, `assigneeId`, `priority`, `milestoneId`, and `dueDate`.
-5. Use `create_issue_link` to make blockers explicit.
-6. Avoid starting a cycle with invisible dependencies.
+5. Use `update_issue` to set `cycleId`, `assigneeId`, `priority`, `milestoneId`, and `dueDate`.
+6. Use `create_issue_link` to make blockers explicit.
+7. Avoid starting a cycle with invisible dependencies.
 
 ## 3. Daily Sync
 
@@ -180,6 +200,8 @@ Escalate from issue-level action to project-level analysis when three or more ac
 - If a project lacks team ownership, suggest creating or attaching a team before scaling execution.
 - If no cycle is `active` but open issues point to the same planned cycle, treat that cycle as the current working batch and note the inference explicitly.
 - Normalize dependency types such as `blocks`, `related-to`, `relates_to`, and `parent-child` before analyzing blocker topology.
+- If an assignment requires a user ID, resolve it through scoped membership tools; do not infer IDs from global user lists.
+- If a task involves AI enablement, report cost guardrails and feature flags before recommending rollout.
 
 ## Reporting Style
 
@@ -196,3 +218,6 @@ Preferred pattern:
 - Do not claim blockers were cleared unless dependency links or comments support that conclusion.
 - Do not delete active project structures when archival is the safer option.
 - Do not infer analytics when `get_project_analytics` is available; use the source tool first.
+- Do not use global user enumeration. `list_users` is intentionally absent from LPM.
+- Do not create full-scope API keys for routine analysis. Prefer `read-only`, then escalate only for explicit execution.
+- Do not expose AI credentials in comments, issue descriptions, notifications, or reports.

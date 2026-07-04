@@ -40,3 +40,4 @@ templates/lpm-skill/
 3. Preserve `Codex` e `Antigravity` como targets de primeira classe.
 4. Adicione `references/` apenas quando o workflow exigir contexto auxiliar.
 5. Atualize `README.md` quando uma nova skill entrar no catálogo ativo.
+6. Inclua guardrails de segurança atuais do LPM quando a skill tocar acesso, membros ou AI.

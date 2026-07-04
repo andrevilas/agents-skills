@@ -26,12 +26,21 @@ Esta skill não é o lugar principal para governança de requisitos ou administr
 - `monitoring`
 - `optimization`
 
+## Baseline LPM Atual
+
+- endpoint MCP operacional: `https://little-project-manager-5zp7h2wmea-uw.a.run.app/mcp`
+- credenciais MCP devem usar presets de menor privilegio; `read-only` e o default seguro para consultas
+- atribuicoes devem usar membros escopados por projeto ou workspace
+- a ferramenta global `list_users` nao existe e nao deve ser recriada nos fluxos da skill
+- rotinas com AI devem considerar governanca de custo, flags de runtime e limites diarios antes de recomendar habilitacao
+
 ## Princípios
 
 - pensar globalmente antes de editar localmente
 - evitar duplicação estrutural
 - preservar rastreabilidade
 - usar analytics antes de escalar
+- preservar menor privilegio ao criar ou recomendar chaves MCP
 - tolerar inconsistências operacionais do dado
 
 ## Nota de Compatibilidade

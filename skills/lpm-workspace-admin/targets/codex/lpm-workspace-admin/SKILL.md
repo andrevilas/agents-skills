@@ -7,6 +7,8 @@ description: Administer LPM workspace structure across projects, teams, labels, 
 
 Use this skill when the task is workspace governance over the `lpm` MCP. It covers structural administration that is broader than one delivery flow: projects, teams, labels, cycles, milestones, notifications, and cleanup actions.
 
+For API keys and Workspace AI credentials, use `access-and-credentials-admin`.
+
 ## When To Use
 
 Use this skill when the user asks to:
@@ -30,7 +32,6 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - Planning structures: `list_cycles`, `get_cycle`, `create_cycle`, `update_cycle`, `delete_cycle`, `list_milestones`, `get_milestone`, `create_milestone`, `update_milestone`, `delete_milestone`
 - Taxonomy: `list_labels`, `create_label`, `update_label`, `delete_label`
 - Communication hygiene: `list_notifications`, `mark_notification_read`, `create_notification`
-- Access: `list_api_keys`, `create_api_key`, `delete_api_key`
 
 ## Operating Principles
 
@@ -57,12 +58,11 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 2. Identify archived, stale, duplicated, or inconsistently named structures.
 3. Prefer `update_project`, `archive_project`, or `unarchive_project` before deletion.
 
-## 2. Team And Access Maintenance
+## 2. Team Maintenance
 
 1. Inspect teams and current membership.
 2. Add or remove members intentionally.
 3. Create a team only when ownership boundaries justify it.
-4. Treat API key creation and deletion as explicit administrative actions.
 
 ## 3. Taxonomy Hygiene
 
@@ -88,4 +88,4 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - Do not delete live workspace structures casually.
 - Do not create duplicate teams or labels without checking the current catalog.
 - Do not treat notifications as a task queue substitute when comments or issue updates would be more appropriate.
-- Do not create API keys unless the user explicitly asked for access provisioning.
+- Do not create API keys in this skill; route access provisioning to `access-and-credentials-admin`.

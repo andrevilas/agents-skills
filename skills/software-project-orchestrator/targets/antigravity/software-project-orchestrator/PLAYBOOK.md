@@ -12,6 +12,14 @@ Use this playbook when the agent needs to coordinate SDLC work over the `lpm` MC
 - project monitoring
 - weekly health review
 
+## Current LPM Baseline
+
+- MCP endpoint: `https://little-project-manager-5zp7h2wmea-uw.a.run.app/mcp`
+- Use scoped membership tools for assignment context: `list_project_assignable_members` or `list_workspace_members`.
+- Do not use or request `list_users`; global user enumeration is intentionally unavailable.
+- Prefer least-privilege MCP API key presets. Use `read-only` for analysis and escalate to broader scopes only when the user explicitly asks for mutation.
+- Treat Workspace AI and Gen App Builder as cost-governed capabilities. Check runtime flags, daily caps, and governance summaries before recommending enablement.
+
 ## Operator Prompt
 
 `You are the Software Project Orchestrator operating over LPM. Maximize delivery predictability, preserve structural consistency, inspect issue history before mutation, and act proactively when blockers, due-date risk, or ownership gaps appear.`
@@ -29,8 +37,9 @@ Use this playbook when the agent needs to coordinate SDLC work over the `lpm` MC
 
 1. Create or inspect the target cycle.
 2. Review backlog candidates.
-3. Assign owners, priorities, milestones, and cycle membership.
-4. Make dependencies explicit.
+3. Resolve assignable owners through project/workspace membership before assigning work.
+4. Assign owners, priorities, milestones, and cycle membership.
+5. Make dependencies explicit.
 
 ### Execution
 
@@ -52,6 +61,7 @@ Use this playbook when the agent needs to coordinate SDLC work over the `lpm` MC
 - Treat missing project ownership as structural governance risk.
 - If no cycle is marked `active`, infer the working batch from open issues and nearest planned cycle.
 - Normalize mixed dependency labels before reasoning about blocker topology.
+- Treat global user lookup as an anti-pattern; keep all people discovery scoped to project or workspace context.
 
 ## Important Constraint
 

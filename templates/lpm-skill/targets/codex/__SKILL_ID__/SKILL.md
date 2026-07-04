@@ -20,7 +20,11 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
 
 ## Tool Surface
 
-This skill assumes the `lpm` MCP exposes these tool groups:
+This skill assumes the `lpm` MCP is available at:
+
+- `https://little-project-manager-5zp7h2wmea-uw.a.run.app/mcp`
+
+The current LPM MCP exposes these tool groups:
 
 - `__PRIMARY_TOOLS__`
 
@@ -49,3 +53,4 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - Do not create duplicate structures without checking current state.
 - Do not mutate adjacent workflow objects unless the user explicitly wants that.
 - Do not infer critical context when the MCP already exposes a canonical read.
+- Do not use global user enumeration; resolve people through project, workspace, or team membership when needed.

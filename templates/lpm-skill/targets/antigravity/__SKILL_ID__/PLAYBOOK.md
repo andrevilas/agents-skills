@@ -6,6 +6,13 @@ This bundle adapts the `__SKILL_ID__` skill for Antigravity-style workflows.
 
 Use this playbook when the agent needs to operate `__WORKFLOW_SCOPE__` over the `lpm` MCP.
 
+## Current LPM Baseline
+
+- MCP endpoint: `https://little-project-manager-5zp7h2wmea-uw.a.run.app/mcp`
+- Resolve people through scoped project, workspace, or team membership when needed.
+- Prefer least privilege for access-related workflows.
+- Treat Workspace AI and Gen App Builder as cost-governed capabilities.
+
 ## Operator Prompt
 
 `__OPERATOR_STANCE__`
