@@ -1,0 +1,9 @@
+{
+  "id": "aish-governed-development-operator",
+  "name": "AISH Governed Development Operator",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Adapter bundle for LPM-governed AISH development workflows."
+}

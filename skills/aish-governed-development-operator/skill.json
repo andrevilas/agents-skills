@@ -1,0 +1,15 @@
+{
+  "id": "aish-governed-development-operator",
+  "name": "AISH Governed Development Operator",
+  "version": "1.0.0",
+  "supported_agents": [
+    "codex",
+    "antigravity"
+  ],
+  "canonical_source": "shared/overview.md",
+  "targets": {
+    "codex": "targets/codex/aish-governed-development-operator",
+    "antigravity": "targets/antigravity/aish-governed-development-operator"
+  },
+  "description": "Standardize software development through LPM-governed AISH Autopilot, local runner execution, approvals, and evidence."
+}

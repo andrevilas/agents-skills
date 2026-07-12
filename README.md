@@ -42,6 +42,7 @@ Skills disponíveis neste repositório:
 - `webhook-integration-operator`: gestão de webhook subscriptions, testes e deliveries
 - `knowledge-and-publication-operator`: curadoria de knowledge items, arquivos e guidance publicado
 - `access-and-credentials-admin`: administração de API keys e AI credentials com guardrails explícitos
+- `aish-governed-development-operator`: padronização de desenvolvimento usando AISH Autopilot governado por LPM, runner local, aprovações e evidências
 
 Codex:
 
@@ -60,6 +61,7 @@ scripts/install-codex-skill.sh analytics-bridge-operator
 scripts/install-codex-skill.sh webhook-integration-operator
 scripts/install-codex-skill.sh knowledge-and-publication-operator
 scripts/install-codex-skill.sh access-and-credentials-admin
+scripts/install-codex-skill.sh aish-governed-development-operator
 ```
 
 Antigravity:
@@ -79,6 +81,7 @@ scripts/install-antigravity-skill.sh analytics-bridge-operator
 scripts/install-antigravity-skill.sh webhook-integration-operator
 scripts/install-antigravity-skill.sh knowledge-and-publication-operator
 scripts/install-antigravity-skill.sh access-and-credentials-admin
+scripts/install-antigravity-skill.sh aish-governed-development-operator
 ```
 
 ## Baseline LPM
@@ -93,6 +96,7 @@ Diretrizes atuais:
 - resolver atribuicoes por `list_project_assignable_members`, `list_workspace_members` ou membros de time
 - preferir chaves MCP `read-only` para analise
 - tratar Workspace AI e Gen App Builder como superficies com governanca de custo
+- tratar AISH como plano de execucao governado por LPM: Autopilot para decomposicao, jobs com aprovacao por checkpoint, runner local e evidencia antes de fechamento
 
 ## Como organizar o catálogo
 
