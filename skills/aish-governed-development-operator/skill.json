@@ -11,5 +11,5 @@
     "codex": "targets/codex/aish-governed-development-operator",
     "antigravity": "targets/antigravity/aish-governed-development-operator"
   },
-  "description": "Standardize software development through LPM-governed AISH Autopilot, local runner execution, approvals, and evidence."
+  "description": "Standardize software development through LPM-governed AISH Autopilot, local or remote runner execution, approvals, host governance, validation, and evidence."
 }

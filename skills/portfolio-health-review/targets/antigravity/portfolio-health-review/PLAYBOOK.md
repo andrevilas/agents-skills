@@ -35,6 +35,14 @@ Use this playbook when the agent needs to review delivery health over the `lpm` 
 3. List main risks.
 4. Recommend the smallest set of corrective actions.
 
+## Guardrails
+
+- Do not infer analytics when current analytics are available.
+- Do not turn a thin local signal into a portfolio-wide claim without comparable evidence.
+- Do not mutate project state during a review unless the user explicitly asks for execution.
+- Separate metric facts from interpretation and recommendations.
+- Rank risks by evidence-backed delivery impact, not by volume of noisy signals.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

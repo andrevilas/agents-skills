@@ -8,8 +8,8 @@ Transformar pedidos de desenvolvimento em um fluxo operacional repetivel:
 
 - capturar escopo e contexto no LPM
 - usar AISH Autopilot para decompor requisitos em issues e jobs
-- manter execucao bloqueada por checkpoints humanos
-- executar somente jobs aprovados no runner local
+- manter execucao bloqueada por checkpoints humanos ou por autorizacao Autopilot claramente limitada
+- executar somente jobs aprovados no runner local ou em host remoto onboarded
 - registrar evidencias sanitizadas no LPM/AISH
 - fechar issues apenas depois de validacao e evidencia
 - manter deploy e release como gates explicitos
@@ -27,17 +27,21 @@ Esta skill padroniza o ciclo de desenvolvimento assistido por AISH. Ela nao subs
 
 - LPM decide e guarda o historico.
 - AISH decompõe, cria jobs, controla gates e registra evidencias.
-- Runner local executa comandos definidos pelo operador.
+- Runner local ou remoto executa comandos definidos pelo operador.
 - Prompts AISH sao contexto, nao shell.
+- Hosts remotos precisam de onboarding, capabilities, monitoramento e cleanup.
 - Cloud Run Jobs e runner gerenciado permanecem gateados.
-- Nenhum deploy ocorre sem release gate explicito.
+- Nenhum deploy ocorre sem release gate explicito ou sem autorizacao Autopilot limitada que inclua deploy.
 
 ## Fluxos Centrais
 
 - intake governado
 - materializacao de backlog
 - aprovacao por job
-- execucao local
+- execucao local e remota governada
+- cockpit por projeto
+- continuous autopilot com limites
+- decision queues de execucao AISH
 - evidencia e fechamento
 - release gate
 - hygiene de filas AISH
@@ -50,7 +54,8 @@ Ao final de um ciclo, deve existir uma trilha rastreavel:
 - issues LPM criadas ou vinculadas
 - jobs AISH vinculados
 - aprovacao por checkpoint
+- host ou runner utilizado e suas capabilities
 - output sanitizado do runner
 - validacao automatizada
-- evidencia de pipeline ou release
+- evidencia de pipeline, deploy e smoke quando aplicavel
 - status final das issues e jobs

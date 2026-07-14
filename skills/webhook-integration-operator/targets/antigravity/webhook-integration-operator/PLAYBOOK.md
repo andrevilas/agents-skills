@@ -33,6 +33,14 @@ Use this playbook when the agent needs to:
 1. Update or pause the subscription.
 2. Re-test after change.
 
+## Guardrails
+
+- Do not create or update a webhook before defining scope, event set, URL, and secret handling.
+- Do not expose webhook secrets in chat, comments, logs, or evidence.
+- Do not diagnose webhook failures without reading recent delivery evidence.
+- Do not treat subscription creation as complete until a test delivery has been triggered or explicitly deferred.
+- Do not delete subscriptions casually; pause or update when safer.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

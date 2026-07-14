@@ -57,6 +57,15 @@ Use this playbook when the agent needs to coordinate SDLC work over the `lpm` MC
 2. Inspect blocker topology.
 3. Report observations first, recommendations second.
 
+## Guardrails
+
+- Do not create duplicate labels, cycles, milestones, projects, or teams before checking existing structure.
+- Do not close issues without checking history, comments, and dependency links.
+- Do not claim blockers were cleared unless dependency evidence or comments support it.
+- Do not bypass LPM with direct Storage uploads for activity evidence.
+- Do not use global user enumeration; resolve people through project or workspace membership.
+- Use `aish-governed-development-operator` for AISH job execution, remote runner hosts, AISH decision queues, and evidence-backed implementation cycles.
+
 ## Heuristics
 
 - Treat 48h without meaningful progress on an `in-progress` item as risk.

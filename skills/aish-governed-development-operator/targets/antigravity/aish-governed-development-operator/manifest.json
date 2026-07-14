@@ -5,5 +5,5 @@
   "agent": "antigravity",
   "type": "operational-playbook",
   "entrypoint": "PLAYBOOK.md",
-  "description": "Adapter bundle for LPM-governed AISH development workflows."
+  "description": "Adapter bundle for LPM-governed AISH development, runner host, autopilot, and evidence workflows."
 }

@@ -7,6 +7,8 @@ description: Administer API keys, workspace AI credentials, and access-oriented 
 
 Use this skill when the task is technical access administration over the `lpm` MCP. It focuses on API key lifecycle, workspace AI credentials, and controlled access hygiene.
 
+Use this skill for credential and access policy decisions that support AISH runner hosts. Use `aish-governed-development-operator` for host onboarding, queue execution, evidence, and runner operation after the access boundary is defined.
+
 ## When To Use
 
 Use this skill when the user asks to:
@@ -15,6 +17,7 @@ Use this skill when the user asks to:
 - inspect configured workspace AI credentials
 - add or replace workspace AI credentials
 - review access posture for technical integrations
+- decide access policy for AISH remote runner hosts, deployment credentials, or repo credentials
 
 Read [references/lpm-capabilities.md](./references/lpm-capabilities.md) when you need exact tool mapping.
 Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wants a realistic end-to-end flow.
@@ -77,3 +80,5 @@ The current LPM MCP exposes these tool groups:
 - Do not expose secret values in explanatory output.
 - Do not use full or broad MCP access for routine analysis.
 - Do not recommend AI provider enablement without noting cost controls and fallback behavior.
+- Do not pass raw repo deploy keys, host credentials, enrollment tokens, browser storage, or `.env` contents into AISH evidence.
+- Do not let runner convenience override least privilege; separate host onboarding from credential provisioning decisions.

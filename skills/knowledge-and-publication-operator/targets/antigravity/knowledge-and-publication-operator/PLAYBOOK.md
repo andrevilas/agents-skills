@@ -32,6 +32,14 @@ Use this playbook when the agent needs to:
 1. Add or remove project knowledge deliberately.
 2. Keep the documentation context auditable.
 
+## Guardrails
+
+- Do not treat unpublished local assumptions as equivalent to governed help articles.
+- Do not delete knowledge items without confirming scope and replacement value.
+- Do not publish or curate artifacts that do not improve execution or governance in scope.
+- Keep project files, knowledge items, and help articles distinct.
+- Preserve source context and avoid turning rough notes into authoritative guidance without review.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

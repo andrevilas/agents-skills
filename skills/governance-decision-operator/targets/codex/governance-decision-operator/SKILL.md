@@ -7,6 +7,8 @@ description: Operate governance threads, decision inbox triage, and structured o
 
 Use this skill when the task is governance decision handling over the `lpm` MCP. It focuses on decision inbox triage, governance thread resolution, and structured downstream outcomes.
 
+This skill operates LPM governance threads: scope, requirements, change sets, business decisions, and downstream artifacts. For AISH execution checkpoints, job approvals, failure review, evidence review, runner targeting, or continuous Autopilot authorization, use `aish-governed-development-operator`.
+
 ## When To Use
 
 Use this skill when the user asks to:
@@ -15,6 +17,8 @@ Use this skill when the user asks to:
 - answer or resolve a governance thread
 - derive an issue, requirement, or change set from a decision
 - summarize what still needs a decision owner
+
+Do not use this skill for AISH job decision queues unless the queue item has become a broader LPM governance thread.
 
 Read [references/lpm-capabilities.md](./references/lpm-capabilities.md) when you need exact tool mapping.
 Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wants a realistic end-to-end flow.
@@ -67,3 +71,4 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - Do not close a governance thread without explicit outcome.
 - Do not derive downstream work from ambiguous threads without clarification.
 - Do not collapse governance and execution history into one opaque comment.
+- Do not confuse AISH execution checkpoints with LPM governance threads; route AISH job decisions to `aish-governed-development-operator`.

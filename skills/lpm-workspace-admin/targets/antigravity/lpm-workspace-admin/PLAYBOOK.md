@@ -32,6 +32,14 @@ Use this playbook when the agent needs to administer workspace structure over th
 1. Review notifications.
 2. Close resolved administrative noise.
 
+## Guardrails
+
+- Do not create duplicate projects, teams, labels, cycles, or milestones before checking current structure.
+- Prefer archive/unarchive over destructive deletion unless the user explicitly requests permanent removal.
+- Do not use global user enumeration; resolve people through workspace, project, or team membership.
+- Do not mutate unrelated workspace taxonomy while solving a narrow request.
+- Keep administrative changes reversible and auditable whenever possible.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

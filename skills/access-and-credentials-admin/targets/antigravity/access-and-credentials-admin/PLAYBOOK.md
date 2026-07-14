@@ -41,6 +41,15 @@ Use this playbook when the agent needs to:
 1. Confirm the intended target.
 2. Revoke or delete the access object.
 
+## Guardrails
+
+- Do not provision broad access when a narrower profile works.
+- Do not rotate or delete credentials casually.
+- Do not expose secret values, API keys, enrollment tokens, host credentials, `.env` contents, browser storage, or auth headers in output or evidence.
+- Do not use full or broad MCP access for routine analysis.
+- Do not recommend AI provider enablement without noting cost controls and fallback behavior.
+- Separate AISH runner host onboarding from credential provisioning decisions; runner convenience must not override least privilege.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

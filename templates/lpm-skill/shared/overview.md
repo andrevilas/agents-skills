@@ -10,6 +10,7 @@ Transformar o agente em um operador capaz de:
 - preservar rastreabilidade entre contexto, decisão e ação
 - reutilizar taxonomias e estruturas existentes antes de criar novas
 - manter compatibilidade entre targets `Codex` e `Antigravity`
+- explicitar guardrails de execucao remota, evidencias e credenciais quando aplicavel
 
 ## Capacidades Centrais
 
@@ -24,3 +25,4 @@ Transformar o agente em um operador capaz de:
 - manter fronteiras claras entre esta skill e skills irmãs
 - preferir convenções estáveis a variações locais
 - documentar guardrails junto com o workflow
+- tratar evidencias como artefatos persistentes que exigem sanitizacao

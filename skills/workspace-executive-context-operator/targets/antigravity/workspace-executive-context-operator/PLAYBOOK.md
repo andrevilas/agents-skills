@@ -32,6 +32,14 @@ Use this playbook when the agent needs to:
 1. Apply the reviewed patch.
 2. Re-run validation to confirm the new state.
 
+## Guardrails
+
+- Do not apply workspace context changes before reading current executive context and validation output.
+- Do not hide ownership gaps, unowned capabilities, or routing-policy ambiguity.
+- Do not conflate a drafted operating model with an applied workspace update.
+- Do not mutate workspace policy when the user asked only for readiness review.
+- Re-run validation after any applied context update.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

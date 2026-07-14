@@ -32,6 +32,14 @@ Use this playbook when the agent needs to:
 1. Confirm gate conditions.
 2. Publish and verify scope alignment.
 
+## Guardrails
+
+- Do not publish a baseline or change set without reading the current baseline and working delta.
+- Do not treat material drift as ready for publication without review status.
+- Do not collapse draft, reviewed, approved, and published states.
+- Do not ignore requirements or change-set evidence when explaining scope movement.
+- Keep publication decisions auditable and reversible where the LPM workflow allows it.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

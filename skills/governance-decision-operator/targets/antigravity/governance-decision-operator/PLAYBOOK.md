@@ -32,6 +32,14 @@ Use this playbook when the agent needs to:
 1. Prepare the downstream artifact when needed.
 2. Keep the action lineage auditable.
 
+## Guardrails
+
+- Do not close a governance thread without an explicit outcome.
+- Do not derive downstream work from ambiguous threads without clarification.
+- Do not collapse governance and execution history into one opaque comment.
+- Do not confuse AISH execution checkpoints with LPM governance threads; route AISH job decisions to the AISH governed development workflow.
+- Keep the source thread, decision, and resulting artifact traceable.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

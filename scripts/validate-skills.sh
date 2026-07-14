@@ -136,6 +136,18 @@ while IFS= read -r -d '' skill_dir_path; do
       check_contains "$antigravity_target_dir/manifest.json" "\"agent\"[[:space:]]*:[[:space:]]*\"antigravity\"" "$skill_name antigravity agent"
       check_contains "$antigravity_target_dir/manifest.json" "\"entrypoint\"[[:space:]]*:[[:space:]]*\"PLAYBOOK.md\"" "$skill_name antigravity entrypoint"
       check_contains "$antigravity_target_dir/PLAYBOOK.md" "Antigravity does not currently appear to consume Codex \`SKILL.md\` bundles natively" "$skill_name antigravity compatibility note"
+
+      if [[ -n "$codex_target_rel" && -d "$skill_dir_path/$codex_target_rel" ]]; then
+        codex_skill_file="$skill_dir_path/$codex_target_rel/SKILL.md"
+        if [[ -f "$codex_skill_file" ]]; then
+          if grep -qE '^## Guardrails$' "$codex_skill_file"; then
+            check_contains "$antigravity_target_dir/PLAYBOOK.md" "^## Guardrails$" "$skill_name antigravity guardrails parity"
+          fi
+          if grep -qE '^## Workflows$|^## Workflow Summary$|^## 1\.' "$codex_skill_file"; then
+            check_contains "$antigravity_target_dir/PLAYBOOK.md" "^## Workflow Summary$" "$skill_name antigravity workflow parity"
+          fi
+        fi
+      fi
     fi
   fi
 

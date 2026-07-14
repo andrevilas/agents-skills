@@ -6,12 +6,14 @@ Use this reference when development work should be standardized through AISH.
 
 - LPM owns governance: workspace access, project context, issues, requirements, approvals, comments, evidence trail, and cost guardrails.
 - AISH owns execution control: Autopilot planning, AISH jobs, runner leases, execution gates, sanitized output, pipeline evidence, and release-readiness evidence.
-- The local runner owns execution: repository checkout, user-held credentials, VPN/private network access, local tokens, dependency cache, and toolchain.
+- The local runner owns local execution: repository checkout, user-held credentials, VPN/private network access, local tokens, dependency cache, and toolchain.
+- A remote runner host owns remote execution only after onboarding: managed checkout, declared capabilities, scoped credential profile, queue polling, cleanup, and heartbeat/monitoring.
 
 ## MVP Posture
 
 - Control plane runs inside the existing LPM service.
-- Runner mode stays `local`.
+- Runner mode stays `local` by default.
+- Remote runner hosts are supported for governed queue work, but must be onboarded, scoped, monitored, and selected by capability or target host.
 - Cloud Tasks records dispatch; it does not execute user code.
 - Managed runner and Cloud Run Jobs remain gated.
 - AISH-specific fixed-cost hardening is demand-driven, not speculative.
@@ -45,6 +47,79 @@ Never do this:
 bash -lc "$AISH_JOB_PROMPT"
 ```
 
+## Remote Host Pattern
+
+Use this pattern when a host without an existing workspace should join the AISH queue:
+
+1. Create a short-lived enrollment token from a trusted operator machine:
+
+```bash
+npm run cli -- aish hosts create-token \
+  --project "$AISH_PROJECT_ID" \
+  --display-name "<host label>" \
+  --expires-minutes 60 \
+  --json
+```
+
+2. Bootstrap the host with declared repos and capabilities:
+
+```bash
+npm run cli -- aish host bootstrap \
+  --token "$AISH_HOST_ENROLLMENT_TOKEN" \
+  --profile "$HOME/.config/aish/host-profile.json" \
+  --managed-dir "$HOME/aish-managed" \
+  --repo "git@github.com:org/repo.git#main" \
+  --display-name "$(hostname)" \
+  --capabilities "build; test; deploy" \
+  --json
+```
+
+3. Verify before execution:
+
+```bash
+npm run cli -- aish host doctor --profile "$HOME/.config/aish/host-profile.json" --json
+npm run cli -- aish host sync-repos --profile "$HOME/.config/aish/host-profile.json" --dry-run --json
+```
+
+4. Start the worker with an operator-controlled executor:
+
+```bash
+npm run cli -- aish host start \
+  --profile "$HOME/.config/aish/host-profile.json" \
+  --runner-id "$(hostname):aish-remote" \
+  --executor-command 'bash -lc "npm run lint && npm test"' \
+  --poll-interval-ms 15000 \
+  --targeted-only \
+  --json
+```
+
+Remote output must include host id, runner id, repo path, HEAD, and validation result, but never tokens, profile contents, auth headers, cookies, or `.env` values.
+
+## Continuous Autopilot Pattern
+
+Use continuous Autopilot only when the user explicitly authorizes a bounded run. Record the authorization in the job approval reason or issue/comment context:
+
+- objective and project
+- max jobs or stop condition
+- timeout/polling window
+- target host or capability constraints
+- whether deploy is included
+- required validation and smoke evidence
+
+If deploy is in scope, production closure still requires Cloud Run/build evidence plus authenticated smoke evidence. If deploy is out of scope, stop after validation and leave release gated.
+
+## Project Cockpit Pattern
+
+Use the AISH project cockpit as the first operational read model for:
+
+- project-scoped queue state
+- decision queues and execution checkpoints
+- remote host readiness
+- timeline of jobs and evidence
+- production/deploy status and smoke evidence
+
+Prefer cockpit-derived state before reconstructing the same answer from many individual job and issue calls.
+
 ## Completion Criteria
 
 A governed AISH cycle is complete only when:
@@ -54,7 +129,8 @@ A governed AISH cycle is complete only when:
 - linked issues are moved to the correct status
 - evidence IDs exist for runner, validation, and deployment when applicable
 - no approved queued jobs are left behind
-- release work remains gated unless the user explicitly requested release
+- remote hosts used in the cycle are healthy, stopped when appropriate, or explicitly left as queue workers
+- release work remains gated unless the user explicitly requested release or included it in bounded continuous Autopilot
 
 ## Common Operating Modes
 
@@ -69,3 +145,11 @@ Use when validating AISH behavior or cleaning stale queues. Record current commi
 ### Production Release
 
 Only after explicit release approval. Use the repository deploy runbook. Enable AISH pipeline evidence and run an authenticated smoke after deploy.
+
+### Remote Queue Work
+
+Use when a trusted host should consume project work without a pre-existing local workspace. Bootstrap repos from Git, run `host doctor`, approve jobs with target host or capability constraints, start the host worker, and monitor until the queue is empty or the stop condition is reached.
+
+### Continuous Autopilot
+
+Use when the human explicitly authorizes a bounded end-to-end run. Execute within the recorded max jobs, timeout, host policy, validation gates, and release boundary. Stop on failures or missing decisions instead of inventing new authority.

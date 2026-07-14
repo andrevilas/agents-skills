@@ -32,6 +32,14 @@ Use this playbook when the agent needs to:
 1. Re-read observability.
 2. Confirm whether the gap was closed.
 
+## Guardrails
+
+- Do not run broad backfills before checking observability and recent bridge runs.
+- Do not claim analytics coverage recovered until a follow-up read confirms it.
+- Do not mutate bridge state when the user asked only for diagnosis.
+- Do not hide partial sync, stale entities, or failed runs behind a summary.
+- Keep recovery scope explicit: workspace, project, entity set, mode, and expected impact.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

@@ -32,6 +32,14 @@ Use this playbook when the agent needs to:
 1. Re-read the issue and links.
 2. Confirm the unblock path is explicit and auditable.
 
+## Guardrails
+
+- Do not mark a blocker resolved without dependency evidence.
+- Do not change issue state before reading the issue, links, and relevant comments.
+- Do not collapse multiple blockers into one generic follow-up.
+- Do not notify or reassign owners before confirming scoped membership and impact.
+- Keep the upstream dependency and downstream blast radius explicit.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

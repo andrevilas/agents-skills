@@ -54,3 +54,4 @@ The current LPM MCP exposes these tool groups:
 - Do not mutate adjacent workflow objects unless the user explicitly wants that.
 - Do not infer critical context when the MCP already exposes a canonical read.
 - Do not use global user enumeration; resolve people through project, workspace, or team membership when needed.
+- If the workflow touches remote execution, autonomous queues, credentials, or evidence, define onboarding, least-privilege, output sanitization, cleanup, smoke, and pending-job closure rules.

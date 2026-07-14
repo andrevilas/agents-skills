@@ -1,4 +1,4 @@
 interface:
   display_name: "AISH Governed Development Operator"
-  short_description: "Run development through LPM-governed AISH"
-  default_prompt: "Use $aish-governed-development-operator to run this development task through LPM-governed AISH Autopilot, local runner execution, approvals, and evidence."
+  short_description: "Run governed AISH development and runners"
+  default_prompt: "Use $aish-governed-development-operator to run this development task through LPM-governed AISH Autopilot, local or remote runner execution, approvals, validation, and evidence."

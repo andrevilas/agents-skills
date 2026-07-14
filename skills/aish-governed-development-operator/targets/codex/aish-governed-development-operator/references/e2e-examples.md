@@ -80,3 +80,52 @@ Expected outcome:
 - deploy evidence exists
 - production smoke evidence exists
 - release state is traceable in LPM/AISH
+
+## Example 5: Remote Runner Host
+
+Goal: add a trusted host to execute governed project queue work.
+
+1. Create a short-lived host enrollment token.
+2. Bootstrap the host with:
+   - profile path
+   - managed directory
+   - allowed Git repos and branches
+   - declared capabilities
+3. Run host doctor and repo sync dry-run.
+4. List hosts and confirm the host is active for the project.
+5. Approve a test job with `--target-host` or required capabilities.
+6. Start the host worker with an operator-controlled executor.
+7. Monitor the host and inspect the completed job evidence.
+8. Stop the worker or leave it polling only if that was the intended operating mode.
+
+Expected outcome:
+
+- host is enrolled with a scoped profile
+- repos are synced without exposing deploy keys or tokens
+- evidence identifies host, runner, repo HEAD, and sanitized validation output
+- no untargeted or unauthorized jobs run on the host
+
+## Example 6: Continuous Autopilot With Explicit Bounds
+
+Goal: execute a pre-approved AISH delivery cycle without pausing after every job.
+
+1. Capture the user's authorization text and confirm it includes:
+   - target project and objective
+   - max jobs or stop condition
+   - timeout or polling window
+   - allowed runner hosts
+   - deploy boundary
+   - validation and smoke evidence requirements
+2. Materialize or inspect the backlog.
+3. Approve jobs only within the authorized scope.
+4. Run the local or remote runner until the stop condition, failure, or release boundary.
+5. Record runner, validation, pipeline, and smoke evidence as applicable.
+6. Move linked issues only after evidence exists.
+7. List remaining jobs and explicitly consume, cancel, or block approved queued work.
+
+Expected outcome:
+
+- the autonomous run stays inside the recorded human authorization
+- failures or missing decisions stop the run instead of expanding authority
+- no approved queued jobs remain forgotten
+- deploy is traceable through build/revision evidence and authenticated smoke

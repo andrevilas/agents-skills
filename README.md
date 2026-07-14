@@ -42,7 +42,7 @@ Skills disponíveis neste repositório:
 - `webhook-integration-operator`: gestão de webhook subscriptions, testes e deliveries
 - `knowledge-and-publication-operator`: curadoria de knowledge items, arquivos e guidance publicado
 - `access-and-credentials-admin`: administração de API keys e AI credentials com guardrails explícitos
-- `aish-governed-development-operator`: padronização de desenvolvimento usando AISH Autopilot governado por LPM, runner local, aprovações e evidências
+- `aish-governed-development-operator`: padronização de desenvolvimento usando AISH Autopilot governado por LPM, runners locais/remotos, cockpit por projeto, aprovações, validações e evidências
 
 Codex:
 
@@ -96,7 +96,7 @@ Diretrizes atuais:
 - resolver atribuicoes por `list_project_assignable_members`, `list_workspace_members` ou membros de time
 - preferir chaves MCP `read-only` para analise
 - tratar Workspace AI e Gen App Builder como superficies com governanca de custo
-- tratar AISH como plano de execucao governado por LPM: Autopilot para decomposicao, jobs com aprovacao por checkpoint, runner local e evidencia antes de fechamento
+- tratar AISH como plano de execucao governado por LPM: Autopilot para decomposicao, jobs com aprovacao por checkpoint, runners locais/remotos onboarded, cockpit por projeto, evidencia antes de fechamento e smoke autenticado apos deploy
 
 ## Como organizar o catálogo
 
@@ -106,6 +106,7 @@ Diretrizes atuais:
 - use `portfolio-health-review` quando o foco principal for leitura executiva, revisão semanal, ou diagnóstico sistêmico com analytics
 - prefira adicionar referências em `targets/codex/<skill>/references/` quando o fluxo exigir detalhe extra, mantendo `SKILL.md` enxuto
 - para validação semântica, mantenha um `references/e2e-examples.md` nas skills com workflow operacional próprio
+- se a skill tocar execucao remota, filas autonomas, credenciais ou evidencias, inclua guardrails explicitos para onboarding, menor privilegio, sanitizacao, cleanup, smoke e fechamento de jobs aprovados
 
 ## Template base
 

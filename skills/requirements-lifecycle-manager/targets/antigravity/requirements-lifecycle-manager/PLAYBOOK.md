@@ -34,6 +34,14 @@ Use this playbook when the agent needs to operate requirements governance over t
 1. Inspect linked issues for execution-backed requirements.
 2. Flag orphaned requirements and stale execution links.
 
+## Guardrails
+
+- Do not publish or mark a baseline current without a real version boundary.
+- Do not create duplicate requirements before checking nearby groups and baselines.
+- Do not detach requirement traceability casually.
+- Do not mix draft requirements with approved baseline content without naming the state.
+- Preserve links between requirement, group, baseline, source document, and execution issue.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

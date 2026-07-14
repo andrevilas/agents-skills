@@ -26,6 +26,12 @@ Use this playbook when the agent needs to operate `__WORKFLOW_SCOPE__` over the 
 3. Apply the minimum mutation needed.
 4. Record or communicate the operational consequence.
 
+## Guardrails
+
+- Read current LPM context before mutation.
+- Preserve traceability between context, decision, action, and evidence.
+- If the workflow touches remote execution, autonomous queues, credentials, or evidence, define onboarding, least-privilege, output sanitization, cleanup, smoke, and pending-job closure rules.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

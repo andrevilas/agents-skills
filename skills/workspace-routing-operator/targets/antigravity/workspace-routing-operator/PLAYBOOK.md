@@ -32,6 +32,14 @@ Use this playbook when the agent needs to:
 1. Re-check unowned domains or capabilities.
 2. Surface governance gaps when routing is ambiguous.
 
+## Guardrails
+
+- Do not route intake before reading workspace executive context or routing signals.
+- Do not force ambiguous intake into one project when split, defer, or reject is more accurate.
+- Do not hide unowned domains or capability gaps.
+- Do not treat routing preview as final approval without an explicit decision.
+- Keep routing evidence and ownership rationale auditable.
+
 ## Important Constraint
 
 Antigravity does not currently appear to consume Codex `SKILL.md` bundles natively. This adapter is therefore a playbook bundle, not a native registry skill.

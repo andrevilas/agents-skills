@@ -32,6 +32,7 @@ templates/lpm-skill/
 - `__WORKFLOW_SCOPE__`: workflow principal operado pela skill
 - `__PRIMARY_TOOLS__`: grupo de tools MCP que sustentam o workflow
 - `__OPERATOR_STANCE__`: postura operacional do agente ao usar a skill
+- `__REMOTE_EXECUTION_GUARDRAILS__`: guardrails quando a skill tocar execucao remota, filas autonomas, credenciais ou evidencias
 
 ## Regras Base
 
@@ -41,3 +42,4 @@ templates/lpm-skill/
 4. Adicione `references/` apenas quando o workflow exigir contexto auxiliar.
 5. Atualize `README.md` quando uma nova skill entrar no catálogo ativo.
 6. Inclua guardrails de segurança atuais do LPM quando a skill tocar acesso, membros ou AI.
+7. Se a skill tocar execucao remota, filas autonomas, credenciais ou evidencias, inclua guardrails para onboarding, menor privilegio, sanitizacao de output, cleanup, smoke e fechamento de jobs aprovados.

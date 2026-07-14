@@ -7,7 +7,7 @@ description: Orchestrate autonomous SDLC workflows with the LPM MCP. Use this sk
 
 Use this skill when the task is operational project management over the `lpm` MCP. It turns Codex into an autonomous SDLC orchestrator that can structure projects, run planning rituals, maintain execution flow, and report delivery health with native LPM tools.
 
-This skill is centered on execution and delivery flow. For requirements and baseline governance, use `requirements-lifecycle-manager`. For broader workspace administration, use `lpm-workspace-admin`. For executive reviews and systemic health diagnostics, use `portfolio-health-review`.
+This skill is centered on execution and delivery flow. For requirements and baseline governance, use `requirements-lifecycle-manager`. For broader workspace administration, use `lpm-workspace-admin`. For executive reviews and systemic health diagnostics, use `portfolio-health-review`. For implementation work that should run through AISH Autopilot, runners, job gates, and evidence, use `aish-governed-development-operator`.
 
 ## When To Use
 
@@ -20,8 +20,10 @@ Use this skill when the user asks to:
 - inspect project health, velocity, burndown, or blockers
 - follow up on stalled issues or near-term deadlines
 - archive or restore projects as part of portfolio management
+- route implementation work into AISH when the user wants governed Autopilot, runners, or evidence-backed delivery
 
 Do not default to this skill when the primary task is requirement baseline management, workspace-wide administrative cleanup, or executive health review.
+Do not use this skill as the primary operator for AISH job execution, remote runner hosts, or AISH decision queues; delegate that workflow to `aish-governed-development-operator`.
 
 Read [references/lpm-capabilities.md](./references/lpm-capabilities.md) when you need the exact tool mapping.
 Read [references/analytics-playbook.md](./references/analytics-playbook.md) when the task is analytics-heavy.
