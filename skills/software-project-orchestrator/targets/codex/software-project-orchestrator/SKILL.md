@@ -48,7 +48,7 @@ The current LPM MCP exposes these tool groups:
 - Planning: `create_cycle`, `update_cycle`, `create_milestone`, `update_milestone`, `list_labels`, `create_label`
 - Execution: `list_issues`, `get_issue`, `update_issue`, `create_issue_link`, `list_issue_links`
 - Communication: `list_comments`, `create_comment`, `create_notification`
-- Activity evidence: `list_workspace_activities`, `list_activity_attachments`, `upload_activity_attachment`, `delete_activity_attachment`
+- Activity evidence: `list_workspace_activities`, `list_activity_attachments`, `upload_activity_attachment`, `create_activity_attachment`, `delete_activity_attachment`
 - Analytics: `get_project_analytics`, `get_project_dependency_graph`, `get_project_dependency_summary`
 - AI governance: `list_workspace_ai_credentials`, `upsert_workspace_ai_credential`, `delete_workspace_ai_credential`
 - Access: `list_api_keys`, `create_api_key`, `update_api_key`, `delete_api_key`
@@ -80,16 +80,19 @@ If a requested action needs adjacent tools from the same MCP, use them after fir
 6. Communicate proactively.
    Use `create_comment` for issue-level follow-up and `create_notification` for due-date or blocker escalation.
 
-7. Prefer reversible portfolio actions.
+7. Make evidence recoverable.
+   Any artifact that can help recreate or analyze a scenario, validation, test, defect, rollout, or release must be registered as LPM activity evidence. Comments, local paths, AISH evidence IDs, or baseline notes are useful context, but they do not replace recoverable `activity_attachment` records.
+
+8. Prefer reversible portfolio actions.
    Use `archive_project` rather than `delete_project` unless the user clearly wants permanent removal.
 
-8. Tolerate operational data inconsistency.
+9. Tolerate operational data inconsistency.
    If the tool surface returns mixed cycle states or inconsistent link type spellings, normalize them in your reasoning before making recommendations.
 
-9. Preserve least privilege.
+10. Preserve least privilege.
    Use `read-only` access for analysis. Recommend or create broader MCP API key presets only when the user explicitly needs mutation, and document why the broader scope is necessary.
 
-10. Treat AI as cost-governed infrastructure.
+11. Treat AI as cost-governed infrastructure.
     Before recommending Workspace AI or Gen App Builder enablement, check feature flags, daily caps, fallback behavior, and available governance summaries.
 
 ## System Prompt
@@ -153,7 +156,7 @@ Default label categories when the user wants a starter taxonomy:
 1. Query active work with `list_issues` using `status: "in-progress"`.
 2. For each risky item, inspect `get_issue` and `list_comments`.
 3. If the issue looks stale, use `create_comment` to ask for status, blocker detail, or scope reduction.
-4. If the user provides operational proof for the activity trail, resolve the activity and attach it with `upload_activity_attachment`.
+4. If operational proof exists for the activity trail, resolve the activity and attach recoverable evidence with `upload_activity_attachment` or `create_activity_attachment`.
 5. If the due date is close or a blocker affects another owner, use `create_notification`.
 6. Move a task to `done` with `update_issue` only after checking comments and dependency links.
 7. If the issue was blocking others, inspect `list_issue_links` and notify impacted owners when the blocker clears.
@@ -206,7 +209,9 @@ Escalate from issue-level action to project-level analysis when three or more ac
 - Normalize dependency types such as `blocks`, `related-to`, `relates_to`, and `parent-child` before analyzing blocker topology.
 - If an assignment requires a user ID, resolve it through scoped membership tools; do not infer IDs from global user lists.
 - If a task involves AI enablement, report cost guardrails and feature flags before recommending rollout.
-- If an activity requires evidence, use `list_workspace_activities` to identify the activity, `list_activity_attachments` to avoid duplicates, and `upload_activity_attachment` for the file. Treat `delete_activity_attachment` as a deliberate cleanup action only.
+- If an activity requires evidence, use `list_workspace_activities` to identify the activity, `list_activity_attachments` to avoid duplicates, and `upload_activity_attachment` for new files or `create_activity_attachment` only for immutable trusted file URLs. Treat `delete_activity_attachment` as a deliberate cleanup action only.
+- If validation includes screenshots, browser smoke, UI QA, or Playwright, attach the captured screenshots as `image/png` or `image/jpeg` evidence before closing the issue. Include buyer/seller or admin/user perspectives and one sample per relevant parameter class when those distinctions affect the result.
+- For tests or incidents, attach enough evidence to recreate and analyze the scenario later: report or manifest, sanitized JSON/log output, screenshots/traces when visual, runner/script when safe, commit/revision, target environment, and acceptance result.
 
 ## Reporting Style
 
@@ -222,6 +227,7 @@ Preferred pattern:
 - Do not close issues without checking history and blockers.
 - Do not claim blockers were cleared unless dependency links or comments support that conclusion.
 - Do not claim evidence was registered unless the upload tool returned an ID or a follow-up list confirms it.
+- Do not close visually validated issues when Playwright/browser screenshots remain only in local files, comments, or chat; they must be attached to the relevant LPM activity.
 - Do not bypass LPM with direct Firebase Storage uploads for activity evidence.
 - Do not delete active project structures when archival is the safer option.
 - Do not infer analytics when `get_project_analytics` is available; use the source tool first.

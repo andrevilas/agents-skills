@@ -11,6 +11,7 @@ Transformar o agente em um operador capaz de:
 - reutilizar taxonomias e estruturas existentes antes de criar novas
 - manter compatibilidade entre targets `Codex` e `Antigravity`
 - explicitar guardrails de execucao remota, evidencias e credenciais quando aplicavel
+- anexar no LPM toda evidencia que ajude a recriar ou analisar cenarios/testes posteriormente
 
 ## Capacidades Centrais
 
@@ -26,3 +27,4 @@ Transformar o agente em um operador capaz de:
 - preferir convenções estáveis a variações locais
 - documentar guardrails junto com o workflow
 - tratar evidencias como artefatos persistentes que exigem sanitizacao
+- nao substituir anexos recuperaveis por comentarios, caminhos locais ou IDs externos quando a evidencia precisa ser inspecionada depois

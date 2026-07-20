@@ -11,6 +11,7 @@ Use this playbook when the agent needs to operate `__WORKFLOW_SCOPE__` over the 
 - MCP endpoint: `https://little-project-manager-5zp7h2wmea-uw.a.run.app/mcp`
 - Resolve people through scoped project, workspace, or team membership when needed.
 - Prefer least privilege for access-related workflows.
+- Evidence that helps recreate or analyze scenarios/tests should be attached as recoverable LPM activity evidence.
 - Treat Workspace AI and Gen App Builder as cost-governed capabilities.
 
 ## Operator Prompt
@@ -31,6 +32,7 @@ Use this playbook when the agent needs to operate `__WORKFLOW_SCOPE__` over the 
 - Read current LPM context before mutation.
 - Preserve traceability between context, decision, action, and evidence.
 - If the workflow touches remote execution, autonomous queues, credentials, or evidence, define onboarding, least-privilege, output sanitization, cleanup, smoke, and pending-job closure rules.
+- If validation includes Playwright/browser/UI screenshots, attach them to the relevant LPM activity before closure.
 
 ## Important Constraint
 

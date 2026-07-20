@@ -37,7 +37,7 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
    Treat `AISH_JOB_PROMPT` as data. Never execute it directly as shell.
 
 4. Evidence closes work.
-   Do not mark issues complete until the runner, validation, or pipeline evidence exists.
+   Do not mark issues complete until runner, validation, or pipeline evidence exists and all artifacts useful for later recreation or analysis are recoverable from LPM/AISH. AISH evidence IDs, comments, baseline notes, or local paths alone are not enough when screenshots, logs, manifests, traces, or reports are needed.
 
 5. No unmanaged release.
    Do not deploy or publish unless release approval is explicit or included in the authorized bounded Autopilot scope, and evidence recording is configured.
@@ -63,10 +63,10 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
    Execute from the real repo checkout or from an onboarded remote host with a deterministic command. Use `--once` for controlled execution unless running an explicitly authorized queue worker.
 
 6. Validate and record evidence.
-   Run relevant tests, lint, build, smoke, or dry-run gates. Ensure the AISH job has evidence IDs.
+   Run relevant tests, lint, build, smoke, or dry-run gates. Ensure the AISH job has evidence IDs and attach key artifacts to the linked LPM activity when they help recreate or analyze the scenario later.
 
 7. Close or advance LPM work.
-   Move linked issues only after reading status, evidence, and blockers. Leave downstream release work gated until evidence review.
+   Move linked issues only after reading status, evidence, blockers, and recoverable LPM activity attachments. Leave downstream release work gated until evidence review.
 
 8. Release only when requested.
    Use the project runbook and `AISH_PIPELINE_EVIDENCE=true` for deploys that should publish AISH evidence.
@@ -88,7 +88,7 @@ Use remote hosts when the work benefits from an isolated machine, a persistent b
    Use `aish host start --profile <path> --executor-command '<operator-controlled command>'`. Set `--targeted-only` for dedicated hosts, `--poll-interval-ms` for queue polling cadence, and `--once` for a single validation job.
 
 5. Close the loop.
-   Evidence should identify the host id, runner id, capability profile, repo HEAD, and sanitized command output. Revoke stale hosts with `aish hosts revoke`.
+   Evidence should identify the host id, runner id, capability profile, repo HEAD, sanitized command output, and any artifacts needed for reproduction or analysis. Revoke stale hosts with `aish hosts revoke`.
 
 ## Continuous Autopilot Mode
 
@@ -100,6 +100,7 @@ Continuous Autopilot is valid only when the user explicitly authorizes it in the
 - allowed runner hosts and required capabilities
 - whether deploy is included or remains gated
 - required validation and smoke evidence
+- required recoverable LPM attachments for screenshots, reports, traces, manifests, JSON/log output, and runner scripts when applicable
 
 If any limit is missing, fall back to job-by-job approval. Stop when validation fails, a governance decision is required, a secret would be exposed, a remote host is unhealthy, or a release boundary is reached.
 
@@ -121,4 +122,6 @@ If any limit is missing, fall back to job-by-job approval. Stop when validation 
 - Do not enable Cloud Run Jobs or managed runners without the managed-runner gate.
 - Do not leave approved queued jobs behind at the end of a cycle; consume, cancel, or explicitly block them.
 - Do not claim deploy completion without AISH pipeline evidence and authenticated smoke evidence against the deployed target.
+- Do not close a visually validated issue or job when Playwright/browser screenshots remain only in local files, comments, chat, or AISH metadata; attach them to the relevant LPM activity and verify with `list_activity_attachments`.
+- Do not treat an AISH `evidenceId` as a substitute for LPM activity attachments when the user or future agent must recover screenshots, logs, JSON, traces, reports, or runner scripts from the issue timeline.
 - Do not record smoke, runner, or pipeline output that includes auth headers, cookies, tokens, `.env` content, or raw credential files.

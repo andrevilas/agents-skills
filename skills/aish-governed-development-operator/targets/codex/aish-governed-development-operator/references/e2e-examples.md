@@ -21,12 +21,14 @@ Goal: implement a feature with governed execution.
 8. Inspect evidence and linked issue.
 9. Repeat job-by-job.
 10. Run validation and record pipeline evidence.
-11. Close issues only after evidence exists.
+11. Attach recoverable LPM activity evidence for reports, logs, manifests, JSON output, screenshots, traces, and runner scripts that are useful for later recreation or analysis.
+12. Close issues only after evidence exists and `list_activity_attachments` confirms the required artifacts.
 
 Expected outcome:
 
 - issues and jobs are linked
 - each executed job has evidence
+- UI or Playwright validation includes recoverable screenshots
 - no sibling job was approved implicitly
 - no release happened without release approval
 
@@ -37,7 +39,7 @@ Goal: validate AISH flow without code changes.
 1. Materialize a sandbox or low-risk project.
 2. Approve a single job.
 3. Run executor that prints repo state, checks expected files, and verifies clean diff.
-4. Record evidence.
+4. Record evidence and attach any reproduction output needed later.
 5. Post-check that no queued approved job remains unless intentionally blocked.
 
 Expected outcome:
@@ -73,12 +75,14 @@ Goal: deploy a validated change.
 3. Wait for Cloud Build and Cloud Run revision readiness.
 4. Run authenticated smoke against the deployed URL.
 5. Record AISH smoke evidence.
-6. Report revision, build id, evidence IDs, and residual risks.
+6. Attach smoke screenshots/traces/logs to the LPM activity when they help reproduce or inspect the release.
+7. Report revision, build id, evidence IDs, attachment status, and residual risks.
 
 Expected outcome:
 
 - deploy evidence exists
 - production smoke evidence exists
+- smoke evidence is recoverable from LPM when visual/browser artifacts were captured
 - release state is traceable in LPM/AISH
 
 ## Example 5: Remote Runner Host

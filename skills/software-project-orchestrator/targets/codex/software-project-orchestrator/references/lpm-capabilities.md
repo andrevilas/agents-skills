@@ -82,7 +82,10 @@ Security baseline:
 2. Use `list_activity_attachments` before adding duplicate evidence to the same activity.
 3. Use `upload_activity_attachment` for new evidence files with `contentBase64`, `fileName`, `fileType`, optional `description`, and optional `capturedAt`.
 4. Use `create_activity_attachment` only for metadata-only compatibility when the file URL already exists and is intentionally trusted.
-5. Use `delete_activity_attachment` only when the user explicitly asks to remove evidence or a cleanup is required.
+5. Attach every artifact that helps recreate or analyze the scenario later: sanitized report, manifest, JSON/log output, screenshots/traces, runner/script, commit/revision, environment, and acceptance result.
+6. For visual validation, browser smoke, UI QA, or Playwright, attach screenshots as `image/png` or `image/jpeg`; do not rely only on comments, local paths, baseline notes, or external evidence IDs.
+7. After writing evidence, re-read `list_activity_attachments` and confirm the activity shows recoverable attachments before reporting closure.
+8. Use `delete_activity_attachment` only when the user explicitly asks to remove evidence or a cleanup is required.
 
 ### Monitoring
 
@@ -104,6 +107,7 @@ Security baseline:
 - Do not create labels without checking `list_labels` first.
 - Do not move an issue to `done` before checking `get_issue`, `list_comments`, and, when relevant, `list_issue_links`.
 - Do not mark evidence as attached unless `list_activity_attachments` confirms the attachment or `upload_activity_attachment` returns an ID.
+- Do not close issues whose validation depends on screenshots, traces, or logs while those artifacts exist only in local files, comments, chat, or AISH metadata.
 - Do not upload activity evidence outside the LPM backend; the MCP upload contract is `upload_activity_attachment`.
 - Do not claim a blocker was cleared unless links or comments confirm the dependency was handled.
 - Prefer `archive_project` over `delete_project` unless permanent removal is explicitly intended.

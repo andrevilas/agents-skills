@@ -35,6 +35,8 @@ Esta skill não é o lugar principal para governança de requisitos ou administr
 - a ferramenta global `list_users` nao existe e nao deve ser recriada nos fluxos da skill
 - evidencias de atividade devem usar `upload_activity_attachment` para novos arquivos; nao contornar o backend com Storage direto
 - `read-only` pode listar evidencias com `list_activity_attachments`, mas criacao/upload/delete exigem perfil de mutacao
+- toda evidencia que ajude a recriar ou analisar um cenario/teste deve ser anexada como artefato recuperavel da atividade no LPM; comentario, caminho local ou ID externo nao substitui `activity_attachment`
+- validacoes visuais, QA de tela, browser smoke e Playwright devem anexar os screenshots obtidos, alem de relatorio/manifest e JSON sanitizado quando existirem
 - rotinas com AI devem considerar governanca de custo, flags de runtime e limites diarios antes de recomendar habilitacao
 
 ## Princípios

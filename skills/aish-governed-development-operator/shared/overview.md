@@ -12,6 +12,7 @@ Transformar pedidos de desenvolvimento em um fluxo operacional repetivel:
 - executar somente jobs aprovados no runner local ou em host remoto onboarded
 - registrar evidencias sanitizadas no LPM/AISH
 - fechar issues apenas depois de validacao e evidencia
+- anexar no LPM toda evidencia que ajude a recriar ou analisar cenarios/testes, incluindo screenshots Playwright quando houver validacao visual
 - manter deploy e release como gates explicitos
 
 ## Fronteira
@@ -59,3 +60,5 @@ Ao final de um ciclo, deve existir uma trilha rastreavel:
 - validacao automatizada
 - evidencia de pipeline, deploy e smoke quando aplicavel
 - status final das issues e jobs
+
+Evidencia AISH nao basta quando os artefatos sao necessarios para auditoria humana ou recuperacao pela UI. Nesses casos, o fechamento deve tambem registrar `activity_attachment` no LPM e confirmar a recuperacao via `list_activity_attachments`.

@@ -120,6 +120,20 @@ Use the AISH project cockpit as the first operational read model for:
 
 Prefer cockpit-derived state before reconstructing the same answer from many individual job and issue calls.
 
+## Recoverable Evidence Pattern
+
+AISH evidence is necessary for runner and pipeline audit, but it is not always sufficient for issue-level recovery. Any artifact that can help a future operator or the LPM UI recreate, inspect, or analyze a scenario must also be attached to the relevant LPM activity.
+
+Attach, when applicable:
+
+- report or manifest
+- sanitized JSON/log output
+- Playwright/browser screenshots and traces
+- runner or reproduction script
+- commit/revision, environment, image/tag, URL, and acceptance result
+
+For visual validation, browser smoke, UI QA, or Playwright, screenshots are mandatory. Before closing a linked issue, re-read LPM activity attachments and confirm the artifact list is recoverable.
+
 ## Completion Criteria
 
 A governed AISH cycle is complete only when:
@@ -128,6 +142,7 @@ A governed AISH cycle is complete only when:
 - all intended jobs are `completed` or intentionally blocked
 - linked issues are moved to the correct status
 - evidence IDs exist for runner, validation, and deployment when applicable
+- recoverable LPM activity attachments exist for reports, logs, screenshots, traces, JSON, manifests, or runner scripts needed for future recreation/analysis
 - no approved queued jobs are left behind
 - remote hosts used in the cycle are healthy, stopped when appropriate, or explicitly left as queue workers
 - release work remains gated unless the user explicitly requested release or included it in bounded continuous Autopilot
