@@ -43,3 +43,4 @@ templates/lpm-skill/
 5. Atualize `README.md` quando uma nova skill entrar no catálogo ativo.
 6. Inclua guardrails de segurança atuais do LPM quando a skill tocar acesso, membros ou AI.
 7. Se a skill tocar execucao remota, filas autonomas, credenciais ou evidencias, inclua guardrails para onboarding, menor privilegio, sanitizacao de output, cleanup, smoke e fechamento de jobs aprovados.
+8. Se a skill tocar Workspace AI, Gen App Builder ou AISH, aplique `docs/ai-cost-benefit-governance.md`: deterministico primeiro, IA leve sob demanda, IA cara somente com justificativa, limites/fallback verificados e evidencia apos uso relevante.

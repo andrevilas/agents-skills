@@ -17,6 +17,7 @@ Transformar o agente em um operador capaz de:
 - governance thread resolution
 - structured outcome mapping
 - auditable follow-up
+- AI enablement decision threshold
 
 ## Princípios
 
@@ -24,3 +25,4 @@ Transformar o agente em um operador capaz de:
 - preservar outcome estruturado, não só texto livre
 - escolher o menor desdobramento operacional compatível com a decisão
 - manter governança separada de execução cotidiana
+- quando a decisão envolver IA, exigir beneficio esperado, limite de custo, fallback e critério de desligamento ou redução

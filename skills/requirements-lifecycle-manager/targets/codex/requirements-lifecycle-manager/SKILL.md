@@ -47,6 +47,9 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 5. Keep change intent explicit.
    State whether the action is authoring, refinement, deprecation, or structural cleanup.
 
+6. Use requirements AI analysis selectively.
+   Prefer direct baseline and issue inspection for small changes. Use `requirementsDocumentAnalysis` only for long, ambiguous, conflicting, or high-risk source documents where assisted extraction reduces missed requirements.
+
 ## Workflows
 
 ## 1. Baseline Setup
@@ -75,6 +78,13 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 2. Check whether execution-linked requirements still point to live issues.
 3. Flag orphaned requirements and issue work that lacks requirement coverage.
 
+## 5. Assisted Document Analysis
+
+1. Confirm the target baseline and source document.
+2. Use deterministic extraction first when the document is short or structured.
+3. Use Workspace AI analysis when the document is large, ambiguous, conflicting, or likely to hide requirements across sections.
+4. Record which requirements were accepted, rejected, or deferred after human/governed review.
+
 ## Decision Heuristics
 
 - If many requirements share the same domain and none are grouped, create a group before scaling edits.
@@ -88,3 +98,5 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - Do not delete a baseline before understanding whether it is current.
 - Do not drop issue traceability without saying so explicitly.
 - Do not infer requirement coverage from issue titles alone when requirement records are available.
+- Do not run document analysis for trivial edits or already curated requirement lists.
+- Do not publish AI-extracted requirements directly into a current baseline without review.

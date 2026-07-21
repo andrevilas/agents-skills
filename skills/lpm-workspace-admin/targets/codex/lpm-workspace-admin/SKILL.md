@@ -5,9 +5,9 @@ description: Administer LPM workspace structure across projects, teams, labels, 
 
 # LPM Workspace Admin
 
-Use this skill when the task is workspace governance over the `lpm` MCP. It covers structural administration that is broader than one delivery flow: projects, teams, labels, cycles, milestones, notifications, and cleanup actions.
+Use this skill when the task is workspace governance over the `lpm` MCP. It covers structural administration that is broader than one delivery flow: projects, teams, labels, cycles, milestones, notifications, cleanup actions, and operational posture for feature flags.
 
-For API keys and Workspace AI credentials, use `access-and-credentials-admin`.
+For API keys and Workspace AI credentials, use `access-and-credentials-admin`. For AI feature posture, apply the cost-benefit policy in the repository documentation: deterministic signals first, AI only when it improves ambiguity, throughput, or decision quality.
 
 ## When To Use
 
@@ -19,6 +19,7 @@ Use this skill when the user asks to:
 - inspect or clean up cycles and milestones
 - review notifications or hygiene tasks
 - rationalize duplicated structures or stale entities
+- review whether Workspace AI or Gen App Builder features should remain enabled, reduced, or gated
 
 Read [references/lpm-capabilities.md](./references/lpm-capabilities.md) when you need exact tool mapping.
 Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wants a realistic end-to-end administrative flow.
@@ -50,6 +51,9 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 5. Keep administrative changes auditable.
    State the structural reason for each mutation.
 
+6. Govern AI feature posture by value.
+   Treat Workspace AI and Gen App Builder as cost-governed workspace capabilities. Before recommending enablement or expansion, check usage, errors, daily limits, fallback behavior, and whether the feature solves a real workflow gap.
+
 ## Workflows
 
 ## 1. Portfolio Cleanup
@@ -76,12 +80,22 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 2. Mark resolved noise as read.
 3. Create notifications only when escalation adds operational value.
 
+## 5. AI Feature Governance
+
+1. Inspect the workspace/project context and the current AI usage summary when available.
+2. Classify each enabled feature as useful, idle, risky, or intentionally reserved.
+3. Keep embeddings/search/suggestions enabled only when the workflow uses them or is about to use them.
+4. Keep ranking, grounding, document analysis, indexing/backfill, and Autopilot expansion gated by a concrete benefit and cost guardrail.
+5. Route credential creation, rotation, or provider setup to `access-and-credentials-admin`.
+
 ## Decision Heuristics
 
 - If two labels represent the same concept with cosmetic differences, standardize before expanding the taxonomy.
 - If a project is inactive but still useful historically, archive it instead of deleting it.
 - If a team has no meaningful ownership boundary, avoid creating another one.
 - If cycles or milestones overlap without clear purpose, consolidate naming and ownership before adding more.
+- If a Gen App Builder or Workspace AI feature is enabled but unused, treat that as a governance signal: either plan a real adoption smoke, lower its cap, or recommend disabling it until demand exists.
+- If ranking or grounding is enabled, verify that the decision quality benefit justifies cost and is covered by budget.
 
 ## Guardrails
 
@@ -89,3 +103,5 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - Do not create duplicate teams or labels without checking the current catalog.
 - Do not treat notifications as a task queue substitute when comments or issue updates would be more appropriate.
 - Do not create API keys in this skill; route access provisioning to `access-and-credentials-admin`.
+- Do not enable or expand AI features just to remove a warning. Validate the workflow demand first.
+- Do not manage raw AI credentials here; this skill governs feature posture, not secrets.

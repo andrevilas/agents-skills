@@ -19,6 +19,7 @@ Transformar o agente em um operador de requisitos capaz de:
 - traceability review
 - baseline hygiene
 - change control
+- requirements AI analysis cost control
 
 ## Princípios
 
@@ -26,3 +27,4 @@ Transformar o agente em um operador de requisitos capaz de:
 - manter nomes e estados consistentes
 - preservar vínculo entre requisito, grupo e issue quando existir
 - evitar drift entre baseline corrente e backlog de execução
+- usar analise assistida de documentos apenas quando volume, ambiguidade ou risco de omissao justificar o custo

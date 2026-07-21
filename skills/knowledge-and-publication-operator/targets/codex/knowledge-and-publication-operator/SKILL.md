@@ -41,6 +41,9 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 4. Keep documentation auditable.
    State what the artifact is for and why it belongs in project context.
 
+5. Control indexing and AI search cost.
+   Use existing knowledge items, files, and help articles first. Trigger indexing/backfill only after source changes or when search/grounding value is clear enough to justify the cost.
+
 ## Workflows
 
 ## 1. Knowledge Review
@@ -61,8 +64,17 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 2. Organize them into project context.
 3. Prepare the project for downstream publication workflows.
 
+## 4. Indexing And Search Readiness
+
+1. Check whether source content changed materially.
+2. Prefer targeted indexing over broad backfill.
+3. Use managed search or grounding only when it improves retrieval, citation, or decision quality beyond direct file/help-article reads.
+4. Record the source set, scope, and reason for any broad indexing/backfill recommendation.
+
 ## Guardrails
 
 - Do not treat unpublished local assumptions as equivalent to governed help articles.
 - Do not delete knowledge context without understanding its project role.
 - Do not collapse every file into a knowledge item without curation intent.
+- Do not reindex unchanged sources just because an index feature is enabled.
+- Do not use grounding as a substitute for reading the most relevant governed source.

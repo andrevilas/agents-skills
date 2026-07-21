@@ -12,6 +12,7 @@ Transformar o agente em um operador capaz de:
 - manter compatibilidade entre targets `Codex` e `Antigravity`
 - explicitar guardrails de execucao remota, evidencias e credenciais quando aplicavel
 - anexar no LPM toda evidencia que ajude a recriar ou analisar cenarios/testes posteriormente
+- aplicar governanca de custo-beneficio quando o workflow tocar Workspace AI, Gen App Builder ou AISH
 
 ## Capacidades Centrais
 
@@ -28,3 +29,4 @@ Transformar o agente em um operador capaz de:
 - documentar guardrails junto com o workflow
 - tratar evidencias como artefatos persistentes que exigem sanitizacao
 - nao substituir anexos recuperaveis por comentarios, caminhos locais ou IDs externos quando a evidencia precisa ser inspecionada depois
+- usar contexto deterministico antes de IA e exigir beneficio, limite, fallback e evidencia para recursos caros

@@ -42,6 +42,9 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 4. Preserve reviewability.
    Make routing decisions easy to audit later.
 
+5. Use AI routing economically.
+   Treat candidate ranking and grounding as escalation tools, not the default. Use deterministic ownership, routing profiles, dependency proximity, and history first. Use Gen App Builder ranking/grounding only when multiple candidates remain plausible or the decision is cross-workspace and material.
+
 ## Workflows
 
 ## 1. Intake Triage
@@ -54,6 +57,7 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 
 1. Inspect candidate ranking and ownership coverage.
 2. Approve, split, reject, or defer with explicit notes.
+3. If ranking/grounding influenced the decision, record why deterministic signals were insufficient and what source/context changed the route.
 
 ## 3. Alignment Check
 
@@ -65,3 +69,5 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - Do not route work without reading workspace context first.
 - Do not force a single-project route when ownership is genuinely split.
 - Do not confuse keyword matches with real domain ownership.
+- Do not invoke ranking or grounding for obvious single-owner requests.
+- Do not let an AI-ranked candidate override explicit ownership without a governance note.

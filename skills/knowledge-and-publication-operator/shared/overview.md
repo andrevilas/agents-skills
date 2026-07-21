@@ -17,6 +17,7 @@ Transformar o agente em um operador capaz de:
 - help article retrieval
 - file-backed context review
 - publication-oriented documentation flow
+- indexing and search cost control
 
 ## Princípios
 
@@ -24,3 +25,4 @@ Transformar o agente em um operador capaz de:
 - separar arquivo bruto, item de conhecimento e artigo de ajuda
 - manter contexto documental rastreável para o projeto
 - tratar publicação como ato deliberado de governança
+- executar indexing/backfill somente quando houver mudança relevante de fonte ou demanda clara de busca/grounding

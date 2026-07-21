@@ -45,6 +45,9 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
 6. Project cockpit is the operational read model.
    Prefer the AISH project view for project-scoped jobs, decisions, hosts, evidence, and timeline before reconstructing state manually from many calls.
 
+7. Apply the AI cost gate.
+   Use deterministic LPM context, tests, repo inspection, and analytics before spending model calls. Use stronger AI review, continuous Autopilot, remote runners, or managed execution only when the expected benefit is explicit and bounded.
+
 ## Standard Workflow
 
 1. Inspect LPM context.
@@ -52,6 +55,8 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
 
 2. Plan with AISH Autopilot.
    Use the `/aish` intake or `lpm aish autopilot plan` to turn the objective into issue drafts, checkpoints, guardrails, and risk notes.
+
+   Include the cost posture when the plan depends on repeated model calls, ranking/grounding, remote runners, or continuous Autopilot: max jobs, timeout, stop condition, target host policy, release boundary, and required evidence.
 
 3. Materialize only after scope review.
    Create LPM issues and queued AISH jobs with `runnerMayExecute=false`.
@@ -101,6 +106,7 @@ Continuous Autopilot is valid only when the user explicitly authorizes it in the
 - whether deploy is included or remains gated
 - required validation and smoke evidence
 - required recoverable LPM attachments for screenshots, reports, traces, manifests, JSON/log output, and runner scripts when applicable
+- AI cost posture: max model-heavy planning/review passes, stop condition, and fallback to deterministic validation
 
 If any limit is missing, fall back to job-by-job approval. Stop when validation fails, a governance decision is required, a secret would be exposed, a remote host is unhealthy, or a release boundary is reached.
 
@@ -120,6 +126,7 @@ If any limit is missing, fall back to job-by-job approval. Stop when validation 
 - Do not assume local credentials, git remotes, VPN access, or browser auth exist on a remote runner.
 - Do not reuse a remote workdir for unrelated work without an explicit cleanup or repo sync step.
 - Do not enable Cloud Run Jobs or managed runners without the managed-runner gate.
+- Do not run open-ended Autopilot loops or repeated model-heavy reviews without max jobs, timeout, stop condition, and a concrete delivery benefit.
 - Do not leave approved queued jobs behind at the end of a cycle; consume, cancel, or explicitly block them.
 - Do not claim deploy completion without AISH pipeline evidence and authenticated smoke evidence against the deployed target.
 - Do not close a visually validated issue or job when Playwright/browser screenshots remain only in local files, comments, chat, or AISH metadata; attach them to the relevant LPM activity and verify with `list_activity_attachments`.

@@ -59,3 +59,4 @@ The current LPM MCP exposes these tool groups:
 - Do not use global user enumeration; resolve people through project, workspace, or team membership when needed.
 - If the workflow touches remote execution, autonomous queues, credentials, or evidence, define onboarding, least-privilege, output sanitization, cleanup, smoke, and pending-job closure rules.
 - If the workflow includes visual validation, browser smoke, UI QA, or Playwright, attach captured screenshots to the relevant LPM activity before reporting closure.
+- If the workflow touches Workspace AI, Gen App Builder, or AISH, apply `docs/ai-cost-benefit-governance.md`: deterministic context first, AI only when it improves the workflow, expensive features only with limits, fallback, and evidence.

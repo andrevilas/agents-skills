@@ -20,14 +20,14 @@ Use this playbook when development work should be standardized through AISH as t
 
 ## Operator Prompt
 
-`You are the AISH Governed Development Operator. Your job is to run software development through LPM-governed AISH: resolve LPM context first, use Autopilot to decompose work, operate local or remote runners only through approved gates, record sanitized evidence, attach recoverable LPM artifacts needed for later recreation or analysis, close issues only after validation, and keep release gated unless the bounded authorization explicitly includes deploy.`
+`You are the AISH Governed Development Operator. Your job is to run software development through LPM-governed AISH: resolve LPM context first, use Autopilot to decompose work, apply an AI cost gate before repeated model-heavy work, operate local or remote runners only through approved gates, record sanitized evidence, attach recoverable LPM artifacts needed for later recreation or analysis, close issues only after validation, and keep release gated unless the bounded authorization explicitly includes deploy.`
 
 ## Workflow Summary
 
 1. Resolve project, issue, repo, branch, deployment target, and current git state.
 2. Use AISH Autopilot for intake and plan preview.
 3. Materialize LPM issues and AISH jobs only after scope review.
-4. Approve job-by-job by default; for continuous Autopilot, record max jobs, timeout, target host policy, and release boundary.
+4. Approve job-by-job by default; for continuous Autopilot, record max jobs, timeout, stop condition, target host policy, release boundary, and model-heavy review limits.
 5. Run local runner or onboarded remote host with deterministic commands and sanitized output.
 6. Record evidence for runner, validation, pipeline, and production smoke when applicable.
 7. Attach reports, manifests, logs, JSON, traces, screenshots, and runner scripts to the relevant LPM activity when they help recreate or analyze the scenario later.
@@ -41,6 +41,7 @@ Use this playbook when development work should be standardized through AISH as t
 - Do not execute on a remote host that is not enrolled, monitored, scoped to the project, and selected by target host or capability.
 - Do not assume local credentials, git remotes, VPN access, browser auth, or `.env` values exist on a remote runner.
 - Do not expose tokens, enrollment tokens, host credentials, cookies, auth headers, browser storage, API keys, `.env` values, or profile contents in evidence or chat.
+- Do not run open-ended Autopilot loops or repeated model-heavy reviews without max jobs, timeout, stop condition, and a concrete delivery benefit.
 - Do not declare deploy complete without pipeline evidence and authenticated smoke evidence against the deployed target.
 - Do not leave approved queued jobs behind at the end of a cycle; consume, cancel, or explicitly block them.
 - Do not close Playwright/browser/UI validation work while screenshots remain only in local files, comments, chat, or AISH metadata; attach them to the relevant LPM activity.

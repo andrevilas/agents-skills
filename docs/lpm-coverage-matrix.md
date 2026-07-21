@@ -27,7 +27,7 @@ Esta matriz documenta a cobertura funcional do catálogo `agents-skills` sobre a
 | `dependency-resolution-operator` | Dependências e bloqueios | graph, summary, resolution context, blocker follow-up, next activity | `get_project_dependency_graph`, `get_project_dependency_summary`, `list_issue_links`, `list_blocked_project_issues`, `get_project_resolution_context`, `get_project_resolution_action_catalog`, `get_issue`, `update_issue`, `set_project_issue_blocker_context`, `create_comment`, `recommend_next_activity` |
 | `workspace-routing-operator` | Intake e roteamento | preview de routing, review de routing, alinhamento workspace/projetos | `get_workspace_executive_context`, `preview_workspace_routing`, `review_workspace_routing`, `list_workspace_projects`, `list_unowned_domains_or_capabilities`, `validate_workspace_project_alignment`, `get_workspace_decision_inbox` |
 | `workspace-executive-context-operator` | Contexto executivo do workspace | executive context, owner surface, gaps, readiness, operating model, routing policy | `get_workspace_executive_context`, `get_workspace_owner_surface`, `get_workspace_read_model`, `validate_workspace_context_completeness`, `validate_workspace_project_alignment`, `generate_workspace_readiness_report`, `list_workspace_context_gaps`, `list_missing_governance_assignments`, `list_unowned_domains_or_capabilities`, `draft_workspace_operating_model`, `draft_workspace_routing_policy`, `apply_workspace_context_update` |
-| `lpm-workspace-admin` | Administração estrutural | projetos, times, ciclos, milestones, labels, notificações, hygiene administrativa | `list_projects`, `get_project`, `create_project`, `update_project`, `archive_project`, `unarchive_project`, `delete_project`, `list_teams`, `get_team`, `create_team`, `update_team`, `delete_team`, `list_team_members`, `add_team_member`, `remove_team_member`, `list_cycles`, `get_cycle`, `create_cycle`, `update_cycle`, `delete_cycle`, `list_milestones`, `get_milestone`, `create_milestone`, `update_milestone`, `delete_milestone`, `list_labels`, `create_label`, `update_label`, `delete_label`, `list_notifications`, `mark_notification_read`, `create_notification` |
+| `lpm-workspace-admin` | Administração estrutural | projetos, times, ciclos, milestones, labels, notificações, hygiene administrativa, governança operacional de feature flags AI | `list_projects`, `get_project`, `create_project`, `update_project`, `archive_project`, `unarchive_project`, `delete_project`, `list_teams`, `get_team`, `create_team`, `update_team`, `delete_team`, `list_team_members`, `add_team_member`, `remove_team_member`, `list_cycles`, `get_cycle`, `create_cycle`, `update_cycle`, `delete_cycle`, `list_milestones`, `get_milestone`, `create_milestone`, `update_milestone`, `delete_milestone`, `list_labels`, `create_label`, `update_label`, `delete_label`, `list_notifications`, `mark_notification_read`, `create_notification` |
 | `portfolio-health-review` | Saúde executiva e portfólio | health review, analytics, burndown, ownership concentration, follow-up executivo | `get_project_analytics`, `list_projects`, `get_project`, `list_issues`, `get_issue`, `list_issue_links`, `list_comments`, `list_notifications`, `create_notification` |
 | `analytics-bridge-operator` | Analytics bridge | runs, processamento, observability, sync coverage | `create_analytics_bridge_run`, `process_analytics_bridge_run`, `list_analytics_bridge_runs`, `get_analytics_bridge_observability`, `get_project`, `get_workspace` |
 | `webhook-integration-operator` | Webhooks | subscriptions, testes, deliveries | `create_webhook_subscription`, `list_webhook_subscriptions`, `update_webhook_subscription`, `delete_webhook_subscription`, `test_webhook_subscription`, `list_webhook_deliveries`, `get_project`, `get_workspace` |
@@ -53,6 +53,7 @@ O catálogo cobre as áreas operacionais relevantes do LPM:
 - webhooks
 - knowledge/publication
 - credenciais e acesso
+- governança transversal de custo-benefício de IA em Workspace AI, Gen App Builder e AISH
 
 ### Sobreposição intencional
 
@@ -63,6 +64,13 @@ Há sobreposição deliberada entre algumas skills:
 - `governance-decision-operator` e `aish-governed-development-operator` compartilham linguagem de decisão, mas a primeira opera governance threads do LPM enquanto a segunda opera checkpoints e decision queues do AISH
 - `workspace-executive-context-operator` e `workspace-routing-operator` compartilham leitura de contexto de workspace, mas não o mesmo workflow
 - `lpm-workspace-admin` e `access-and-credentials-admin` encostam em access control, mas a segunda concentra guardrails técnicos
+- `lpm-workspace-admin` governa feature flags e postura operacional de IA; `access-and-credentials-admin` governa credenciais e menor privilégio; `aish-governed-development-operator`, `workspace-routing-operator`, `knowledge-and-publication-operator` e `requirements-lifecycle-manager` consomem IA somente quando o ganho operacional justificar
+
+### Política transversal de IA
+
+A referência canônica é `docs/ai-cost-benefit-governance.md`.
+
+Ela não cria uma skill separada porque custo-benefício de IA é uma preocupação transversal. Skills que habilitam, decidem ou consomem Workspace AI, Gen App Builder ou AISH devem aplicar a ordem: determinístico primeiro, IA leve sob demanda, IA cara com justificativa, evidência depois.
 
 ### O que não significa
 

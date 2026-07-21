@@ -17,6 +17,7 @@ Transformar o agente em um operador capaz de:
 - routing candidate review
 - workspace alignment
 - cross-project routing decisions
+- AI-assisted routing cost control
 
 ## Princípios
 
@@ -24,3 +25,4 @@ Transformar o agente em um operador capaz de:
 - usar sinais de domínio e capacidade antes de roteamento manual
 - evitar criar ambiguidade entre projetos com ownership sobreposto
 - registrar o motivo do roteamento, não só o resultado
+- usar ranking/grounding apenas quando sinais determinísticos gerarem múltiplos candidatos plausíveis ou decisão cross-workspace relevante

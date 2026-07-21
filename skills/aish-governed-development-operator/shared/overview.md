@@ -33,6 +33,7 @@ Esta skill padroniza o ciclo de desenvolvimento assistido por AISH. Ela nao subs
 - Hosts remotos precisam de onboarding, capabilities, monitoramento e cleanup.
 - Cloud Run Jobs e runner gerenciado permanecem gateados.
 - Nenhum deploy ocorre sem release gate explicito ou sem autorizacao Autopilot limitada que inclua deploy.
+- Uso de IA deve seguir custo-beneficio: contexto deterministico primeiro, modelo forte apenas quando o risco/complexidade justificar, continuous Autopilot sempre com limite de jobs, timeout e stop condition.
 
 ## Fluxos Centrais
 
@@ -46,6 +47,7 @@ Esta skill padroniza o ciclo de desenvolvimento assistido por AISH. Ela nao subs
 - evidencia e fechamento
 - release gate
 - hygiene de filas AISH
+- cost gate de Autopilot e runners
 
 ## Resultado Esperado
 
@@ -60,5 +62,6 @@ Ao final de um ciclo, deve existir uma trilha rastreavel:
 - validacao automatizada
 - evidencia de pipeline, deploy e smoke quando aplicavel
 - status final das issues e jobs
+- justificativa de uso quando IA forte, continuous Autopilot, runner remoto ou managed execution forem escolhidos
 
 Evidencia AISH nao basta quando os artefatos sao necessarios para auditoria humana ou recuperacao pela UI. Nesses casos, o fechamento deve tambem registrar `activity_attachment` no LPM e confirmar a recuperacao via `list_activity_attachments`.

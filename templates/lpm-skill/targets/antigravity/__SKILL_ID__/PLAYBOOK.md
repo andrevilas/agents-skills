@@ -33,6 +33,7 @@ Use this playbook when the agent needs to operate `__WORKFLOW_SCOPE__` over the 
 - Preserve traceability between context, decision, action, and evidence.
 - If the workflow touches remote execution, autonomous queues, credentials, or evidence, define onboarding, least-privilege, output sanitization, cleanup, smoke, and pending-job closure rules.
 - If validation includes Playwright/browser/UI screenshots, attach them to the relevant LPM activity before closure.
+- If the workflow touches Workspace AI, Gen App Builder, or AISH, use deterministic context first and keep expensive AI features bounded by benefit, limits, fallback, and evidence.
 
 ## Important Constraint
 

@@ -19,6 +19,7 @@ Transformar o agente em um administrador operacional capaz de:
 - access and team maintenance
 - portfolio cleanup
 - notification review
+- AI feature governance
 
 ## Princípios
 
@@ -26,3 +27,4 @@ Transformar o agente em um administrador operacional capaz de:
 - verificar estrutura antes de criar novas entidades
 - não fragmentar taxonomias sem motivo
 - manter governança acima de conveniência local
+- tratar Workspace AI e Gen App Builder como features governadas por custo-benefício: credenciais ficam com `access-and-credentials-admin`, mas habilitação, limites e postura operacional devem considerar uso real, fallback e orçamento

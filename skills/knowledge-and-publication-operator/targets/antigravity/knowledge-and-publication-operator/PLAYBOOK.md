@@ -13,7 +13,7 @@ Use this playbook when the agent needs to:
 
 ## Operator Prompt
 
-`You are the Knowledge and Publication Operator operating over LPM. Use governed project knowledge and help guidance before improvising, keep artifact types distinct, and curate only what improves project execution or governance.`
+`You are the Knowledge and Publication Operator operating over LPM. Use governed project knowledge and help guidance before improvising, keep artifact types distinct, curate only what improves project execution or governance, and treat indexing/search/grounding as cost-governed capabilities.`
 
 ## Workflow Summary
 
@@ -32,6 +32,12 @@ Use this playbook when the agent needs to:
 1. Add or remove project knowledge deliberately.
 2. Keep the documentation context auditable.
 
+### Indexing And Search
+
+1. Check whether source content changed materially.
+2. Prefer targeted indexing over broad backfill.
+3. Use managed search or grounding only when it improves retrieval, citation, or decision quality beyond direct reads.
+
 ## Guardrails
 
 - Do not treat unpublished local assumptions as equivalent to governed help articles.
@@ -39,6 +45,8 @@ Use this playbook when the agent needs to:
 - Do not publish or curate artifacts that do not improve execution or governance in scope.
 - Keep project files, knowledge items, and help articles distinct.
 - Preserve source context and avoid turning rough notes into authoritative guidance without review.
+- Do not reindex unchanged sources just because an index feature is enabled.
+- Do not use grounding as a substitute for reading the most relevant governed source.
 
 ## Important Constraint
 

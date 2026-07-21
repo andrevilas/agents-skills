@@ -98,6 +98,19 @@ Diretrizes atuais:
 - tratar Workspace AI e Gen App Builder como superficies com governanca de custo
 - tratar AISH como plano de execucao governado por LPM: Autopilot para decomposicao, jobs com aprovacao por checkpoint, runners locais/remotos onboarded, cockpit por projeto, evidencia antes de fechamento e smoke autenticado apos deploy
 
+Política transversal para IA:
+
+- usar sinais determinísticos do LPM antes de acionar IA
+- reservar ranking, grounding, análise documental extensa e loops Autopilot para casos com ganho claro
+- verificar flags, limites diários, erros, fallback e billing antes de habilitar ou ampliar recursos
+- registrar o motivo operacional quando uma chamada de IA orientar decisão, backlog, roteamento ou release
+
+Referência:
+
+```text
+docs/ai-cost-benefit-governance.md
+```
+
 ## Como organizar o catálogo
 
 - mantenha skills por domínio operacional, não por tool isolada
@@ -107,6 +120,7 @@ Diretrizes atuais:
 - prefira adicionar referências em `targets/codex/<skill>/references/` quando o fluxo exigir detalhe extra, mantendo `SKILL.md` enxuto
 - para validação semântica, mantenha um `references/e2e-examples.md` nas skills com workflow operacional próprio
 - se a skill tocar execucao remota, filas autonomas, credenciais ou evidencias, inclua guardrails explicitos para onboarding, menor privilegio, sanitizacao, cleanup, smoke e fechamento de jobs aprovados
+- se a skill tocar Workspace AI, Gen App Builder ou AISH, aplique a política `docs/ai-cost-benefit-governance.md` sem duplicar texto extenso dentro do `SKILL.md`
 
 ## Template base
 
