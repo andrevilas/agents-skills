@@ -29,6 +29,7 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
 This skill assumes the `lpm` MCP exposes these tool groups:
 
 - Analytics: `get_project_analytics`
+- Integrity and scope: `get_project_read_model`, `get_project_scope_resolution_context`
 - Project scope: `list_projects`, `get_project`
 - Execution context: `list_issues`, `get_issue`
 - Dependencies: `list_issue_links`
@@ -41,7 +42,7 @@ This skill assumes the `lpm` MCP exposes these tool groups:
    State the exact project, cycle, milestone, or portfolio slice before making claims.
 
 2. Use canonical metrics first.
-   Pull `get_project_analytics` before forming a delivery-health narrative.
+   Pull `get_project_analytics` before forming a delivery-health narrative, but evaluate delivery and `metrics.integrity` together.
 
 3. Separate fact from interpretation.
    Keep raw metrics, inferred risks, and recommended actions distinct.
@@ -57,8 +58,8 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 ## 1. Project Health Review
 
 1. Resolve project scope.
-2. Pull analytics.
-3. Summarize status distribution, completion rate, completion time, and burndown shape.
+2. Pull analytics, project read model, and scope-resolution context.
+3. Summarize status distribution, completion rate, completion time, burndown shape, and integrity signals.
 4. Drill into blockers and risky work only where the metrics suggest pressure.
 5. Return a concise health summary and actions.
 
@@ -83,6 +84,8 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - Rising average completion time is a warning signal, not proof by itself.
 - One owner holding more than roughly 40 percent of active work indicates concentration risk.
 - Repeated notifications around the same scope suggest unresolved operational pressure.
+- Any invalid lifecycle state, stale active cycle, orphan AISH/Autopilot item, terminal issue-job mismatch, or post-baseline requirement update means health is at least `watch`.
+- Five or more accumulated lifecycle/orphan/terminal violations should be treated as `critical` unless live evidence proves the signal is stale.
 
 ## Reporting Style
 
@@ -93,6 +96,7 @@ Use this pattern:
 ## Guardrails
 
 - Do not infer health without first reading analytics when the tool is available.
+- Do not repeat `healthy` from the top-level metric without checking `metrics.integrity`, working-scope drift, and the current execution batch.
 - Do not report blocker clearance unless issue links or comments support it.
 - Do not turn a thin local signal into a portfolio-wide claim without comparable evidence.
 - Do not mutate operational objects unless the user explicitly asks for execution.

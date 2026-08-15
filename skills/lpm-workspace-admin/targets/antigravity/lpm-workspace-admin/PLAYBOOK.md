@@ -22,6 +22,7 @@ Use this playbook when the agent needs to administer workspace structure over th
 
 1. Inspect existing projects, teams, and planning structures.
 2. Update or archive before deleting.
+3. After unarchiving, verify repository links, baseline, cycle, milestone, ownership, and analytics integrity.
 
 ### Taxonomy
 
@@ -44,6 +45,7 @@ Use this playbook when the agent needs to administer workspace structure over th
 
 - Do not create duplicate projects, teams, labels, cycles, or milestones before checking current structure.
 - Prefer archive/unarchive over destructive deletion unless the user explicitly requests permanent removal.
+- Treat active cycles past their end date as integrity signals; close or replace only after inspecting remaining work.
 - Do not use global user enumeration; resolve people through workspace, project, or team membership.
 - Do not mutate unrelated workspace taxonomy while solving a narrow request.
 - Keep administrative changes reversible and auditable whenever possible.

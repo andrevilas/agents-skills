@@ -19,6 +19,7 @@ Use this skill when the user asks to:
 - inspect or clean up cycles and milestones
 - review notifications or hygiene tasks
 - rationalize duplicated structures or stale entities
+- restore an archived project and re-establish its repository, cycle, milestone, and baseline governance
 - review whether Workspace AI or Gen App Builder features should remain enabled, reduced, or gated
 
 Read [references/lpm-capabilities.md](./references/lpm-capabilities.md) when you need exact tool mapping.
@@ -45,6 +46,8 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 3. Standardize taxonomy.
    Normalize label, cycle, and milestone naming before adding net-new entities.
 
+   Treat an active cycle whose end date has passed as an integrity signal. Inspect remaining work, then close or deliberately replace it.
+
 4. Preserve shared workspace health.
    Optimize for clarity across the workspace, not just the local project request.
 
@@ -61,6 +64,7 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 1. List projects in scope.
 2. Identify archived, stale, duplicated, or inconsistently named structures.
 3. Prefer `update_project`, `archive_project`, or `unarchive_project` before deletion.
+4. After unarchiving, verify repository links, current baseline, active cycle, open milestone, ownership, and analytics integrity before declaring the project operational.
 
 ## 2. Team Maintenance
 
@@ -94,6 +98,7 @@ This skill assumes the `lpm` MCP exposes these tool groups:
 - If a project is inactive but still useful historically, archive it instead of deleting it.
 - If a team has no meaningful ownership boundary, avoid creating another one.
 - If cycles or milestones overlap without clear purpose, consolidate naming and ownership before adding more.
+- If a project was archived, preserve its historical baseline and create a new governed increment instead of rewriting the historical record.
 - If a Gen App Builder or Workspace AI feature is enabled but unused, treat that as a governance signal: either plan a real adoption smoke, lower its cap, or recommend disabling it until demand exists.
 - If ranking or grounding is enabled, verify that the decision quality benefit justifies cost and is covered by budget.
 

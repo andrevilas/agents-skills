@@ -24,14 +24,14 @@ Use this playbook when development work should be standardized through AISH as t
 
 ## Workflow Summary
 
-1. Resolve project, issue, repo, branch, deployment target, and current git state.
+1. Resolve project, issue, repo, branch, deployment target, current git state, analytics integrity, working scope, and current AISH jobs.
 2. Use AISH Autopilot for intake and plan preview.
-3. Materialize LPM issues and AISH jobs only after scope review.
+3. Materialize LPM issues and AISH jobs only after scope review, using a stable idempotency key.
 4. Approve job-by-job by default; for continuous Autopilot, record max jobs, timeout, stop condition, target host policy, release boundary, and model-heavy review limits.
 5. Run local runner or onboarded remote host with deterministic commands and sanitized output.
 6. Record evidence for runner, validation, pipeline, and production smoke when applicable.
 7. Attach reports, manifests, logs, JSON, traces, screenshots, and runner scripts to the relevant LPM activity when they help recreate or analyze the scenario later.
-8. Close linked issues only after evidence exists and required activity attachments are recoverable.
+8. Close linked issues only after evidence exists, required activity attachments are recoverable, and terminal issue-job reconciliation converges.
 9. Confirm no approved queued jobs remain.
 
 ## Guardrails
@@ -43,6 +43,8 @@ Use this playbook when development work should be standardized through AISH as t
 - Do not expose tokens, enrollment tokens, host credentials, cookies, auth headers, browser storage, API keys, `.env` values, or profile contents in evidence or chat.
 - Do not run open-ended Autopilot loops or repeated model-heavy reviews without max jobs, timeout, stop condition, and a concrete delivery benefit.
 - Do not declare deploy complete without pipeline evidence and authenticated smoke evidence against the deployed target.
+- Do not accept invalid states, stale cycles, orphan work, terminal mismatches, or baseline drift as healthy.
+- Do not ignore failed issue-job reconciliation; preserve it and retry explicitly.
 - Do not leave approved queued jobs behind at the end of a cycle; consume, cancel, or explicitly block them.
 - Do not close Playwright/browser/UI validation work while screenshots remain only in local files, comments, chat, or AISH metadata; attach them to the relevant LPM activity.
 

@@ -1,7 +1,7 @@
 {
   "id": "portfolio-health-review",
   "name": "Portfolio Health Review",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "agent": "antigravity",
   "type": "operational-playbook",
   "entrypoint": "PLAYBOOK.md",

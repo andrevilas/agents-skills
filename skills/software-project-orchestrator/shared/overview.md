@@ -46,7 +46,8 @@ Esta skill não é o lugar principal para governança de requisitos ou administr
 - preservar rastreabilidade
 - usar analytics antes de escalar
 - preservar menor privilegio ao criar ou recomendar chaves MCP
-- tolerar inconsistências operacionais do dado
+- detectar inconsistências operacionais e corrigi-las apenas por transições rastreáveis
+- exigir idempotência e reconciliação terminal quando AISH participa da execução
 
 ## Nota de Compatibilidade
 

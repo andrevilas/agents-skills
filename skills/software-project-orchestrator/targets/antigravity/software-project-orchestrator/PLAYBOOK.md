@@ -56,13 +56,15 @@ Use this playbook when the agent needs to coordinate SDLC work over the `lpm` MC
 ### Monitoring
 
 1. Read project analytics.
-2. Inspect blocker topology.
-3. Report observations first, recommendations second.
+2. Read integrity metrics, working scope, active cycles, and terminal issue-job consistency.
+3. Inspect blocker topology.
+4. Report observations first, recommendations second.
 
 ## Guardrails
 
 - Do not create duplicate labels, cycles, milestones, projects, or teams before checking existing structure.
 - Do not close issues without checking history, comments, and dependency links.
+- Do not silently normalize invalid lifecycle states or ignore failed AISH reconciliation.
 - Do not claim blockers were cleared unless dependency evidence or comments support it.
 - Do not close visually validated issues when screenshots remain only in local files, comments, or chat.
 - Do not bypass LPM with direct Storage uploads for activity evidence.

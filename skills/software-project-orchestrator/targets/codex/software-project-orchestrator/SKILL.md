@@ -87,7 +87,7 @@ If a requested action needs adjacent tools from the same MCP, use them after fir
    Use `archive_project` rather than `delete_project` unless the user clearly wants permanent removal.
 
 9. Tolerate operational data inconsistency.
-   If the tool surface returns mixed cycle states or inconsistent link type spellings, normalize them in your reasoning before making recommendations.
+   If the tool surface returns mixed cycle states or inconsistent link type spellings, report the integrity gap and normalize only through supported, traceable mutations. Never silently convert data just to make analytics look healthy.
 
 10. Preserve least privilege.
    Use `read-only` access for analysis. Recommend or create broader MCP API key presets only when the user explicitly needs mutation, and document why the broader scope is necessary.
@@ -166,13 +166,14 @@ Use [references/operating-templates.md](./references/operating-templates.md) for
 ## 4. Monitoring
 
 1. Use `get_project_analytics`.
-2. Evaluate:
+2. Read `metrics.integrity`, `get_project_read_model`, and `get_project_scope_resolution_context` before calling the project healthy.
+3. Evaluate:
    - completion rate
    - status distribution
    - average completion time
    - 15-day burndown trend
-3. If analytics suggest stagnation, inspect `list_issue_links`, `list_issues`, and issue history.
-4. Report observations first, then recommendations.
+4. If analytics or integrity suggest pressure, inspect `list_issue_links`, `list_issues`, cycles, and issue/job history.
+5. Report observations first, then recommendations.
 
 When no cycle is marked `active`, infer the execution batch from open issues, nearest planned cycle dates, and milestone alignment instead of blocking on strict cycle status.
 
@@ -211,6 +212,7 @@ Escalate from issue-level action to project-level analysis when three or more ac
 - If a task involves AI enablement, report cost guardrails and feature flags before recommending rollout.
 - If an activity requires evidence, use `list_workspace_activities` to identify the activity, `list_activity_attachments` to avoid duplicates, and `upload_activity_attachment` for new files or `create_activity_attachment` only for immutable trusted file URLs. Treat `delete_activity_attachment` as a deliberate cleanup action only.
 - If validation includes screenshots, browser smoke, UI QA, or Playwright, attach the captured screenshots as `image/png` or `image/jpeg` evidence before closing the issue. Include buyer/seller or admin/user perspectives and one sample per relevant parameter class when those distinctions affect the result.
+- If work is executed through AISH, use a stable materialization key and require terminal issue-job reconciliation before marking delivery healthy.
 - For tests or incidents, attach enough evidence to recreate and analyze the scenario later: report or manifest, sanitized JSON/log output, screenshots/traces when visual, runner/script when safe, commit/revision, target environment, and acceptance result.
 
 ## Reporting Style
@@ -231,6 +233,7 @@ Preferred pattern:
 - Do not bypass LPM with direct Firebase Storage uploads for activity evidence.
 - Do not delete active project structures when archival is the safer option.
 - Do not infer analytics when `get_project_analytics` is available; use the source tool first.
+- Do not close a linked issue before its AISH evidence/comment is durable, and do not ignore a failed terminal reconciliation.
 - Do not use global user enumeration. `list_users` is intentionally absent from LPM.
 - Do not create full-scope API keys for routine analysis. Prefer `read-only`, then escalate only for explicit execution.
 - Do not expose AI credentials in comments, issue descriptions, notifications, or reports.

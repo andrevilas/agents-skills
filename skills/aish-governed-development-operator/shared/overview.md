@@ -48,6 +48,8 @@ Esta skill padroniza o ciclo de desenvolvimento assistido por AISH. Ela nao subs
 - release gate
 - hygiene de filas AISH
 - cost gate de Autopilot e runners
+- preflight de integridade e materializacao idempotente
+- reconciliacao terminal issue-job explicita e recuperavel
 
 ## Resultado Esperado
 
@@ -62,6 +64,7 @@ Ao final de um ciclo, deve existir uma trilha rastreavel:
 - validacao automatizada
 - evidencia de pipeline, deploy e smoke quando aplicavel
 - status final das issues e jobs
+- estado de reconciliacao terminal e chave da materializacao governada
 - justificativa de uso quando IA forte, continuous Autopilot, runner remoto ou managed execution forem escolhidos
 
 Evidencia AISH nao basta quando os artefatos sao necessarios para auditoria humana ou recuperacao pela UI. Nesses casos, o fechamento deve tambem registrar `activity_attachment` no LPM e confirmar a recuperacao via `list_activity_attachments`.

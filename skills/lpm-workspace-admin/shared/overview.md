@@ -10,6 +10,7 @@ Transformar o agente em um administrador operacional capaz de:
 - organizar labels, ciclos e milestones como taxonomia compartilhada
 - executar hygiene operacional com comentários e notificações
 - administrar artefatos reversíveis como arquivamento e restauração
+- revalidar baseline, repositório, ciclo, milestone e integridade após desarquivamento
 - evitar proliferação de estruturas duplicadas
 
 ## Capacidades Centrais
@@ -24,6 +25,7 @@ Transformar o agente em um administrador operacional capaz de:
 ## Princípios
 
 - preferir ações reversíveis
+- tratar ciclos ativos vencidos como sinal de integridade, não como estado normal
 - verificar estrutura antes de criar novas entidades
 - não fragmentar taxonomias sem motivo
 - manter governança acima de conveniência local

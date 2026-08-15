@@ -20,8 +20,8 @@ Use this playbook when the agent needs to review delivery health over the `lpm` 
 ### Review
 
 1. Define scope.
-2. Pull analytics.
-3. Inspect high-risk work only where metrics justify deeper analysis.
+2. Pull analytics, integrity, project read model, and working-scope context.
+3. Inspect high-risk work only where delivery or integrity metrics justify deeper analysis.
 
 ### Risk Diagnosis
 
@@ -38,6 +38,7 @@ Use this playbook when the agent needs to review delivery health over the `lpm` 
 ## Guardrails
 
 - Do not infer analytics when current analytics are available.
+- Do not call a project healthy when integrity reports drift, stale cycles, invalid states, orphan work, or terminal mismatches.
 - Do not turn a thin local signal into a portfolio-wide claim without comparable evidence.
 - Do not mutate project state during a review unless the user explicitly asks for execution.
 - Separate metric facts from interpretation and recommendations.

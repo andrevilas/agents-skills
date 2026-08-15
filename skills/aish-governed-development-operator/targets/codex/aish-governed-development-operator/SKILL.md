@@ -48,6 +48,9 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
 7. Apply the AI cost gate.
    Use deterministic LPM context, tests, repo inspection, and analytics before spending model calls. Use stronger AI review, continuous Autopilot, remote runners, or managed execution only when the expected benefit is explicit and bounded.
 
+8. Integrity precedes throughput.
+   Read `get_project_analytics.metrics.integrity`, the project read model, working-scope context, and existing AISH jobs before materializing work. A high completion rate does not override invalid states, stale cycles, orphan work, terminal mismatches, or baseline drift.
+
 ## Standard Workflow
 
 1. Inspect LPM context.
@@ -57,6 +60,8 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
    Use the `/aish` intake or `lpm aish autopilot plan` to turn the objective into issue drafts, checkpoints, guardrails, and risk notes.
 
    Include the cost posture when the plan depends on repeated model calls, ranking/grounding, remote runners, or continuous Autopilot: max jobs, timeout, stop condition, target host policy, release boundary, and required evidence.
+
+   For materialization, use a stable `--idempotency-key` for the governed objective. A retry with the same key must reuse the run, issues, and jobs.
 
 3. Materialize only after scope review.
    Create LPM issues and queued AISH jobs with `runnerMayExecute=false`.
@@ -71,7 +76,7 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
    Run relevant tests, lint, build, smoke, or dry-run gates. Ensure the AISH job has evidence IDs and attach key artifacts to the linked LPM activity when they help recreate or analyze the scenario later.
 
 7. Close or advance LPM work.
-   Move linked issues only after reading status, evidence, blockers, and recoverable LPM activity attachments. Leave downstream release work gated until evidence review.
+   Move linked issues only after reading status, evidence, blockers, and recoverable LPM activity attachments. Terminal AISH jobs must expose `issueReconciliation`; retry failed convergence with `lpm-codex aish jobs reconcile --job <jobId> --json`. Leave downstream release work gated until evidence review.
 
 8. Release only when requested.
    Use the project runbook and `AISH_PIPELINE_EVIDENCE=true` for deploys that should publish AISH evidence.
@@ -128,6 +133,8 @@ If any limit is missing, fall back to job-by-job approval. Stop when validation 
 - Do not enable Cloud Run Jobs or managed runners without the managed-runner gate.
 - Do not run open-ended Autopilot loops or repeated model-heavy reviews without max jobs, timeout, stop condition, and a concrete delivery benefit.
 - Do not leave approved queued jobs behind at the end of a cycle; consume, cancel, or explicitly block them.
+- Do not rerun Autopilot materialization without a stable idempotency key or a deliberate new scope identity.
+- Do not accept a completed job with an open linked issue, or a done issue with a nonterminal linked job, as healthy.
 - Do not claim deploy completion without AISH pipeline evidence and authenticated smoke evidence against the deployed target.
 - Do not close a visually validated issue or job when Playwright/browser screenshots remain only in local files, comments, chat, or AISH metadata; attach them to the relevant LPM activity and verify with `list_activity_attachments`.
 - Do not treat an AISH `evidenceId` as a substitute for LPM activity attachments when the user or future agent must recover screenshots, logs, JSON, traces, reports, or runner scripts from the issue timeline.
