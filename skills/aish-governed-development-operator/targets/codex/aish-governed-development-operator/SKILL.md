@@ -73,7 +73,11 @@ Read [references/e2e-examples.md](./references/e2e-examples.md) when the user wa
    Execute from the real repo checkout or from an onboarded remote host with a deterministic command. Use `--once` for controlled execution unless running an explicitly authorized queue worker.
 
 6. Validate and record evidence.
-   Run relevant tests, lint, build, smoke, or dry-run gates. Ensure the AISH job has evidence IDs and attach key artifacts to the linked LPM activity when they help recreate or analyze the scenario later.
+   Run relevant tests, lint, build, smoke, or dry-run gates. Before integrated tests, verify dependency health for the declared database, queue, object store, workflow engine, and target server instead of treating connection failures as product failures.
+
+   Validation processes must be resource-bounded and must terminate. Prefer isolated batches that preserve the same coverage when a monolithic suite grows without bound; diagnose render loops or leaked handles before raising heap limits. Test harnesses must close test-owned pools, event-bus connections, servers, timers, and workers. A gate that prints success but does not exit is still failed.
+
+   Ensure the AISH job has evidence IDs and attach key artifacts to the linked LPM activity when they help recreate or analyze the scenario later.
 
 7. Close or advance LPM work.
    Move linked issues only after reading status, evidence, blockers, and recoverable LPM activity attachments. Terminal AISH jobs must expose `issueReconciliation`; retry failed convergence with `lpm-codex aish jobs reconcile --job <jobId> --json`. Leave downstream release work gated until evidence review.

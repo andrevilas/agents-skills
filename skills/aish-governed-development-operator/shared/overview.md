@@ -50,6 +50,8 @@ Esta skill padroniza o ciclo de desenvolvimento assistido por AISH. Ela nao subs
 - cost gate de Autopilot e runners
 - preflight de integridade e materializacao idempotente
 - reconciliacao terminal issue-job explicita e recuperavel
+- preflight de dependencias de runtime e saude antes dos testes integrados
+- gates de teste com memoria limitada e encerramento explicito de pools, barramentos, servidores, timers e workers
 
 ## Resultado Esperado
 

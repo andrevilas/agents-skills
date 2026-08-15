@@ -28,6 +28,8 @@ assert_contains "$INTEGRITY_SKILL" 'active cycle past its end date is a health s
 assert_contains "$INTEGRITY_SKILL" 'current baseline does not erase unpublished changes' 'scope-drift detection'
 assert_contains "$AISH_SKILL" '--idempotency-key' 'AISH stable materialization key'
 assert_contains "$AISH_SKILL" 'aish jobs reconcile' 'AISH terminal retry path'
+assert_contains "$AISH_SKILL" 'verify dependency health' 'AISH runtime dependency preflight'
+assert_contains "$AISH_SKILL" 'close test-owned pools, event-bus connections, servers, timers, and workers' 'AISH validation resource closure'
 assert_contains "$HEALTH_SKILL" 'metrics\.integrity' 'composite portfolio health'
 assert_contains "$ORCHESTRATOR_SKILL" 'terminal issue-job reconciliation' 'orchestrator closure contract'
 assert_contains "$ADMIN_SKILL" 'After unarchiving' 'post-unarchive governance preflight'
