@@ -225,6 +225,14 @@ scripts/update-codex-skill.sh governed-project-integrity-review --dest /caminho/
 
 Após cada cópia, o instalador compara recursivamente o destino com a fonte canônica e falha se houver divergência.
 
+Para detectar remoção ou drift posterior nos cinco bundles de integridade distribuídos globalmente e nos três projetos locais, execute:
+
+```bash
+scripts/verify-governed-distribution.sh
+```
+
+O verificador compara 25 cópias com as fontes canônicas e falha se qualquer destino estiver ausente ou divergente. Os caminhos podem ser ajustados por `CODEX_SKILLS_DIR`, `ANTIGRAVITY_SKILLS_DIR`, `LPM_REPO` e `AISH_REPO`.
+
 ## Destinos padrão
 
 - Codex: `~/.codex/skills`

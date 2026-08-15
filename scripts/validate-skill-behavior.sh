@@ -21,6 +21,7 @@ AISH_SKILL="$REPO_ROOT/skills/aish-governed-development-operator/targets/codex/a
 HEALTH_SKILL="$REPO_ROOT/skills/portfolio-health-review/targets/codex/portfolio-health-review/SKILL.md"
 ORCHESTRATOR_SKILL="$REPO_ROOT/skills/software-project-orchestrator/targets/codex/software-project-orchestrator/SKILL.md"
 ADMIN_SKILL="$REPO_ROOT/skills/lpm-workspace-admin/targets/codex/lpm-workspace-admin/SKILL.md"
+DISTRIBUTION_VERIFIER="$REPO_ROOT/scripts/verify-governed-distribution.sh"
 
 assert_contains "$INTEGRITY_SKILL" 'A completed AISH job linked to an issue requires evidence' 'terminal integrity invariant'
 assert_contains "$INTEGRITY_SKILL" 'same key must not create more work items' 'materialization idempotency invariant'
@@ -33,6 +34,7 @@ assert_contains "$AISH_SKILL" 'close test-owned pools, event-bus connections, se
 assert_contains "$HEALTH_SKILL" 'metrics\.integrity' 'composite portfolio health'
 assert_contains "$ORCHESTRATOR_SKILL" 'terminal issue-job reconciliation' 'orchestrator closure contract'
 assert_contains "$ADMIN_SKILL" 'After unarchiving' 'post-unarchive governance preflight'
+assert_contains "$DISTRIBUTION_VERIFIER" 'diff -qr' 'installed distribution drift detection'
 
 echo
 echo 'Behavior validation passed: governed integrity scenarios are present.'

@@ -36,6 +36,7 @@ global catalog rather than a project-local mirror.
   closure, composite health, orchestrated closure, and post-unarchive preflight.
 - Installer smoke validation passed in an isolated temporary destination.
 - Post-install recursive comparisons passed for every destination listed above.
+- A final audit detected that the Antigravity global directory had disappeared after the earlier installation. The five bundles were reinstalled, recursively verified, and `scripts/verify-governed-distribution.sh` was added to detect future missing or divergent copies across all 25 governed destinations.
 
 The repository remains the authoritative source. Local copies are deployment
 artifacts and must be refreshed through `scripts/install-skill.sh` after future
