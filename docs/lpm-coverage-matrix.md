@@ -11,7 +11,7 @@ Esta matriz documenta a cobertura funcional do catálogo `agents-skills` sobre a
 
 ## Status
 
-- Cobertura funcional atual: completa para LPM core e atualizada para AISH governado em 2026-07-14
+- Cobertura funcional atual: completa para LPM core e atualizada para integridade governada LPM/AISH em 2026-08-15
 - Cobertura 1:1 por endpoint: não é o objetivo do catálogo
 - Lacunas funcionais abertas: nenhuma critica apos a atualizacao AISH; acompanhar evolucao de managed runners e Cloud Run Jobs quando sairem do gate
 
@@ -21,6 +21,7 @@ Esta matriz documenta a cobertura funcional do catálogo `agents-skills` sobre a
 | --- | --- | --- | --- |
 | `software-project-orchestrator` | Execução SDLC de projeto | projetos, issues, ciclos, milestones, membros escopados, links, comentários, evidências de atividade, notificações, analytics | `list_projects`, `create_project`, `update_project`, `archive_project`, `unarchive_project`, `create_team`, `add_team_member`, `list_project_assignable_members`, `list_workspace_members`, `create_cycle`, `create_milestone`, `list_labels`, `create_label`, `list_issues`, `get_issue`, `update_issue`, `create_issue_link`, `list_issue_links`, `list_comments`, `create_comment`, `list_workspace_activities`, `list_activity_attachments`, `upload_activity_attachment`, `delete_activity_attachment`, `create_notification`, `get_project_analytics` |
 | `aish-governed-development-operator` | Desenvolvimento governado por AISH | intake Autopilot, materialização de backlog, jobs AISH, aprovação por checkpoint, continuous Autopilot com limites, project cockpit, decision queues AISH, runner local, remote runner hosts, evidências, validação, deploy/smoke e release gate | `list_projects`, `get_project`, `list_issues`, `get_issue`, `create_issue`, `update_issue`, `list_issue_links`, `create_issue_link`, `list_comments`, `create_comment`, AISH `jobs create`, AISH `jobs list`, AISH `jobs get`, AISH `autopilot plan`, AISH `autopilot materialize`, AISH `autopilot approve`, AISH `hosts create-token`, AISH `hosts enroll`, AISH `hosts list`, AISH `hosts revoke`, AISH `host bootstrap`, AISH `host doctor`, AISH `host sync-repos`, AISH `host monitor`, AISH `host start`, AISH `runner start`, AISH `pipeline record` |
+| `governed-project-integrity-review` | Integridade governada | lifecycle canônico, scope drift, ciclos vencidos, órfãos Autopilot/AISH, idempotência, reconciliação terminal e health composto | `get_project`, `get_project_analytics`, `get_project_read_model`, `get_project_scope_resolution_context`, `list_issues`, `get_issue`, `list_comments`, `list_cycles`, `list_milestones`, `list_requirement_baselines`, `list_project_repository_links`, CLI AISH `jobs list`, CLI AISH `jobs reconcile` |
 | `requirements-lifecycle-manager` | Requisitos e baseline | requisitos, grupos, baselines, rastreabilidade de escopo | `list_requirements`, `create_requirement`, `update_requirement`, `delete_requirement`, `list_requirement_baselines`, `create_requirement_baseline`, `update_requirement_baseline`, `delete_requirement_baseline`, `list_requirement_groups`, `create_requirement_group`, `update_requirement_group`, `delete_requirement_group`, `get_project`, `list_issues`, `get_issue` |
 | `scope-baseline-publisher` | Governança de scope publication | working scope, delta, change sets, publicação de baseline | `get_project_scope_resolution_context`, `list_working_scope_delta_entities`, `create_change_set`, `update_project_change_set_status`, `list_change_sets`, `publish_project_baseline_from_resolution`, `publish_change_set`, `list_requirement_baselines`, `list_requirements` |
 | `governance-decision-operator` | Decisão e governança | decision inbox, governance threads, outcomes estruturados, drafting assistido | `get_project_decision_inbox`, `list_project_decision_queue`, `get_governance_thread_resolution_context`, `get_governance_thread_messages`, `reply_to_governance_thread`, `update_governance_thread`, `resolve_governance_thread_with_outcome`, `prepare_issue_draft_from_governance_thread`, `prepare_requirement_draft_from_governance_thread`, `prepare_change_set_draft_from_governance_thread` |
@@ -42,6 +43,7 @@ O catálogo cobre as áreas operacionais relevantes do LPM:
 
 - execução de projeto
 - desenvolvimento governado por AISH
+- revisão e reconciliação de integridade governada
 - operacao de remote runners AISH
 - decision queues AISH e cockpit por projeto
 - governança de requisitos e baselines

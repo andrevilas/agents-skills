@@ -43,6 +43,7 @@ Skills disponíveis neste repositório:
 - `knowledge-and-publication-operator`: curadoria de knowledge items, arquivos e guidance publicado
 - `access-and-credentials-admin`: administração de API keys e AI credentials com guardrails explícitos
 - `aish-governed-development-operator`: padronização de desenvolvimento usando AISH Autopilot governado por LPM, runners locais/remotos, cockpit por projeto, aprovações, validações e evidências
+- `governed-project-integrity-review`: revisão composta e reconciliação de lifecycle, scope, issue-job, evidência e saúde LPM/AISH
 
 Codex:
 
@@ -62,6 +63,7 @@ scripts/install-codex-skill.sh webhook-integration-operator
 scripts/install-codex-skill.sh knowledge-and-publication-operator
 scripts/install-codex-skill.sh access-and-credentials-admin
 scripts/install-codex-skill.sh aish-governed-development-operator
+scripts/install-codex-skill.sh governed-project-integrity-review
 ```
 
 Antigravity:
@@ -82,6 +84,7 @@ scripts/install-antigravity-skill.sh webhook-integration-operator
 scripts/install-antigravity-skill.sh knowledge-and-publication-operator
 scripts/install-antigravity-skill.sh access-and-credentials-admin
 scripts/install-antigravity-skill.sh aish-governed-development-operator
+scripts/install-antigravity-skill.sh governed-project-integrity-review
 ```
 
 ## Baseline LPM
@@ -199,6 +202,7 @@ Valide a estrutura do catálogo com:
 
 ```bash
 scripts/validate-skills.sh
+scripts/validate-skill-behavior.sh
 ```
 
 No GitHub, a mesma checagem roda automaticamente no workflow `.github/workflows/validate-skills.yml` em `push` para `main` e em `pull_request`.
@@ -210,6 +214,16 @@ O validador checa:
 - target de Codex com `SKILL.md` e `agents/openai.yaml`
 - target de Antigravity com `manifest.json` e `PLAYBOOK.md`
 - `references/e2e-examples.md` quando a skill declara workflow operacional no `SKILL.md`
+
+O validador comportamental acrescenta cenários determinísticos para idempotência de materialização, integridade terminal issue-job, ciclos vencidos, drift de baseline, health composto e reativação governada de projetos.
+
+Instalação project-local usa o mesmo instalador com destino explícito:
+
+```bash
+scripts/update-codex-skill.sh governed-project-integrity-review --dest /caminho/do/projeto/.codex/skills
+```
+
+Após cada cópia, o instalador compara recursivamente o destino com a fonte canônica e falha se houver divergência.
 
 ## Destinos padrão
 

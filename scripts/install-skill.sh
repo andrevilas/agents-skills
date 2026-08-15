@@ -94,4 +94,9 @@ fi
 rm -rf "$TARGET_DIR"
 cp -R "$SOURCE_DIR" "$TARGET_DIR"
 
+if ! diff -qr "$SOURCE_DIR" "$TARGET_DIR" >/dev/null; then
+  echo "Installed skill differs from canonical source: $TARGET_DIR" >&2
+  exit 1
+fi
+
 echo "Installed $SKILL for $AGENT at $TARGET_DIR"

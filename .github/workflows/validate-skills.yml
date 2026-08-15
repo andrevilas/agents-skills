@@ -16,3 +16,6 @@ jobs:
 
       - name: Validate skill catalog structure
         run: scripts/validate-skills.sh
+
+      - name: Validate governed behavior contracts
+        run: scripts/validate-skill-behavior.sh
