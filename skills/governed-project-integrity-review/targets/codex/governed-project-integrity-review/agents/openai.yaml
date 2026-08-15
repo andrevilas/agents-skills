@@ -1,0 +1,4 @@
+interface:
+  display_name: "Governed Project Integrity Review"
+  short_description: "Detect and reconcile governance and execution integrity drift."
+  default_prompt: "Review this LPM/AISH project for lifecycle, scope, evidence, and execution integrity, then propose a governed reconciliation."

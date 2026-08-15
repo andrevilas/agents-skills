@@ -1,0 +1,9 @@
+{
+  "id": "governed-project-integrity-review",
+  "name": "Governed Project Integrity Review",
+  "version": "1.0.0",
+  "agent": "antigravity",
+  "type": "operational-playbook",
+  "entrypoint": "PLAYBOOK.md",
+  "description": "Review and reconcile LPM/AISH integrity without masking drift or partial execution."
+}
