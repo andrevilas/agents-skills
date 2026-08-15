@@ -4,11 +4,11 @@
   "status": "active",
   "upstream_repo": "https://github.com/mattpocock/skills.git",
   "default_branch": "main",
-  "upstream_ref": "main",
+  "upstream_ref": "8b78b531ab965735c5dc74f6f7a219e1e37326df",
   "imported_path": "skills/productivity/grill-me/SKILL.md",
   "bundle_target_path": "external/grill-me/codex/grill-me",
-  "synced_at": "2026-05-12",
+  "synced_at": "2026-08-15",
   "synced_by": "codex",
   "local_patch_policy": "patch-in-agents-skills-only-when-explicitly-documented",
-  "notes": "Imported as a Codex-only external bundle. Behavior is intentionally preserved from upstream."
+  "notes": "Imported as a Codex-only external bundle. SKILL.md and agents/openai.yaml are preserved from the pinned upstream commit."
 }

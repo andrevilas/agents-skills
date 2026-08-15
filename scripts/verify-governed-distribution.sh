@@ -11,13 +11,21 @@ AISH_REPO="${AISH_REPO:-$GITHUB_ROOT/ai-software-house}"
 CODEX_GLOBAL="${CODEX_SKILLS_DIR:-$HOME/.codex/skills}"
 ANTIGRAVITY_GLOBAL="${ANTIGRAVITY_SKILLS_DIR:-$HOME/.antigravity/skills}"
 
-SKILLS=(
+GLOBAL_SKILLS=()
+for skill_dir in "$REPO_ROOT"/skills/*; do
+  [[ -d "$skill_dir" ]] || continue
+  GLOBAL_SKILLS+=("${skill_dir##*/}")
+done
+
+PROJECT_SKILLS=(
   governed-project-integrity-review
   aish-governed-development-operator
   portfolio-health-review
   software-project-orchestrator
   lpm-workspace-admin
 )
+
+verified_copy_count=0
 
 verify_copy() {
   local skill="$1"
@@ -36,14 +44,37 @@ verify_copy() {
     return 1
   fi
   echo "OK: $skill $agent at $destination_root"
+  verified_copy_count=$((verified_copy_count + 1))
 }
 
-for skill in "${SKILLS[@]}"; do
+verify_external_codex_copy() {
+  local skill="$1"
+  local source_dir="$REPO_ROOT/external/$skill/codex/$skill"
+  local destination_dir="$CODEX_GLOBAL/$skill"
+
+  if [[ ! -d "$destination_dir" ]]; then
+    echo "FAIL: missing external codex copy for $skill at $destination_dir" >&2
+    return 1
+  fi
+  if ! diff -qr "$source_dir" "$destination_dir" >/dev/null; then
+    echo "FAIL: divergent external codex copy for $skill at $destination_dir" >&2
+    return 1
+  fi
+  echo "OK: $skill external codex at $CODEX_GLOBAL"
+  verified_copy_count=$((verified_copy_count + 1))
+}
+
+for skill in "${GLOBAL_SKILLS[@]}"; do
   verify_copy "$skill" codex "$CODEX_GLOBAL"
   verify_copy "$skill" antigravity "$ANTIGRAVITY_GLOBAL"
+done
+
+for skill in "${PROJECT_SKILLS[@]}"; do
   verify_copy "$skill" codex "$LPM_REPO/.codex/skills"
   verify_copy "$skill" codex "$AISH_REPO/.codex/skills"
   verify_copy "$skill" codex "$REPO_ROOT/.codex/skills"
 done
 
-echo "Governed distribution verified across 25 installed copies."
+verify_external_codex_copy grill-me
+
+echo "Governed distribution verified across $verified_copy_count installed copies."

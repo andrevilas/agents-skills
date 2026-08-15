@@ -77,4 +77,9 @@ fi
 rm -rf "$TARGET_DIR"
 cp -R "$SOURCE_DIR" "$TARGET_DIR"
 
+if ! diff -qr "$SOURCE_DIR" "$TARGET_DIR" >/dev/null; then
+  echo "Installed external skill differs from catalog source: $TARGET_DIR" >&2
+  exit 1
+fi
+
 echo "Installed external Codex skill $SKILL at $TARGET_DIR"

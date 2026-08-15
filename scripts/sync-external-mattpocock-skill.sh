@@ -54,7 +54,8 @@ if [[ -z "$SOURCE_REPO" ]]; then
   exit 1
 fi
 
-SOURCE_FILE="$SOURCE_REPO/skills/productivity/$SKILL/SKILL.md"
+SOURCE_DIR="$SOURCE_REPO/skills/productivity/$SKILL"
+SOURCE_FILE="$SOURCE_DIR/SKILL.md"
 DEST_DIR="${DEST:-$REPO_ROOT/external/$SKILL/codex/$SKILL}"
 
 if [[ ! -f "$SOURCE_FILE" ]]; then
@@ -63,6 +64,11 @@ if [[ ! -f "$SOURCE_FILE" ]]; then
 fi
 
 mkdir -p "$DEST_DIR"
-cp "$SOURCE_FILE" "$DEST_DIR/SKILL.md"
+cp -R "$SOURCE_DIR/." "$DEST_DIR/"
+
+if ! diff -qr "$SOURCE_DIR" "$DEST_DIR" >/dev/null; then
+  echo "Synced external skill differs from upstream source: $DEST_DIR" >&2
+  exit 1
+fi
 
 echo "Synced mattpocock skill $SKILL to $DEST_DIR"
