@@ -1,0 +1,133 @@
+{
+  "id": "lpm-pilot-feedback",
+  "title": "Verify pilot feedback",
+  "version": "2.0.0",
+  "pack": "internal",
+  "kind": "process",
+  "invocation": "implicit",
+  "description": "Use only for LPM maintainers when a pilot or tester (piloto, homologação) reports an LPM problem: verify read-only, classify, register only confirmed defects in the pilot milestone, record processed reports, report to the owner; never reply to the pilot. Not for deploys (use lpm-release-product).",
+  "doneWhen": "Every new report item is classified and recorded in the processed-message state file. Confirmed LPM defects exist once, in the pilot milestone, as an activity or as a comment on its duplicate. Managed-workspace demands are registered in that workspace. The owner has a report in the pilot pattern.",
+  "authorityCeiling": "Process skill; read-only verification; writes activities, comments and evidence only for confirmed items; no AI calls or code searches on the reporter's workspace; never replies to the pilot.",
+  "jobs": [
+    "verify the pilot's new reports and register only the confirmed defects",
+    "the tester reports the ChatGPT connector lost create_comment: check the request logs and the active OAuth grant",
+    "the pilot reported the same bug again: comment on the existing activity instead of creating a new one",
+    "verifique os relatos novos do piloto e registre só os defeitos confirmados no marco do piloto",
+    "o piloto reclamou do Advisor: classifique e transforme a falha confirmada em fixture do golden set",
+    "o piloto relatou uma demanda da plataforma do cliente: registre no workspace gerenciado, não no repositório lpm",
+    "report the processed pilot items to the owner in the pilot pattern"
+  ],
+  "routing": [
+    {
+      "order": 13,
+      "all": [
+        [
+          "pilot",
+          "piloto",
+          "tester",
+          "testador",
+          "homologacao"
+        ],
+        [
+          "report*",
+          "relat*",
+          "reclam*",
+          "problem*",
+          "bug",
+          "feedback",
+          "erro",
+          "error",
+          "falha"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "read the processed-message state file",
+      "internal": true,
+      "stopText": "Pilot reports are verified by LPM maintainers. Forward the report to them."
+    }
+  ],
+  "notFor": [
+    {
+      "when": "fixing, deploying or announcing the fix of a registered pilot defect",
+      "skill": "lpm-release-product"
+    },
+    {
+      "when": "writing the code of the fix for a registered activity",
+      "skill": "lpm-deliver-activity"
+    },
+    {
+      "when": "planning more work in the managed workspace than one registered demand",
+      "skill": "lpm-plan-work"
+    },
+    {
+      "when": "a customer request that arrives by WhatsApp or an intake protocol, not from a pilot",
+      "skill": "lpm-intake-triage"
+    }
+  ],
+  "owns": [],
+  "uses": [
+    "get_mcp_connection_info",
+    "list_milestones",
+    "create_issue",
+    "list_issues",
+    "get_issue",
+    "list_comments",
+    "create_comment",
+    "upload_activity_attachment",
+    "list_workspace_activities",
+    "list_activity_attachments",
+    "list_workspace_members",
+    "list_workspace_repository_links",
+    "read_repository_file_excerpt"
+  ],
+  "cli": [],
+  "sharedRefs": [
+    {
+      "name": "pilot-verification",
+      "loadWhen": "a run starts",
+      "inlineSummary": false
+    },
+    {
+      "name": "advisor-golden-set",
+      "loadWhen": "an Advisor defect is confirmed",
+      "inlineSummary": false
+    },
+    {
+      "name": "advisor-semantics",
+      "loadWhen": "a report is about the Advisor",
+      "inlineSummary": false
+    },
+    {
+      "name": "evidence-and-closure",
+      "loadWhen": "you attach evidence",
+      "inlineSummary": false
+    },
+    {
+      "name": "connection-and-access",
+      "loadWhen": "a tool is missing or denied",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/pilot-checks.md",
+      "loadWhen": "P2 checks an OAuth, missing-tool, Advisor or code claim"
+    },
+    {
+      "file": "references/pilot-report-template.md",
+      "loadWhen": "you write the owner report (§8)"
+    },
+    {
+      "file": "references/tools.md",
+      "loadWhen": "a call fails"
+    }
+  ],
+  "behaviorContracts": [
+    "missing-tool-fallback",
+    "pilot-feedback-rules"
+  ],
+  "codex": {
+    "shortDescription": "Verify pilot reports; register only confirmed LPM defects",
+    "defaultPrompt": "Use $lpm-pilot-feedback to verify the new pilot reports and register only confirmed LPM defects."
+  }
+}

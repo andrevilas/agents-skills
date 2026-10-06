@@ -1,0 +1,51 @@
+# Flow: direct item, bulk, dependency, allocation and lifecycle edits
+Load when: SKILL.md rows 5, 7, 8
+
+## Preconditions
+1. The owner's order for this exact operation is quoted (SKILL.md P1 step 1). SKILL.md row 1 (read-only): step B2 preview only, no P1, no write.
+2. Load {{ref:owner-direct-operations}}. Ids and `updatedAt` come from SKILL.md §3 or the table below; never invent one.
+3. Connector: only {{tool:update_workspace_roadmap_item}}. Other writes: API key whose profile lists the tool (tools.md).
+
+| Input | Get it from (call → field) | If missing |
+|---|---|---|
+| linkId | {{tool:list_workspace_roadmap_item_links}}(workspaceId, roadmapId) → `id` by `sourceItemId` / `targetItemId` | ask |
+| allocationId, projectId | {{tool:list_workspace_roadmap_allocations}}(workspaceId, roadmapId) → `id` with `status` active or missing; {{tool:list_workspace_projects}}(workspaceId) → `id` | ask |
+| archived/rejected linkId or allocationId; links/allocations of an archived item | {{tool:get_workspace_roadmap_overview}}(workspaceId, roadmapId, includeArchived=true) → `itemLinks[].id` / `allocations[].id` (the two lists above hide them) | ask |
+| reason | the owner's words verbatim (text after "Motivo:", "porque", or the clause saying why) | ask |
+
+## Steps
+### B. Direct edit (SKILL.md rows 5, 7, 8)
+0. {{tool:get_workspace}}(workspaceId) → `roadmapGovernanceMode` (missing → `shadow`). Do this even when the owner already said "do it" (once per turn: reuse SKILL.md P1 step 2). `enforce` → {{ref:enforce-mode}} and stop this flow.
+1. Pick the tool; send only changed fields. One item: {{tool:update_workspace_roadmap_item}}(workspaceId, itemId, title?, description?, category?, priority?) / {{tool:archive_workspace_roadmap_item}}(workspaceId, itemId, reason) / {{tool:restore_workspace_roadmap_item}}(workspaceId, itemId, reason); roadmap: {{tool:archive_workspace_roadmap}}(workspaceId, roadmapId, reason); dependency: {{tool:create_workspace_roadmap_dependency}}(workspaceId, roadmapId, sourceItemId, targetItemId, type, rationale?) / {{tool:update_workspace_roadmap_dependency}}(workspaceId, linkId, type?, rationale?, status?) / {{tool:archive_workspace_roadmap_dependency}}(workspaceId, linkId, reason); allocation: {{tool:create_workspace_roadmap_allocation}}(workspaceId, roadmapId, itemId, projectId, role, rationale?, replacesAllocationId?) / {{tool:update_workspace_roadmap_allocation}}(workspaceId, allocationId, role?, rationale?, status?) / {{tool:archive_workspace_roadmap_allocation}}(workspaceId, allocationId, reason); lifecycle (row 8): {{tool:review_workspace_roadmap_item}}(workspaceId, itemId, lifecycle, rationale?).
+2. Bulk (row 5): {{tool:preview_workspace_roadmap_item_bulk}}(workspaceId, itemIds=<SKILL.md §3 itemIds, 1–100>, operation) [A]; drop `missingItemIds` (they abort the commit); for `update` only, also drop items with `isArchived` or `lifecycle == "materialized"` (archive/restore keep them); tell the owner.
+3. Lifecycle (row 8): next allowed gate only ({{ref:owner-direct-operations}} § Lifecycle); `imported` → `approved` is two calls.
+4. Link or allocation already active in the inputs list → report "already done", no call. New primary while one is active → create with `replacesAllocationId`.
+5. Confirmation: the quoted order already names this exact operation and says do/apply it → show the exact call in the report and go to step B6. Otherwise ask the § Stop and ask question and wait.
+6. Call the row's tool [O]; bulk: {{tool:commit_workspace_roadmap_item_bulk}}(workspaceId, itemIds=step B2 list, operation, updates (update) or reason (archive/restore), confirmed=true) [O]. These tools take no idempotencyKey: after a timeout re-read (§ Verify) before any retry.
+7. Verify: the § Verify row for that tool.
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| before an item or roadmap write, or {{tool:commit_workspace_roadmap_item_bulk}}, and the order does not name it | "Apply <exact call with every argument, including confirmed=true for bulk> now? It skips change-request review." |
+| before a dependency or allocation write the order does not name | list each link or allocation key; "Create/change exactly these?" |
+| before {{tool:review_workspace_roadmap_item}} the order does not name | "Record <gate> for <item> as your decision?" |
+| edit and `lifecycle == "materialized"` | "Archive it, or add a follow-up item?" |
+| archive/restore without a reason | "Why <archive/restore> <item/roadmap>? The reason is stored." |
+| dependency between items of two roadmaps | "Which roadmap holds both?" |
+| `PRIMARY_ALREADY_ASSIGNED` | "Replace the primary (`replacesAllocationId` = id in the error) or add this project as `contributor`?" |
+| "transition from approved to delivered" | the item was materialized (stored lifecycle stays `approved`); report it, try no other value |
+
+## Verify
+| After | Re-read with | Pass when |
+|---|---|---|
+| item edit, archive, restore, bulk, lifecycle | {{tool:list_workspace_roadmap_items}}(workspaceId, roadmapId, includeArchived=true) | new fields, `isArchived` or `lifecycle` as requested; bulk `updatedCount` == itemIds count |
+| roadmap archive | {{tool:get_workspace_roadmap_overview}}(workspaceId, includeArchived=true) | `roadmaps[]` entry `status == "archived"` |
+| dependency write | {{tool:list_workspace_roadmap_item_links}}(workspaceId, roadmapId); an endpoint item archived → the includeArchived overview `itemLinks[]` | active `id` listed with `status` active; archived `id` absent (overview: `status == "archived"`) |
+| allocation write | {{tool:list_workspace_roadmap_allocations}}(workspaceId, roadmapId); item archived → the includeArchived overview `allocations[]` | active `id` listed, one active primary per item; archived/rejected `id` absent (overview: that `status`) |
+| a re-read still shows an old value | — | do not claim done: put the id and the value read under Pending |
+
+## Report fields
+- quoted owner order; tool → ids changed, new values or lifecycle
+- dropped ids (bulk, materialized items), already-done links or allocations
+- archive → undo: {{tool:restore_workspace_roadmap_item}} per item, or bulk `restore` with a reason

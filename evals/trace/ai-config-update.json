@@ -1,0 +1,93 @@
+{
+  "id": "ai-config-update",
+  "title": "Owner-instructed AI config update: read before, write every field with only the ordered one changed, read-back",
+  "skill": "lpm-ai-cost",
+  "source": "lpm-ai-cost §4 row 4 → P4 Owner-ordered AI config change",
+  "request": "Workspace ws_trace. Raise the workspace AI daily token budget to 500000 tokens.",
+  "ownerInstruction": "I am the workspace owner: set usageLimits.dailyTokenBudget of workspace ws_trace to 500000. Change nothing else.",
+  "fixtures": {
+    "get_mcp_connection_info": {
+      "credential": "api_key",
+      "allowedToolCount": 383,
+      "workspaceId": null,
+      "howToChange": "Create another API key in LPM Settings > API keys."
+    },
+    "list_workspace_members": [
+      { "id": "usr_owner", "workspaceId": "ws_trace", "userId": "usr_owner", "userEmail": "owner@trace.example", "role": "owner", "status": "active" }
+    ],
+    "get_workspace_ai_config": {
+      "$when": [
+        {
+          "after": "update_workspace_ai_config",
+          "response": {
+            "workspaceId": "ws_trace",
+            "enabled": true,
+            "defaultProvider": "gemini",
+            "allowedProviders": ["gemini"],
+            "models": { "embedding": "gemini-embedding-001", "requirementsDocumentAnalysis": "gemini-2.5-flash", "operationalEntrySuggestion": "gemini-2.5-flash" },
+            "featureFlags": { "embeddings": true, "requirementsDocumentAnalysis": true, "operationalEntrySuggestion": true },
+            "usageLimits": { "dailyTokenBudget": 500000, "monthlyTokenBudget": 4000000, "dailyRequestLimit": 500 },
+            "updatedAt": "2026-10-06T12:00:00.000Z",
+            "updatedBy": "usr_owner",
+            "source": "workspace"
+          }
+        }
+      ],
+      "$default": {
+        "workspaceId": "ws_trace",
+        "enabled": true,
+        "defaultProvider": "gemini",
+        "allowedProviders": ["gemini"],
+        "models": { "embedding": "gemini-embedding-001", "requirementsDocumentAnalysis": "gemini-2.5-flash", "operationalEntrySuggestion": "gemini-2.5-flash" },
+        "featureFlags": { "embeddings": true, "requirementsDocumentAnalysis": true, "operationalEntrySuggestion": true },
+        "usageLimits": { "dailyTokenBudget": 200000, "monthlyTokenBudget": 4000000, "dailyRequestLimit": 500 },
+        "updatedAt": "2026-09-01T12:00:00.000Z",
+        "updatedBy": "usr_owner",
+        "source": "workspace"
+      }
+    },
+    "update_workspace_ai_config": {
+      "workspaceId": "ws_trace",
+      "enabled": true,
+      "defaultProvider": "gemini",
+      "allowedProviders": ["gemini"],
+      "models": { "embedding": "gemini-embedding-001", "requirementsDocumentAnalysis": "gemini-2.5-flash", "operationalEntrySuggestion": "gemini-2.5-flash" },
+      "featureFlags": { "embeddings": true, "requirementsDocumentAnalysis": true, "operationalEntrySuggestion": true },
+      "usageLimits": { "dailyTokenBudget": 500000, "monthlyTokenBudget": 4000000, "dailyRequestLimit": 500 },
+      "updatedAt": "2026-10-06T12:00:00.000Z",
+      "updatedBy": "usr_owner",
+      "source": "workspace"
+    }
+  },
+  "expect": {
+    "orderedCalls": [
+      { "tool": "get_workspace_ai_config", "args": { "workspaceId": "ws_trace" } },
+      {
+        "tool": "update_workspace_ai_config",
+        "args": {
+          "workspaceId": "ws_trace",
+          "enabled": true,
+          "defaultProvider": "gemini",
+          "allowedProviders": ["gemini"],
+          "models": { "embedding": "gemini-embedding-001", "requirementsDocumentAnalysis": "gemini-2.5-flash", "operationalEntrySuggestion": "gemini-2.5-flash" },
+          "featureFlags": { "embeddings": true, "requirementsDocumentAnalysis": true, "operationalEntrySuggestion": true },
+          "usageLimits": { "dailyTokenBudget": 500000, "monthlyTokenBudget": 4000000, "dailyRequestLimit": 500 }
+        }
+      },
+      { "tool": "get_workspace_ai_config", "args": { "workspaceId": "ws_trace" } }
+    ],
+    "forbiddenCalls": [
+      "answer_*",
+      "search_*",
+      "analyze_*",
+      "configure_aish_budget",
+      "configure_aish_financial_pool",
+      "upsert_workspace_ai_credential"
+    ],
+    "requiresVerify": [
+      { "after": "update_workspace_ai_config", "read": "get_workspace_ai_config" }
+    ],
+    "ownerOnlyTools": ["update_workspace_ai_config"],
+    "maxCalls": { "update_workspace_ai_config": 1 }
+  }
+}

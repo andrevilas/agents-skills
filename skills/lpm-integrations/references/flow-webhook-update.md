@@ -1,0 +1,37 @@
+# Flow: update, pause, resume or rotate a webhook
+Load when: decision rows 4 and 5 of SKILL.md (change URL, name or events; pause; resume; rotate the secret)
+
+## Preconditions
+1. A `full`/`custom` API key and {{tool:list_workspaces}}() → `access.canManage == true` for workspaceId (SKILL.md §2). {{tool:list_workspaces}} errors, or no row for workspaceId → no webhook write or test; report the error and STOP.
+2. subscriptionId from SKILL.md §3 (list by workspaceId only; workspace-wide rows have `projectId == null`). A subscription of another workspace or project cannot move: delete it (row 7) and create a new one (row 2).
+3. {{tool:update_webhook_subscription}} is [O]. Facts on pause, dead-letter and rotation: {{ref:webhook-events}}.
+
+## Steps
+1. {{tool:list_webhook_subscriptions}}(workspaceId) → keep `name`, `url`, `events`, `status`, `secretPreview`, `updatedAt` of subscriptionId.
+2. {{tool:list_webhook_deliveries}}(subscriptionId, limitCount=20) → newest `delivered` row's `deliveredAt` (none → "no recent delivery"). Use it in the pause row of § Stop and ask and in the decision request.
+3. Pause → tell: "While paused, new events are dropped and queued deliveries dead-letter. Resume replays nothing."
+4. Rotate → the receiver accepts the old and the new secret first; LPM switches at once (no overlap). The new secret comes only from the env var `LPM_WEBHOOK_SECRET`, as in {{ref:flow-webhook-create}} step 3 (length check without printing). No env var reachable → the web app cannot edit a secret: the owner creates a new subscription there with the new secret, then deletes the old one (SKILL.md row 7).
+5. New `url` not `https://`, new secret < 32 characters, or `*` not requested → § Stop and ask.
+6. [O] Owner order naming this exact change in this conversation; none → decision request ({{ref:authority-and-owner-decisions#decision-request}}), STOP.
+7. {{tool:update_webhook_subscription}}(subscriptionId, changed fields only; `events` = the full new list; `secret` = value of `LPM_WEBHOOK_SECRET` only for a rotation, else omit it; `status` `active`/`paused`) [O]. Never show the secret.
+8. Verify: § Verify.
+9. URL, secret or resume changed → test it: SKILL.md P1 (row 3).
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| no owner order for this exact change | send the decision request and STOP |
+| pause with a `delivered` row from step 2 | "<name> is in use (last delivery <deliveredAt>). Pausing drops events. No replay. Proceed?" |
+| the user pastes the new secret in chat (even called fake or test) | never repeat it, in full or in part, in any message, command, argument or report, and never use it; reply with the exact text of SKILL.md §6 (pasted secret) and STOP |
+| receiver cannot accept both secrets during rotation | "Rotation has no overlap: deliveries fail until the receiver has the new secret. Schedule a window?" |
+| `url` not `https://`, weak secret, `*` not requested | ask with {{ref:flow-webhook-create}} § Stop and ask |
+
+## Verify
+| After | Re-read with | Pass when |
+|---|---|---|
+| update | {{tool:list_webhook_subscriptions}}(workspaceId) | changed `url`, `status` equal the request; `events` equal as a set (LPM trims, deduplicates and sorts); `updatedAt` newer than step 1 |
+| rotation | same row | `secretPreview` differs from step 1 and equals first4••••last4 of the new secret; compare silently, e.g. `s="$LPM_WEBHOOK_SECRET"; [ "${s:0:4}••••${s: -4}" = "<secretPreview>" ]; echo $?` (0 = match) |
+| URL, secret or resume | SKILL.md P1 | newest `system.test` `delivered`, `lastError == null` |
+
+## Report fields
+Scope, subscription `id`, changed fields (never the secret; `secretPreview` only), owner instruction (quoted), test delivery `status` + `deliveredAt`.

@@ -1,0 +1,152 @@
+{
+  "id": "lpm-roadmap",
+  "title": "Roadmap: read, trace and governed change requests",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when reading, tracing an LPM roadmap (rastreabilidade), creating a roadmap, one item or a capability (even on owner order), or change requests (pedido de mudança): submit, review, decide, apply. Not for direct owner commits (use lpm-roadmap-owner-ops) or change sets (use lpm-requirements-scope).",
+  "doneWhen": "The roadmap read is reported, or the request is in the asked state and a re-read confirms it.",
+  "authorityCeiling": "Submit/revise/withdraw [C]; review, apply, batch and structure writes [O] (GOV-MAX v1); the rest [A].",
+  "jobs": [
+    "show the LPM roadmap overview of this workspace",
+    "qual a rastreabilidade do item <título>? onde ele está sendo executado?",
+    "propose raising the priority of roadmap item <title> (change request)",
+    "o que tenho para revisar no roadmap? aprove o pedido de mudança <id>",
+    "apply the approved roadmap change request <id>",
+    "retire o pedido de mudança <id> e envie um novo",
+    "which work in project <name> is not linked to the roadmap?",
+    "create a capability \"Payments\" in the roadmap (owner order)"
+  ],
+  "routing": [
+    {
+      "order": 29,
+      "all": [
+        [
+          "roadmap",
+          "roadmaps",
+          "capability",
+          "capabilities",
+          "change request",
+          "pedido de mudanca",
+          "cr",
+          "review inbox",
+          "traceability",
+          "rastreabilidade"
+        ]
+      ],
+      "unless": [
+        "unowned",
+        "sem dono",
+        "knowledge",
+        "conhecimento",
+        "help",
+        "ajuda"
+      ],
+      "firstCall": "get_workspace_roadmap_overview"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "owner-ordered direct item edit, archive/restore, bulk, import, roadmap dependency/allocation, lifecycle gate, materialization, governance mode",
+      "skill": "lpm-roadmap-owner-ops"
+    },
+    {
+      "when": "code evidence or impact of an item",
+      "skill": "lpm-ask-advisor"
+    },
+    {
+      "when": "a decision thread on an item or request",
+      "skill": "lpm-governance-decisions"
+    },
+    {
+      "when": "unowned executive domains or capabilities",
+      "skill": "lpm-executive-context"
+    }
+  ],
+  "owns": [
+    "get_workspace_roadmap_overview",
+    "list_workspace_roadmaps",
+    "list_workspace_roadmap_items",
+    "list_workspace_roadmap_item_links",
+    "get_workspace_roadmap_item_history",
+    "list_workspace_capabilities",
+    "list_workspace_roadmap_allocations",
+    "list_workspace_roadmap_materializations",
+    "get_workspace_roadmap_traceability",
+    "explain_workspace_roadmap_traceability_gap",
+    "get_project_roadmap_drilldown",
+    "list_unlinked_project_work",
+    "create_workspace_roadmap",
+    "update_workspace_roadmap",
+    "create_workspace_roadmap_item",
+    "create_workspace_capability",
+    "update_workspace_capability",
+    "archive_workspace_capability",
+    "preview_workspace_roadmap_change",
+    "submit_workspace_roadmap_change",
+    "list_workspace_roadmap_change_requests",
+    "get_workspace_roadmap_change_request",
+    "revise_workspace_roadmap_change",
+    "get_workspace_roadmap_review_inbox",
+    "review_workspace_roadmap_change",
+    "apply_workspace_roadmap_change",
+    "withdraw_workspace_roadmap_change",
+    "comment_workspace_roadmap_change",
+    "batch_workspace_roadmap_changes",
+    "get_workspace_roadmap_governance_observability",
+    "process_workspace_roadmap_notification_outbox"
+  ],
+  "uses": [
+    "list_workspace_members",
+    "list_workspace_projects",
+    "get_workspace"
+  ],
+  "cli": [
+    "roadmap status",
+    "roadmap create",
+    "roadmap update",
+    "roadmap capability-create",
+    "roadmap capability-update",
+    "roadmap capability-archive",
+    "roadmap item-create"
+  ],
+  "sharedRefs": [
+    {
+      "name": "authority-and-owner-decisions",
+      "loadWhen": "an [O] step is next",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/change-request-lifecycle.md",
+      "loadWhen": "a change-request write is next"
+    },
+    {
+      "file": "references/change-request-facts.md",
+      "loadWhen": "a patch, status or error code is unclear"
+    },
+    {
+      "file": "references/traceability.md",
+      "loadWhen": "tracing an item or auditing unlinked work"
+    },
+    {
+      "file": "references/capabilities-vs-executive.md",
+      "loadWhen": "the request mentions capabilities"
+    },
+    {
+      "file": "references/flow-structure-write.md",
+      "loadWhen": "decision row 10 applies"
+    }
+  ],
+  "behaviorContracts": [
+    "missing-tool-fallback",
+    "roadmap-create-via-cr",
+    "roadmap-independent-review"
+  ],
+  "codex": {
+    "shortDescription": "Read the LPM roadmap and run governed change requests",
+    "defaultPrompt": "Use $lpm-roadmap to show the LPM roadmap of workspace <workspaceId> or propose a governed change to an item."
+  }
+}

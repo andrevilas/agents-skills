@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "tokens": [
+    {
+      "token": "list_users",
+      "kind": "nonexistent-tool",
+      "reason": "Does not exist; never call it."
+    }
+  ]
+}

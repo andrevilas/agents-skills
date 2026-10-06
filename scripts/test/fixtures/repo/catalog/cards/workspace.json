@@ -1,0 +1,4 @@
+{ "cards": [
+  { "name": "get_mcp_connection_info", "purpose": "Tells the caller which scopes and tools its connection has and how to enable more.", "effect": "read", "authority": "autonomous", "idempotency": "naturally idempotent", "oauthScope": "workspace:read", "errors": [], "inputs": [] },
+  { "name": "get_orphan_report", "status": "stub", "purpose": "", "effect": "read", "authority": null, "oauthScope": null }
+] }

@@ -1,0 +1,51 @@
+# Flow: cockpit session (plan, owner approval, dispatch waves)
+Load when: decision rows 5 and 6 of SKILL.md
+
+## Preconditions
+1. LPM API key (`full` or `custom`); the caller manages the workspace. Load {{ref:cockpit-state-actions}}.
+2. Row 5: {{ref:bounded-run-checklist}} is filled with the owner's values. Any limit missing → STOP: SKILL.md P1 + P2 per job.
+3. Row 6: start at step 3 (lease), then go to step 9.
+
+## Steps
+1. {{tool:list_aish_execution_sessions}}(workspaceId, projectIds) → reuse a non-terminal session with this objective only while now < `createdAt` + the owner's `timeoutMinutes` (else step 2): keep `session.id`, `session.status`. `draft`/`clarification-required`/`ready` → step 3, then 4; any other status → step 3, then 9 or {{ref:flow-session-control}}. Never re-plan an `approved` session without the user's yes ("a new plan clears the owner approval"). `canCreate == false` → STOP, tell the user.
+2. [C] Show scope and objective; on "yes": {{tool:create_aish_execution_session}}(workspaceId, scopeType=`project` (one project) or `workspace`, projectIds, objective (≤4000 chars, no secrets), idempotencyKey="aish-session-<projectId or workspaceId for scope workspace>-<yyyymmdd>-<n>") [C] → keep `session.id`, `createdAt`. `timeoutMinutes` counts from this `createdAt` and includes the wait for owner approval: tell the owner the deadline (`createdAt` + `timeoutMinutes`).
+3. coordinatorId = "agent-<tool>-<8 random chars>", chosen once per session and reused for every renewal. {{tool:acquire_aish_coordinator_lease}}(sessionId, coordinatorId, idempotencyKey="lease-<s8>-<n>") [A] → keep `leaseNonce`, `fencingToken`, `expiresAt`. Renew before `expiresAt` with n + 1; send only the latest pair; never write the nonce in comments or payloads.
+4. Row 6 → step 9. Build ≤100 nodes ({{ref:bounded-run-checklist}} § Node fields). Every node REQUIRES `issueId` (an open activity of node `projectId`) and `revision` (= `lastKnownCommit`); no activity → create or select one first ({{skill:lpm-plan-work}} / ask); show the plan, the checklist and the status moves of step 7; wait for "yes".
+5. {{tool:put_aish_execution_plan}}(sessionId, coordinatorId, leaseNonce, fencingToken, plan, commandId="plan-<s8>-v<version>") [C] → keep `plan.hash`.
+6. {{tool:get_aish_execution_readiness}}(sessionId) (8 fail-closed facts) → `repository-or-revision-missing`, `dependency-plan-invalid`, `recipe-invalid`, or `policy-context-incomplete` without `plan.authorization` → fix the plan, version + 1, step 4. Any other reason except `current-plan-not-approved` → its § Readiness row in {{ref:cockpit-state-actions}}, no new version.
+7. {{tool:append_aish_execution_session_command}}(sessionId, commandId="ready-<s8>-v<version>", type="session-ready", nextStatus="ready") [C]; then commandId="await-<s8>-v<version>", type="approval-requested", nextStatus="awaiting-approval" [C].
+8. Verify: {{tool:get_aish_execution_session}}(sessionId) → `session.status == "awaiting-approval"` and `session.currentPlanHash == plan.hash`. Report that the owner must approve this hash; STOP until the owner orders it. Do not renew the lease while waiting; tell the owner the cockpit is free after `expiresAt`.
+9. {{tool:get_aish_execution_session}}(sessionId) → keep `session.status`, `currentPlanHash`, `approvedPlanHash`, `activeCheckpointId`. `activeCheckpointId` set and `checkpoint.status != "resolved"` → {{ref:flow-session-control}} step 7; `resolved` with `decision.action == "resume"` → its step 3 (resume); `"cancel"` → the session is canceled, report.
+10. `approvedPlanHash == currentPlanHash` → step 13. Else the owner's order naming this `currentPlanHash` is not quoted from this conversation → decision request ({{ref:authority-and-owner-decisions#decision-request}}), STOP.
+11. {{tool:get_aish_execution_readiness}}(sessionId) → any reason except `current-plan-not-approved` → STOP, fix per {{ref:cockpit-state-actions}} § Readiness. The owner can approve only while a runner is online with a free slot.
+12. {{tool:approve_aish_execution_plan}}(sessionId, coordinatorId, leaseNonce, fencingToken, planHash=`currentPlanHash`, commandId="approve-<s8>-<planHash first 12>") [O]. Verify: {{tool:get_aish_execution_session}} → `session.status == "approved"`.
+13. [C] "Dispatch wave <w>? Each ready node reserves its financial cap." On "yes": {{tool:dispatch_aish_execution_plan}}(sessionId, coordinatorId, leaseNonce, fencingToken, planHash=`approvedPlanHash`, commandId="dispatch-<s8>-w<w>") [C] → keep `dispatched[].id`, `blockedNodeCount`.
+14. Verify: {{tool:get_aish_job}}(each `dispatched[].id`) → `executionGate.runnerMayExecute == true`, or `executionGate.requiredCheckpoint == "release-gate"` (deploy-gated → {{skill:lpm-aish-delivery}}).
+15. After a wave, report and STOP. Continue (step 13, w + 1) when the user asks, or when a later check ({{tool:get_aish_execution_session}} → `workflow`, `nodeRuns`) shows completed nodes; lease past `expiresAt` → step 3 first. No node left → report.
+
+`<s8>` = the first 8 characters of sessionId. Retry a timed-out call with the SAME commandId or key.
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| a limit, cap, host or `deployAllowed` is not given by the owner | "Which <limit> do you authorize? Without it I create and approve job by job." |
+| a deploy, release or production node | "A deploy needs a release package you approve (lpm-aish-delivery); no plan approval covers it. Plan without it?" |
+| "AISH execution session must be awaiting approval." | do the step 7 status moves first |
+| "AISH execution session is not ready: <reasons>." | fix each reason as in step 6; `runner-capacity-unavailable` → the row below |
+| "already has an active coordinator" | "Session <id> is coordinated by <coordinatorId> until <expiresAt>. Wait, or take over after that?" |
+| readiness `runner-capacity-unavailable` | "No runner has a free slot. Start one ({{skill:lpm-aish-runners}}) or wait?" No new plan version. |
+| a budget error at dispatch ("Financial budget is not configured", "Insufficient financial reservation capacity") | "Dispatch is blocked by the budget: <error>. Your decision ({{skill:lpm-ai-cost}})." Never configure budgets. |
+| `pauseReason` `budget` or `timeout`; "AISH execution budget limit reached; session paused." / "AISH execution timeout limit reached; session paused." | `budget` = plan `maxJobs` reached (retries count), not money: never {{skill:lpm-ai-cost}}. "The session hit its <maxJobs or timeoutMinutes>. A new session with a new owner-approved authorization is needed. Create it?" |
+
+## Verify
+| After | Re-read with | Pass when |
+|---|---|---|
+| plan + status moves (steps 5–7) | {{tool:get_aish_execution_session}} | `status == "awaiting-approval"`, `currentPlanHash == plan.hash` |
+| owner approval (step 12) | {{tool:get_aish_execution_session}} | `status == "approved"`, `approvedPlanHash == currentPlanHash` |
+| each wave (step 13) | {{tool:get_aish_job}} per dispatched id | gate open, or `release-gate` for deploy-gated jobs |
+
+## Report fields
+- sessionId, plan version and `currentPlanHash`, session status
+- owner order (verbatim quote) for the approval
+- per wave: dispatched job ids, `blockedNodeCount`
+- pending: owner approval, runner capacity, budget, checkpoint — who must act

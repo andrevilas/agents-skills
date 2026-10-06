@@ -1,0 +1,37 @@
+# Flow: analytics bridge run
+Load when: decision row 12 of SKILL.md (run, refresh or backfill the analytics bridge / BigQuery)
+
+## Preconditions
+1. {{tool:create_analytics_bridge_run}} and {{tool:process_analytics_bridge_run}} need a `full`/`custom` API key. Connector → core rule 2.
+2. Read access to the scope (workspaceId or projectId, SKILL.md §3). Facts and cost levers: {{ref:analytics-bridge}}.
+3. Both calls are [C] and have no idempotency key. Process runs inside the call and can pass 60 s.
+
+## Steps
+1. {{tool:get_analytics_bridge_observability}}(workspaceId or projectId) → keep `runtime.bigQueryLoadEnabled`, `watermarks[]`.
+2. {{tool:list_analytics_bridge_runs}}(same scope) → `queued` runs. A run matches only when its `workspaceId` and `projectId` equal the request scope (workspace request: `projectId == null`) and its returned `entityTypes` equal the requested set. Match → runId = its `id`; apply the wide check of step 3 to it, then step 6. A `queued` run that does not match → § Stop and ask (never process it silently).
+3. Pick the smallest scope (project first) and the fewest entityTypes (always send them; never omit); `mode="incremental"` unless the user asked backfill; requestedReason from the user. Wide = any of: `audit_events` in entityTypes; all six entities; workspace scope with `bigQueryLoadEnabled == true` → § Stop and ask.
+4. [C] Show scope, entityTypes, mode, reason: "Re-exports the full history of these entities; BigQuery rows are appended. Creating it resets these entities' sync markers now; observability will show never-synced until processed. Create and process it now? (yes/no)"
+5. {{tool:create_analytics_bridge_run}}(workspaceId or projectId, entityTypes, mode, requestedReason) [C] → keep `id` (runId), `entityTypes`. Returned `entityTypes` differ from the request → STOP, report the queued run.
+6. Run from step 2 only: [C] "Process queued run <runId> (<scope>, <entityTypes>, reason <requestedReason>) now? It runs inside the call, can pass 60 s. (yes/no)". Run from step 5: the step-4 yes covers it.
+7. {{tool:process_analytics_bridge_run}}(runId) [C], once.
+8. Timeout, or `status == "running"` → wait 60 s, {{tool:list_analytics_bridge_runs}}(same scope) → `status` of runId; repeat (max 3 reads). Still `running` → Pending "run <runId> still running"; Next: re-check with SKILL.md row 11. Never create or process again.
+9. `failed` → no retry exists; report `errorMessage` and per-entity `loadJobs`; a new run only on request (step 3).
+10. Verify: § Verify.
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| wide run: `audit_events` in entityTypes (BigQuery on or off), entityTypes omitted or all six, or workspace scope with `bigQueryLoadEnabled == true` | decision request with cost and duplicate rows ({{ref:authority-and-owner-decisions#decision-request}}), STOP |
+| `queued` run wider than requested, or of another scope or entity set | report its `id`, scope, `entityTypes`, `requestedReason` (no cancel tool exists); decision request: "Process it as is, or leave it and create the run you asked for?" STOP. "As is" still passes the wide check of step 3 |
+| run not in the caller's {{tool:list_analytics_bridge_runs}} | STOP: "Only its creator processes this run." |
+| no requestedReason | "Why is this run needed (one line for the audit)?" |
+
+## Verify
+| After | Re-read with | Pass when |
+|---|---|---|
+| create | create result | `status == "queued"`, `entityTypes` equal the request |
+| process | process result + {{tool:list_analytics_bridge_runs}}(same scope) | `status == "completed"`, `errorMessage == null`, each `loadJobs[entity].status` `loaded` (`skipped` if `bigQueryLoadEnabled == false`) |
+| watermarks | {{tool:get_analytics_bridge_observability}}(same scope) | `watermarks[].lastSuccessfulRunId == runId` for every entity of the run |
+
+## Report fields
+Scope, runId, entityTypes, mode, `status`, `exportedRows`, per-entity `loadJobs`, watermark run id, `errorMessage` (if any).

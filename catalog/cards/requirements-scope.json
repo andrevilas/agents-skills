@@ -1,0 +1,2520 @@
+[
+  {
+    "name": "create_change_set",
+    "purpose": "Creates a draft change set: a snapshot of the live working-scope delta (default) or an immutable requirement proposal (additions copied from existing source requirements, or description revisions).",
+    "useWhen": [
+      "Proposing requirement additions or description rewrites for owner review WITHOUT editing live requirements (requirementProposal mode)",
+      "Working scope has unpublished changes that must go to review and you are not using create_project_change_set_from_resolution"
+    ],
+    "avoidWhen": [
+      "Live-scope snapshot - prefer create_project_change_set_from_resolution (same result, returns changeSetId as JSON)",
+      "No delta (get_project_scope_resolution_context.workingScope.affectedCount = 0) - no change set needed",
+      "Discussion still open - use create_governance_thread or draft_change_set_from_governance_thread first"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "title",
+        "required": false,
+        "source": "user",
+        "notes": "default 'Change set YYYY-MM-DD'"
+      },
+      {
+        "param": "summary",
+        "required": false,
+        "source": "user",
+        "notes": "what changes and why; include deletions (the delta cannot detect removals)"
+      },
+      {
+        "param": "sourceBaselineId",
+        "required": false,
+        "source": "list_requirement_baselines -> id of the isCurrent baseline",
+        "notes": "live mode: OMIT (another id breaks publication-gate matching); proposal mode: REQUIRED and must equal the current baseline id"
+      },
+      {
+        "param": "requirementProposal",
+        "required": false,
+        "source": "agent-built from list_requirements data",
+        "notes": "either {additions:[{key [A-Za-z0-9_-], title<=300, description<=20000, type functional|non-functional|interface|business|technical, source:{projectId, baselineId, requirementId}, linkedIssueIds<=50}] (1-200)} or {revisions:[{requirementId, title (exact current), beforeDescription (exact current), description (new)}] (1-200)}; never mix; unknown keys rejected"
+      },
+      {
+        "param": "dryRun",
+        "required": false,
+        "source": "constant",
+        "notes": "proposal mode: send true first to get the fingerprint; nothing is written"
+      },
+      {
+        "param": "expectedProposalFingerprint",
+        "required": false,
+        "source": "previous dryRun response -> draft.scopeProposal.contentFingerprint",
+        "notes": "required to create a proposal"
+      }
+    ],
+    "preconditions": [
+      "Live mode: caller can read the project",
+      "Proposal mode: caller can manage the project and read every source project; the project has exactly one current baseline",
+      "Proposal sources exist, are not deleted and belong to source.baselineId; linkedIssueIds are non-deleted issues of this project"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "Live mode: plain text 'Change set created with ID: <id>'. Proposal dryRun: JSON {previewOnly:true, draft{reviewPolicy, workingScopeSnapshot, scopeProposal{contentFingerprint, ...}}}. Proposal create: JSON {id:'proposal-<fingerprint>', reused:false|true}.",
+    "pairsWith": [
+      "get_project_scope_resolution_context",
+      "list_requirements",
+      "get_change_set",
+      "update_change_set",
+      "publish_baseline_from_working_scope"
+    ],
+    "errors": [
+      {
+        "when": "Preview and confirm the exact proposal fingerprint before creation",
+        "fix": "Call with dryRun:true, copy draft.scopeProposal.contentFingerprint into expectedProposalFingerprint and call again without dryRun."
+      },
+      {
+        "when": "Proposal requires the unique current baseline of this project",
+        "fix": "Pass sourceBaselineId = id of the isCurrent baseline; if none or several are current, report to the owner."
+      },
+      {
+        "when": "Source requirement or baseline mismatch",
+        "fix": "source.baselineId must be the baselineId of that source requirement; read it with list_requirements."
+      },
+      {
+        "when": "Revision base text changed / Revision must change the description / Revision requirement is outside the current baseline",
+        "fix": "Re-read the requirement from the current baseline; title and beforeDescription must match exactly and description must differ."
+      },
+      {
+        "when": "Linked issue outside project or missing / Duplicate proposal key / Duplicate source requirement",
+        "fix": "Fix the payload: issues of this project only, unique keys, each source once."
+      },
+      {
+        "when": "Zod validation error (invalid_type, too_big, unrecognized_keys)",
+        "fix": "Fix the requirementProposal shape: additions OR revisions, allowed keys only, limits respected."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Proposal mode needs manage access; ask the owner."
+      },
+      {
+        "when": "Proposal exceeds safe document size / Project not found or archived",
+        "fix": "Split the proposal into smaller ones / verify projectId."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Live mode freezes the delta now; editing requirements afterwards makes an approved change set stale and it will not unblock publication.",
+        "verifiedFrom": "src/lib/projectChangeSet.ts:95-136"
+      },
+      {
+        "text": "Proposal mode never edits live requirements, always needs formal review (draft->in-review->approved) and is retry-safe (same content -> same id, reused:true).",
+        "verifiedFrom": "src/server/immutableRequirementChangeSetCommands.ts:63-100"
+      },
+      {
+        "text": "Additions must copy an existing source requirement - there is no free-text new-requirement proposal.",
+        "verifiedFrom": "src/server/immutableRequirementProposal.ts:99-132"
+      }
+    ],
+    "verifiedFrom": "createProjectChangeSetCommand; immutableRequirementChangeSetCommands.create (src/server/immutableRequirementChangeSetCommands.ts); buildImmutableRequirementChangeSet (src/server/immutableRequirementProposal.ts); buildProjectChangeSetDraft (src/lib/projectChangeSet.ts)"
+  },
+  {
+    "name": "create_project_change_set_from_resolution",
+    "purpose": "Creates a draft change set that snapshots the current working-scope delta and returns its changeSetId as JSON.",
+    "useWhen": [
+      "Publication is blocked (publicationGate.shouldBlockPublication=true) or the delta is material and must go to review",
+      "Default way for an agent to package live working-scope changes for the owner"
+    ],
+    "avoidWhen": [
+      "Proposing additions or description rewrites without editing live scope - use create_change_set with requirementProposal",
+      "No delta (workingScope.affectedCount = 0)",
+      "An active change set already covers the same delta - reuse it (get_project_scope_resolution_context.changeSets.latest)"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "title",
+        "required": false,
+        "source": "user",
+        "notes": "default 'Change set YYYY-MM-DD'"
+      },
+      {
+        "param": "summary",
+        "required": false,
+        "source": "user",
+        "notes": "what changes and why; mention deleted requirements explicitly"
+      },
+      {
+        "param": "sourceBaselineId",
+        "required": false,
+        "source": "list_requirement_baselines -> id",
+        "notes": "OMIT: defaults to the current baseline; another id breaks publication-gate matching"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it",
+      "Working scope has changes worth reviewing"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "{projectId, changeSetId, mode:'preview', status:'draft_created', requiresHumanReview:true, auditContext}. 'status' is the operation result; the change set itself is 'draft'.",
+    "pairsWith": [
+      "get_project_scope_resolution_context",
+      "list_working_scope_delta_entities",
+      "get_change_set",
+      "update_project_change_set_status"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Snapshot freezes now: edit requirements afterwards and the approved change set will no longer match the gate - create a new one.",
+        "verifiedFrom": "src/lib/projectChangeSet.ts:95-142"
+      },
+      {
+        "text": "Each call creates another draft.",
+        "verifiedFrom": "server.ts:30255-30300"
+      },
+      {
+        "text": "reviewPolicy (materiality, requiresFormalReview) is computed at creation - read it with get_change_set.",
+        "verifiedFrom": "src/lib/projectChangeSet.ts:119"
+      }
+    ],
+    "verifiedFrom": "createProjectChangeSetFromResolutionCommand -> createProjectChangeSetCommand; buildProjectChangeSetDraft (src/lib/projectChangeSet.ts)"
+  },
+  {
+    "name": "create_requirement",
+    "purpose": "Creates one requirement directly in the live scope of a baseline.",
+    "useWhen": [
+      "The user/owner explicitly asked to add this requirement to the working scope",
+      "Materializing a requirement the owner approved in a governance thread (draft_requirement_from_governance_thread output)"
+    ],
+    "avoidWhen": [
+      "Proposing scope for owner review without touching live scope - use create_governance_thread or create_change_set with requirementProposal",
+      "Tracking work to do - use create_issue (requirements are scope, issues are work)"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "baselineId",
+        "required": true,
+        "source": "list_requirement_baselines -> id (the isCurrent one)",
+        "notes": "a non-current baseline is accepted but invisible to the working-scope delta"
+      },
+      {
+        "param": "title",
+        "required": true,
+        "source": "user",
+        "notes": "short statement"
+      },
+      {
+        "param": "description",
+        "required": true,
+        "source": "user",
+        "notes": "testable statement / acceptance intent"
+      },
+      {
+        "param": "type",
+        "required": true,
+        "source": "constant",
+        "notes": "functional|non-functional|interface|business|technical (not validated server-side: use exactly)"
+      },
+      {
+        "param": "status",
+        "required": true,
+        "source": "constant",
+        "notes": "pending|met|not-met|in-progress|obsolete; use 'pending' for new scope"
+      },
+      {
+        "param": "groupId",
+        "required": false,
+        "source": "list_requirement_groups -> id",
+        "notes": ""
+      },
+      {
+        "param": "sourceDocumentId",
+        "required": false,
+        "source": "list_project_knowledge_items -> id",
+        "notes": "not validated"
+      },
+      {
+        "param": "issueId",
+        "required": false,
+        "source": "list_issues -> id",
+        "notes": "primary linked issue"
+      },
+      {
+        "param": "linkedIssueIds",
+        "required": false,
+        "source": "list_issues -> id",
+        "notes": "array of issue ids"
+      },
+      {
+        "param": "linkedCycleIds",
+        "required": false,
+        "source": "list_cycles -> id",
+        "notes": "array; a cycle can belong to only one requirement"
+      },
+      {
+        "param": "linkedMilestoneIds",
+        "required": false,
+        "source": "list_milestones -> id",
+        "notes": "array"
+      }
+    ],
+    "preconditions": [
+      "The user/owner asked for this scope change (GOV-MAX); otherwise propose it instead",
+      "Baseline exists (use the current one)",
+      "Linked issues/cycles/milestones exist, are not deleted and have no different baselineId"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "Plain text 'Requirement created with ID: <id>' - parse the id after 'ID: '.",
+    "pairsWith": [
+      "list_requirement_baselines",
+      "list_requirement_groups",
+      "list_requirements",
+      "get_project_scope_resolution_context",
+      "create_project_change_set_from_resolution"
+    ],
+    "errors": [
+      {
+        "when": "Baseline is required / Baseline not found",
+        "fix": "Pass the isCurrent id from list_requirement_baselines."
+      },
+      {
+        "when": "Requirement group not found",
+        "fix": "Use an id from list_requirement_groups or omit groupId."
+      },
+      {
+        "when": "Linked issue|cycle|milestone not found",
+        "fix": "Verify ids with list_issues / list_cycles / list_milestones (same project, not deleted)."
+      },
+      {
+        "when": "Linked issue|cycle|milestone does not belong to the selected baseline",
+        "fix": "That work item is bound to another baseline; link only work items of this baseline or omit."
+      },
+      {
+        "when": "Linked cycle is already associated with another requirement",
+        "fix": "Cycles are exclusive; unlink it from the other requirement (update_requirement) or omit."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm requirements create --project <projectId> --baseline <baselineId> --title <title> --description <text> --type <type> --status <status> [--group <groupId>] [--source-document <docId>] [--issue <issueId>] [--json]",
+    "gotchas": [
+      {
+        "text": "A requirement created in the current baseline counts as 'changed' in the working-scope delta; 2+ such changes (or any linked cost, or no linked delivery) make the next publication need a reviewed change set.",
+        "verifiedFrom": "src/lib/projectWorkingScopeDelta.ts:71"
+      },
+      {
+        "text": "Fires webhook requirement_created and a semantic-embedding sync.",
+        "verifiedFrom": "server.ts:31222-31230"
+      },
+      {
+        "text": "Retrying creates duplicates - check list_requirements first.",
+        "verifiedFrom": "server.ts:31091-31130"
+      }
+    ],
+    "verifiedFrom": "createRequirementCommand; validateRequirementStructure; getRequirementWorkItemBindingConflict (src/lib/requirementWorkItemState.ts); CLI handleRequirementCreate"
+  },
+  {
+    "name": "create_requirement_baseline",
+    "purpose": "Creates a new EMPTY baseline record (optionally marked current); it does not copy any existing requirements.",
+    "useWhen": [
+      "The owner explicitly asks for a new empty baseline to be filled manually"
+    ],
+    "avoidWhen": [
+      "Snapshotting the current scope as a new version - use publish_baseline_from_working_scope (clones the current baseline's requirements)",
+      "Switching which existing baseline is current - use update_requirement_baseline",
+      "Agent-proposed scope changes - use create_change_set or create_project_change_set_from_resolution"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "free text, e.g. 'Escopo Q4'"
+      },
+      {
+        "param": "version",
+        "required": true,
+        "source": "user",
+        "notes": "free text, e.g. 'v3.0'; duplicates are NOT rejected - check list_requirement_baselines"
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "free text"
+      },
+      {
+        "param": "isCurrent",
+        "required": false,
+        "source": "user",
+        "notes": "boolean, default false; true demotes the current baseline and runs the publication gate"
+      }
+    ],
+    "preconditions": [
+      "The owner explicitly instructed this (baselines are the approved scope - GOV-MAX)",
+      "Caller can read the project (the server checks only read access)",
+      "If isCurrent=true and the working-scope delta is medium/high materiality, an approved change set matching the current delta must exist"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "not idempotent",
+    "returns": "Plain text 'Baseline created with ID: <id>' - parse the id after 'ID: '.",
+    "pairsWith": [
+      "list_requirement_baselines",
+      "create_requirement",
+      "update_requirement_baseline"
+    ],
+    "errors": [
+      {
+        "when": "Material baseline publication requires an approved change set for the current working scope",
+        "fix": "Working-scope delta is medium/high materiality. Run create_project_change_set_from_resolution, move it to in-review, wait for the owner's approval, then publish again WITHOUT editing requirements in between (any edit makes the approved snapshot stale)."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "With isCurrent=true the new current baseline starts EMPTY (requirements are copied only with cloneFromBaselineId, which this tool does not declare), so the approved scope shows zero requirements.",
+        "verifiedFrom": "server.ts:30589"
+      },
+      {
+        "text": "Every requirement with an empty baselineId is attached to the new baseline.",
+        "verifiedFrom": "server.ts:30773-30779"
+      },
+      {
+        "text": "If the gate matches an approved change set, that change set is auto-marked published.",
+        "verifiedFrom": "server.ts:30539-30550"
+      },
+      {
+        "text": "Each call creates another baseline.",
+        "verifiedFrom": "server.ts:30489"
+      }
+    ],
+    "verifiedFrom": "createRequirementBaselineCommand; resolveBaselinePublicationApprovalGate; evaluateChangeSetPublicationGate (src/lib/changeSetPublicationGate.ts)"
+  },
+  {
+    "name": "create_requirement_group",
+    "purpose": "Creates a named requirement group in a project.",
+    "useWhen": [
+      "The user wants requirements organized under a new category and list_requirement_groups has no group with that name"
+    ],
+    "avoidWhen": [
+      "A group with that name exists - reuse its id from list_requirement_groups",
+      "Renaming - use update_requirement_group"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "free text; no uniqueness check"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it",
+      "No group with the same name exists"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "Plain text 'Requirement group created with ID: <id>' - parse the id after 'ID: '.",
+    "pairsWith": [
+      "list_requirement_groups",
+      "create_requirement",
+      "update_requirement"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "No duplicate-name or empty-name check; retries create duplicates.",
+        "verifiedFrom": "server.ts:31692-31705"
+      },
+      {
+        "text": "Any extra key sent is stored in the group document.",
+        "verifiedFrom": "server.ts:31698"
+      }
+    ],
+    "verifiedFrom": "createRequirementGroupCommand"
+  },
+  {
+    "name": "delete_requirement",
+    "purpose": "Soft-deletes a requirement and permanently strips all its links (issues, cycles, milestones, parent/child, dependencies).",
+    "useWhen": [
+      "The user/owner explicitly asked to remove a requirement (duplicate or created by mistake)"
+    ],
+    "avoidWhen": [
+      "The requirement is dropped but history matters - use update_requirement with status 'obsolete'",
+      "Removing approved scope without an owner decision - open create_governance_thread on the requirement"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "requirementId",
+        "required": true,
+        "source": "list_requirements -> id",
+        "notes": "show title and links to the user before deleting"
+      }
+    ],
+    "preconditions": [
+      "The user/owner confirmed this exact requirement after seeing its title and linked work items",
+      "Requirement exists"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text 'Requirement <id> marked as deleted.'",
+    "pairsWith": [
+      "list_requirements",
+      "create_project_change_set_from_resolution"
+    ],
+    "errors": [
+      {
+        "when": "Requirement not found",
+        "fix": "Wrong id; re-list with list_requirements."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "No restore tool: the record stays with isDeleted=true but issue/cycle/milestone links, parent/child and dependency references are cleared for good and its semantic embedding is deleted.",
+        "verifiedFrom": "server.ts:31509-31690"
+      },
+      {
+        "text": "The working-scope delta never shows removals (removedCount stays 0) - state the deletion in the change set summary.",
+        "verifiedFrom": "src/lib/projectWorkingScopeDelta.ts:52"
+      }
+    ],
+    "verifiedFrom": "deleteRequirementCommand"
+  },
+  {
+    "name": "delete_requirement_baseline",
+    "purpose": "Permanently deletes a baseline and hard-deletes every requirement stored in it, unlinking issues, cycles and milestones.",
+    "useWhen": [
+      "The owner explicitly orders removal of a specific baseline created by mistake"
+    ],
+    "avoidWhen": [
+      "Retiring old scope versions - keep them, they are the history",
+      "Removing one requirement - use delete_requirement or update_requirement status 'obsolete'",
+      "Changing which baseline is current - use update_requirement_baseline"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "baselineId",
+        "required": true,
+        "source": "list_requirement_baselines -> id",
+        "notes": "state name, version and requirement count to the owner before deleting"
+      }
+    ],
+    "preconditions": [
+      "The owner explicitly confirmed deleting this exact baseline after seeing its name, version and requirement count (list_requirements)",
+      "Baseline exists"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text 'Baseline <id> deleted successfully.'",
+    "pairsWith": [
+      "list_requirement_baselines",
+      "list_requirements"
+    ],
+    "errors": [
+      {
+        "when": "Baseline not found",
+        "fix": "Already deleted or wrong id; re-list with list_requirement_baselines and treat as done if it is gone."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Irreversible, no restore tool.",
+        "verifiedFrom": "server.ts:30964-31000"
+      },
+      {
+        "text": "Requirements are hard-deleted (not soft); issues, cycles and milestones lose baselineId/requirementId.",
+        "verifiedFrom": "server.ts:30980-30999"
+      },
+      {
+        "text": "If it was current, the newest remaining baseline becomes current automatically, bypassing the publication gate.",
+        "verifiedFrom": "server.ts:30989-30990"
+      },
+      {
+        "text": "Change sets that reference it are left dangling.",
+        "verifiedFrom": "server.ts:30964-31000"
+      },
+      {
+        "text": "Large baselines are written in several batches (not atomic).",
+        "verifiedFrom": "server.ts:30196-30200"
+      }
+    ],
+    "verifiedFrom": "deleteRequirementBaselineCommand; commitBatchedOperations"
+  },
+  {
+    "name": "delete_requirement_group",
+    "purpose": "Permanently deletes a requirement group and sets groupId=null on every requirement that used it.",
+    "useWhen": [
+      "The user confirmed a group is no longer wanted (e.g. empty or created by mistake)"
+    ],
+    "avoidWhen": [
+      "Merging groups - first move requirements with update_requirement groupId, then delete",
+      "Renaming - use update_requirement_group"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "groupId",
+        "required": true,
+        "source": "list_requirement_groups -> id",
+        "notes": "tell the user how many requirements will be ungrouped (list_requirements with groupId)"
+      }
+    ],
+    "preconditions": [
+      "The user confirmed after seeing the group name and its requirement count",
+      "Group exists"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text 'Requirement group <id> deleted and requirements ungrouped.'",
+    "pairsWith": [
+      "list_requirement_groups",
+      "list_requirements"
+    ],
+    "errors": [
+      {
+        "when": "Requirement group not found",
+        "fix": "Already deleted or wrong id; re-list with list_requirement_groups."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Irreversible; membership is lost in every baseline, including past copies.",
+        "verifiedFrom": "server.ts:31787"
+      },
+      {
+        "text": "Ungrouped requirements get a new updatedAt, so those in the current baseline show as 'changed' in the working-scope delta and can raise materiality.",
+        "verifiedFrom": "server.ts:31778-31784"
+      }
+    ],
+    "verifiedFrom": "deleteRequirementGroupCommand"
+  },
+  {
+    "name": "get_change_set",
+    "purpose": "Reads one change set in full: status, review policy, working-scope snapshot and, for proposals, the content fingerprint.",
+    "useWhen": [
+      "Before any status change, to read status, reviewPolicy.requiresFormalReview and scopeProposal.contentFingerprint",
+      "Verifying that a transition or publication took effect"
+    ],
+    "avoidWhen": [
+      "Listing or searching change sets - use list_change_sets"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "changeSetId",
+        "required": true,
+        "source": "list_change_sets -> id, create_project_change_set_from_resolution -> changeSetId, or create_change_set -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{id, title, summary, status, sourceBaselineId, publicationBaselineId, publicationBaselineName, workingScopeSnapshot, reviewPolicy{materiality, requiresFormalReview, reasonCodes}, scopeProposal{kind, contentFingerprint, additions, revisions} (proposals only), approvedContentFingerprint, reviewRequestedAt/By, approvedAt/By, rejectedAt/By, publishedAt/By}",
+    "pairsWith": [
+      "list_change_sets",
+      "update_change_set",
+      "publish_baseline_from_working_scope"
+    ],
+    "errors": [
+      {
+        "when": "-32602 Change set not found",
+        "fix": "Wrong changeSetId; re-list with list_change_sets."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "For proposals, scopeProposal.contentFingerprint is the expectedProposalFingerprint required by update_change_set and publish_baseline_from_working_scope.",
+        "verifiedFrom": "src/server/immutableRequirementChangeSetCommands.ts:78"
+      }
+    ],
+    "verifiedFrom": "server.ts inline tools/call handler (requireProjectAccess read + change_sets doc)"
+  },
+  {
+    "name": "get_project_resolution_action_catalog",
+    "purpose": "Returns the recommended actions, guardrails and audit context for one project risk, without the entity list.",
+    "useWhen": [
+      "You need to know which tool (if any) resolves a risk and whether human review is required before acting",
+      "Building an action plan for the owner from list_project_resolution_risks output"
+    ],
+    "avoidWhen": [
+      "You also need the affected entities - use get_project_resolution_context",
+      "Scope publication guardrails - use get_project_scope_resolution_context (publicationGate)"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "riskId",
+        "required": true,
+        "source": "list_project_resolution_risks -> risks[].id",
+        "notes": "exact id, e.g. 'delivery:overdue', 'scope:working-scope-drift', 'governance:decision-needed'"
+      }
+    ],
+    "preconditions": [
+      "Caller holds a project governance role (project-owner, product-owner or delivery-lead) or is the project ownerId",
+      "riskId is currently firing (the four delivery:* ids always resolve)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{project, generatedAt, risk, actions:[{id, label, mode, toolName, uiTarget, recommended, requiresHumanReview, preconditions}], allowed, requiresHumanReview, blockingReasons (['human_review_required'] when review is needed), preconditions, auditContext{projectId, riskId, generatedAt}}",
+    "pairsWith": [
+      "list_project_resolution_risks",
+      "list_project_resolution_entities"
+    ],
+    "errors": [
+      {
+        "when": "Resolution risk not found",
+        "fix": "riskId is not currently active. Re-run list_project_resolution_risks and copy an id from risks[].id exactly."
+      },
+      {
+        "when": "You do not have access to this owner surface",
+        "fix": "Caller has no governance role (project-owner, product-owner, delivery-lead) and is not the project ownerId. Use get_project_execution_context or get_project_scope_resolution_context instead, or ask the owner to assign a role."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Actions with toolName null point to a UI screen (uiTarget: issues-tab, requirements-tab, change-view, decision-inbox) - tell the user where to go.",
+        "verifiedFrom": "src/lib/projectResolution.ts:224-226"
+      },
+      {
+        "text": "Preconditions are labels (project_access_manage, formal_review_before_execute, human_review_required), not checks the server ran. allowed is always true.",
+        "verifiedFrom": "src/lib/projectResolution.ts:153-175"
+      }
+    ],
+    "verifiedFrom": "getProjectResolutionActionCatalogCommand -> getProjectResolutionContextCommand; buildRiskActions, buildActionPreconditions (src/lib/projectResolution.ts)"
+  },
+  {
+    "name": "get_project_resolution_context",
+    "purpose": "Returns one risk's resolution context: summary, a page of affected entities, recommended actions with the tool to call, and review guardrails.",
+    "useWhen": [
+      "You picked a riskId and need the affected issues/requirements/threads plus the recommended next action in one call",
+      "Deciding whether a risk must go to the owner (requiresHumanReview) before anyone acts"
+    ],
+    "avoidWhen": [
+      "You only need the affected entities - use list_project_resolution_entities",
+      "You only need actions and guardrails - use get_project_resolution_action_catalog",
+      "Baseline publication questions - use get_project_scope_resolution_context"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "riskId",
+        "required": true,
+        "source": "list_project_resolution_risks -> risks[].id",
+        "notes": "exact id, e.g. 'delivery:overdue', 'scope:working-scope-drift', 'governance:decision-needed'"
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "previous response -> nextCursor",
+        "notes": "numeric offset string; omit on first page; stop when nextCursor is null"
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "page size, default 25, max 100"
+      }
+    ],
+    "preconditions": [
+      "Caller holds a project governance role (project-owner, product-owner or delivery-lead) or is the project ownerId",
+      "riskId is currently firing (delivery:overdue, delivery:blocked, delivery:ownership-gaps and delivery:unestimated always resolve, even at count 0)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{project, generatedAt, risk, summary, entities:[{id, type (issue|requirement|governance-thread|baseline|project), title, subtitle, status, changedAt, details[{label,value}], requiresAttention}], entityCount, nextCursor, actions:[{id, label, mode (inspect|preview|execute), toolName (null = UI-only), uiTarget, recommended, requiresHumanReview, preconditions[]}], allowed, requiresHumanReview, blockingReasons, preconditions, auditContext}",
+    "pairsWith": [
+      "list_project_resolution_risks",
+      "list_project_resolution_entities",
+      "bulk_set_project_issue_estimates",
+      "bulk_assign_project_issue_owners",
+      "bulk_set_project_issue_due_dates",
+      "get_project_scope_resolution_context"
+    ],
+    "errors": [
+      {
+        "when": "Resolution risk not found",
+        "fix": "riskId is not currently active. Re-run list_project_resolution_risks and copy an id from risks[].id exactly."
+      },
+      {
+        "when": "You do not have access to this owner surface",
+        "fix": "Caller has no governance role (project-owner, product-owner, delivery-lead) and is not the project ownerId. Use get_project_execution_context or get_project_scope_resolution_context instead, or ask the owner to assign a role."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "allowed is always true - it is NOT a permission check.",
+        "verifiedFrom": "src/lib/projectResolution.ts:744"
+      },
+      {
+        "text": "requiresHumanReview=true (every scope:* and governance:* risk) means present findings to the owner instead of executing.",
+        "verifiedFrom": "src/lib/projectResolution.ts:170-171"
+      },
+      {
+        "text": "Execute actions name bulk_* tools that need an updates list you build from the entities.",
+        "verifiedFrom": "src/lib/projectResolution.ts:162-164"
+      },
+      {
+        "text": "Detail labels are Portuguese.",
+        "verifiedFrom": "src/lib/projectResolution.ts:589"
+      },
+      {
+        "text": "Loads up to 200 governance threads; same API-key side effect as list_project_resolution_risks (orphan requirements re-attached).",
+        "verifiedFrom": "server.ts:8756-8758"
+      }
+    ],
+    "verifiedFrom": "getProjectResolutionContextCommand; buildProjectResolutionContext, buildRiskActions, buildFallbackResolutionRisk, paginateEntities (src/lib/projectResolution.ts)"
+  },
+  {
+    "name": "get_project_scope_resolution_context",
+    "purpose": "One-call scope status: current baseline, working-scope delta counts, orphan requirements, publication gate, recent change sets and guarded next actions.",
+    "useWhen": [
+      "First call before any requirement, baseline or change-set work",
+      "Deciding whether a change set is needed (publicationGate.requiresFormalReview) or publication is blocked (publicationGate.shouldBlockPublication)"
+    ],
+    "avoidWhen": [
+      "Per-requirement delta rows - use list_working_scope_delta_entities",
+      "More than 25 orphan requirements - use list_requirements_awaiting_baseline"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{project, currentBaseline (doc or null), workingScope{mode (unbaselined|inferred-live-requirements), currentBaselineId, addedCount, changedCount, removedCount, unchangedCount, affectedCount}, requirementsAwaitingBaseline{count, items(<=25)}, publicationGate{requiresFormalReview, shouldBlockPublication, matchedApprovedChangeSetId, materiality (none|low|medium|high), reasonCodes}, changeSets{totalCount, activeCount, latest(<=10)}, actions[], requiresHumanReview, blockingReasons, preconditions, auditContext}",
+    "pairsWith": [
+      "list_working_scope_delta_entities",
+      "list_requirements_awaiting_baseline",
+      "create_project_change_set_from_resolution",
+      "update_project_change_set_status",
+      "publish_project_baseline_from_resolution"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Materiality is medium/high (formal review needed before a current baseline can be published) when >=2 requirements are affected, any forecast cost, a requirement has no linked delivery, >=3 linked issues, >=2 cycles+milestones, etc. 'changed' = requirement of the current baseline updated after the baseline was created, including status-only edits.",
+        "verifiedFrom": "src/lib/changeSetMaterialityPolicy.ts:14-30"
+      },
+      {
+        "text": "removedCount is always 0 (removals are never detected).",
+        "verifiedFrom": "src/lib/projectWorkingScopeDelta.ts:52"
+      }
+    ],
+    "verifiedFrom": "getProjectScopeResolutionContextCommand; loadProjectScopeResolutionData; evaluateChangeSetPublicationGate; evaluateChangeSetMaterialityPolicy (src/lib/changeSetMaterialityPolicy.ts); buildProjectWorkingScopeDelta (src/lib/projectWorkingScopeDelta.ts)"
+  },
+  {
+    "name": "list_change_sets",
+    "purpose": "Lists all change sets (formal scope-change packages) of a project, newest first.",
+    "useWhen": [
+      "Looking for an existing draft, in-review or approved change set before creating a new one",
+      "Getting a changeSetId for get_change_set or a status update"
+    ],
+    "avoidWhen": [
+      "You need one change set in full - use get_change_set",
+      "You need active count and gate status together - use get_project_scope_resolution_context (changeSets.latest holds 10)"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Array of {id, title, summary, status (draft|in-review|approved|rejected|published), sourceBaselineId, publicationBaselineId, workingScopeSnapshot{materiality, affectedRequirementIds, addedCount, changedCount, forecastCostDelta, ...}, reviewPolicy{materiality, requiresFormalReview, reasonCodes}, scopeProposal (immutable proposals only; contentFingerprint), approvedAt, approvedBy, createdAt, createdBy}",
+    "pairsWith": [
+      "get_change_set",
+      "update_change_set",
+      "create_project_change_set_from_resolution"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 access denied by OAuth policy, or OPERATION_FAILED under an OAuth connector",
+        "fix": "Call get_mcp_connection_info to check the portfolio:read scope; OAuth hides domain error text, so retry once and then report the projectId you used."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Not paginated and documents are large (a proposal can hold up to 700 KB).",
+        "verifiedFrom": "server.ts:30206-30220"
+      },
+      {
+        "text": "Results over 1 MB come back truncated as {items, truncated:true, returned, total, hint}.",
+        "verifiedFrom": "src/server/mcpResponseLimit.ts:46-47"
+      },
+      {
+        "text": "Active statuses are draft, in-review and approved; a change set with scopeProposal is an immutable proposal with its own rules.",
+        "verifiedFrom": "server.ts:10476"
+      }
+    ],
+    "verifiedFrom": "listProjectChangeSetsCommand; limitMcpToolResult (src/server/mcpResponseLimit.ts)"
+  },
+  {
+    "name": "list_project_resolution_entities",
+    "purpose": "Lists, page by page, the issues, requirements or governance threads affected by one project risk.",
+    "useWhen": [
+      "You need every affected item of a risk (e.g. all overdue or unassigned issues) to act on or report them",
+      "A risk has more than 25 affected entities and you must page through them"
+    ],
+    "avoidWhen": [
+      "You also need recommended actions and guardrails - use get_project_resolution_context",
+      "You need requirement delta rows for scope - use list_working_scope_delta_entities"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "riskId",
+        "required": true,
+        "source": "list_project_resolution_risks -> risks[].id",
+        "notes": "exact id, e.g. 'delivery:overdue', 'scope:working-scope-drift', 'governance:decision-needed'"
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "previous response -> nextCursor",
+        "notes": "numeric offset string; omit on first page; stop when nextCursor is null"
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "page size, default 25, max 100"
+      }
+    ],
+    "preconditions": [
+      "Caller holds a project governance role (project-owner, product-owner or delivery-lead) or is the project ownerId",
+      "riskId is currently firing (the four delivery:* ids always resolve)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{project, generatedAt, risk, entityCount, items:[{id, type, title, subtitle, status, changedAt, details[{label,value}], requiresAttention}], nextCursor}. For issue items, details include priority, assignee, estimate, due date (and overdue days / blockers).",
+    "pairsWith": [
+      "list_project_resolution_risks",
+      "bulk_set_project_issue_estimates",
+      "bulk_assign_project_issue_owners",
+      "bulk_set_project_issue_due_dates"
+    ],
+    "errors": [
+      {
+        "when": "Resolution risk not found",
+        "fix": "riskId is not currently active. Re-run list_project_resolution_risks and copy an id from risks[].id exactly."
+      },
+      {
+        "when": "You do not have access to this owner surface",
+        "fix": "Caller has no governance role (project-owner, product-owner, delivery-lead) and is not the project ownerId. Use get_project_execution_context or get_project_scope_resolution_context instead, or ask the owner to assign a role."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Same data as get_project_resolution_context.entities.",
+        "verifiedFrom": "server.ts:9195-9204"
+      },
+      {
+        "text": "Sorted most recently changed first (overdue: oldest due date first).",
+        "verifiedFrom": "src/lib/projectResolution.ts:579-597"
+      },
+      {
+        "text": "Detail labels are Portuguese ('Responsavel', 'Estimativa', 'Prazo').",
+        "verifiedFrom": "src/lib/projectResolution.ts:436-437"
+      },
+      {
+        "text": "Same API-key side effect as list_project_resolution_risks.",
+        "verifiedFrom": "server.ts:8756-8758"
+      }
+    ],
+    "verifiedFrom": "listProjectResolutionEntitiesCommand -> getProjectResolutionContextCommand; buildEntitiesForRisk (src/lib/projectResolution.ts)"
+  },
+  {
+    "name": "list_project_resolution_risks",
+    "purpose": "Lists the project's currently firing owner-surface risks (scope, delivery, governance), each with an id you pass to the other resolution tools.",
+    "useWhen": [
+      "Starting a project health or triage pass and you need the open risks with ids",
+      "You need a riskId for get_project_resolution_context, list_project_resolution_entities or get_project_resolution_action_catalog",
+      "The owner asks what is wrong with a project and you hold a governance role on it"
+    ],
+    "avoidWhen": [
+      "You only need baseline/working-scope/publication state - use get_project_scope_resolution_context",
+      "Caller has no governance role on the project - use get_project_execution_context",
+      "You need the full executive summary text - use get_project_owner_surface"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it",
+      "Caller holds a project governance role (project-owner, product-owner or delivery-lead) or is the project ownerId"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{project{id,name,key,workspaceId,teamId}, generatedAt, risks:[{id, severity (high|medium|low), title, detail, category (scope|delivery|governance|setup), entityCount, actionable, requiresHumanReview, recommendedActionIds}]}. Use risks[].id as riskId.",
+    "pairsWith": [
+      "list_projects",
+      "get_project_resolution_context",
+      "list_project_resolution_entities",
+      "get_project_resolution_action_catalog"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this owner surface",
+        "fix": "Caller has no governance role (project-owner, product-owner, delivery-lead) and is not the project ownerId. Use get_project_execution_context or get_project_scope_resolution_context instead, or ask the owner to assign a role."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 access denied by OAuth policy, or OPERATION_FAILED under an OAuth connector",
+        "fix": "Call get_mcp_connection_info to check the portfolio:read scope; OAuth hides domain error text, so retry once and then report the projectId you used."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Possible ids: scope:no-current-baseline, scope:working-scope-drift, scope:requirements-awaiting-baseline, scope:material-delta-impact, scope:moderate-delta-impact, delivery:overdue, delivery:blocked, delivery:ownership-gaps, delivery:unestimated, governance:decision-needed; only firing risks are listed.",
+        "verifiedFrom": "src/lib/projectResolution.ts:396-413"
+      },
+      {
+        "text": "Titles/details are in Portuguese.",
+        "verifiedFrom": "src/lib/projectResolution.ts:536-560"
+      },
+      {
+        "text": "With an API key (not OAuth) the call may spend Gen App Builder grounding quota and silently re-attach orphan requirements to the current baseline.",
+        "verifiedFrom": "server.ts:8756-8758"
+      }
+    ],
+    "verifiedFrom": "listProjectResolutionRisksCommand -> getProjectOwnerSurfaceCommand -> getProjectReadModelCommand (repairOrphanRequirementsForProject); buildProjectResolutionRiskCatalog (src/lib/projectResolution.ts); canAccessProjectOwnerSurface (src/lib/projectGovernance.ts)"
+  },
+  {
+    "name": "list_requirement_baselines",
+    "purpose": "Lists all requirement baselines (approved scope snapshots) of a project, newest first; the one with isCurrent=true is the approved scope.",
+    "useWhen": [
+      "You need a baselineId for list_requirements or create_requirement (take the item with isCurrent=true)",
+      "Checking baseline history and version names before a publication"
+    ],
+    "avoidWhen": [
+      "You need delta counts or publication gate - use get_project_scope_resolution_context (it also returns currentBaseline)"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Array of {id, name, version, description, isCurrent, publishedAt, publishedBy, previousBaselineId, previousBaselineName, publicationNotes, changeSetId, contentFingerprint, requirementCount, createdAt}. Pick isCurrent=true.",
+    "pairsWith": [
+      "list_projects",
+      "list_requirements",
+      "create_requirement",
+      "get_project_scope_resolution_context"
+    ],
+    "errors": [
+      {
+        "when": "Empty array",
+        "fix": "Wrong projectId or the project has no baseline yet; verify with get_project. The first baseline is published with publish_baseline_from_working_scope on the owner's instruction."
+      },
+      {
+        "when": "-32003 access denied by OAuth policy, or OPERATION_FAILED under an OAuth connector",
+        "fix": "Call get_mcp_connection_info to check the portfolio:read scope; OAuth hides domain error text, so retry once and then report the projectId you used."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Not paginated.",
+        "verifiedFrom": "server.ts:39411-39414"
+      },
+      {
+        "text": "If no item has isCurrent=true the project is unbaselined (risk scope:no-current-baseline).",
+        "verifiedFrom": "src/lib/projectWorkingScopeDelta.ts:40-44"
+      },
+      {
+        "text": "Each baseline holds its own copies of requirements; never edit requirements of a non-current baseline unless told to.",
+        "verifiedFrom": "server.ts:30589-30600"
+      }
+    ],
+    "verifiedFrom": "server.ts inline tools/call handler (Firestore projects/{projectId}/baselines orderBy createdAt desc)"
+  },
+  {
+    "name": "list_requirement_groups",
+    "purpose": "Lists the requirement groups (categories) of a project.",
+    "useWhen": [
+      "You need a groupId to filter list_requirements or to set on create_requirement/update_requirement",
+      "Checking whether a group already exists before creating one"
+    ],
+    "avoidWhen": [
+      "Listing requirements of a group - use list_requirements with groupId"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Array of {id, name, projectId, workspaceId, createdAt} (unordered).",
+    "pairsWith": [
+      "list_requirements",
+      "create_requirement",
+      "create_requirement_group"
+    ],
+    "errors": [
+      {
+        "when": "Empty array",
+        "fix": "No groups yet (or wrong projectId)."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Groups are project-wide and shared by all baselines.",
+        "verifiedFrom": "server.ts:39855"
+      },
+      {
+        "text": "Unordered - sort by name yourself; names are not unique.",
+        "verifiedFrom": "server.ts:39855-39857"
+      }
+    ],
+    "verifiedFrom": "server.ts inline tools/call handler (Firestore projects/{projectId}/requirement_groups)"
+  },
+  {
+    "name": "list_requirements",
+    "purpose": "Lists the non-deleted requirements of one baseline with their linked issue/cycle/milestone ids, optionally filtered by group, status or type.",
+    "useWhen": [
+      "Reading the approved scope (current baseline) or a past version",
+      "Finding a requirementId to update, link or quote",
+      "Checking traceability: which requirements have linkedIssueIds"
+    ],
+    "avoidWhen": [
+      "What changed since the baseline - use list_working_scope_delta_entities",
+      "Requirements without a baseline - use list_requirements_awaiting_baseline"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "baselineId",
+        "required": true,
+        "source": "list_requirement_baselines -> id (the isCurrent one)",
+        "notes": ""
+      },
+      {
+        "param": "groupId",
+        "required": false,
+        "source": "list_requirement_groups -> id",
+        "notes": ""
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "pending|met|not-met|in-progress|obsolete"
+      },
+      {
+        "param": "type",
+        "required": false,
+        "source": "constant",
+        "notes": "functional|non-functional|interface|business|technical"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Array of {id, title, description, type, status, groupId, baselineId, issueId, linkedIssueIds, linkedCycleIds, linkedMilestoneIds, parentRequirementId, dependencies, sourceDocumentId, previousRequirementId, createdAt, updatedAt}",
+    "pairsWith": [
+      "list_requirement_baselines",
+      "update_requirement",
+      "list_issues"
+    ],
+    "errors": [
+      {
+        "when": "Empty array",
+        "fix": "Wrong baselineId (or empty baseline); take the isCurrent id from list_requirement_baselines."
+      },
+      {
+        "when": "-32003 access denied by OAuth policy, or OPERATION_FAILED under an OAuth connector",
+        "fix": "Call get_mcp_connection_info to check the portfolio:read scope; OAuth hides domain error text, so retry once and then report the projectId you used."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": "lpm requirements list --project <projectId> --baseline <baselineId> [--status <status>] [--type <type>] [--group <groupId>] [--json]",
+    "gotchas": [
+      {
+        "text": "Not paginated; results over 1 MB are truncated to {items, truncated:true, returned, total, hint} - filter by groupId/status/type.",
+        "verifiedFrom": "server.ts:39825-39826"
+      },
+      {
+        "text": "Each published baseline has its own requirement copies with new ids (previousRequirementId points to the older copy); use ids from the current baseline.",
+        "verifiedFrom": "server.ts:30589-30600"
+      }
+    ],
+    "verifiedFrom": "server.ts inline tools/call handler (requirements where baselineId and isDeleted=false) + enrichRequirementsWithLinkedWorkItems; CLI handleRequirementsList"
+  },
+  {
+    "name": "list_requirements_awaiting_baseline",
+    "purpose": "Lists, page by page, non-deleted requirements whose baselineId is empty or points to a baseline that no longer exists (orphans).",
+    "useWhen": [
+      "get_project_scope_resolution_context shows requirementsAwaitingBaseline.count > 0 and you need all of them",
+      "Before reconcile_orphan_requirements_into_baseline, to show the user exactly what will be attached"
+    ],
+    "avoidWhen": [
+      "What changed in the current baseline - use list_working_scope_delta_entities",
+      "Normal requirement reads - use list_requirements"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "pending|met|not-met|in-progress|obsolete; exact match, not validated"
+      },
+      {
+        "param": "type",
+        "required": false,
+        "source": "constant",
+        "notes": "functional|non-functional|interface|business|technical; exact match, not validated"
+      },
+      {
+        "param": "groupId",
+        "required": false,
+        "source": "list_requirement_groups -> id",
+        "notes": ""
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "previous response -> nextCursor",
+        "notes": "numeric offset string; omit on first page; stop when nextCursor is null"
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "page size, default 25, max 100"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, generatedAt, totalCount, items:[{id, title, status, type, groupId, baselineId, updatedAt}], nextCursor}",
+    "pairsWith": [
+      "get_project_scope_resolution_context",
+      "reconcile_orphan_requirements_into_baseline"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Usually empty: read-model calls made with an API key (list_project_resolution_risks, get_project_read_model, get_project_owner_surface...) silently attach orphans to the current baseline.",
+        "verifiedFrom": "server.ts:8756-8758"
+      },
+      {
+        "text": "A misspelled filter just returns 0 items.",
+        "verifiedFrom": "server.ts:10811-10814"
+      }
+    ],
+    "verifiedFrom": "listRequirementsAwaitingBaselineCommand; loadProjectScopeResolutionData; paginateScopeResolutionItems"
+  },
+  {
+    "name": "list_working_scope_delta_entities",
+    "purpose": "Lists, page by page, working-scope requirements classified as added, changed or unchanged versus the current baseline.",
+    "useWhen": [
+      "Explaining exactly which requirements changed since the current baseline",
+      "Writing the summary of a change set before creating it"
+    ],
+    "avoidWhen": [
+      "You only need the counts - use get_project_scope_resolution_context"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "changeType",
+        "required": false,
+        "source": "constant",
+        "notes": "added|changed|unchanged; omit for all"
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "previous response -> nextCursor",
+        "notes": "numeric offset string; omit on first page; stop when nextCursor is null"
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "page size, default 25, max 100"
+      }
+    ],
+    "preconditions": [
+      "Project exists and the caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, generatedAt, summary{mode, currentBaselineId, addedCount, changedCount, removedCount, unchangedCount}, totalCount, items:[{requirementId, baselineId, title, type, status, groupId, changedAt, changeType}], nextCursor}",
+    "pairsWith": [
+      "get_project_scope_resolution_context",
+      "create_project_change_set_from_resolution"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "added = requirement with empty baselineId; changed = requirement of the current baseline updated after the baseline was created (new requirements created in the current baseline also show as changed).",
+        "verifiedFrom": "src/lib/projectWorkingScopeDelta.ts:69-72"
+      },
+      {
+        "text": "Requirements of non-current baselines are ignored.",
+        "verifiedFrom": "src/lib/projectWorkingScopeDelta.ts:69-71"
+      },
+      {
+        "text": "Without a current baseline (mode unbaselined) every requirement is 'added'. Deletions never appear.",
+        "verifiedFrom": "src/lib/projectWorkingScopeDelta.ts:42-66"
+      }
+    ],
+    "verifiedFrom": "listWorkingScopeDeltaEntitiesCommand; buildProjectWorkingScopeDelta (src/lib/projectWorkingScopeDelta.ts)"
+  },
+  {
+    "name": "publish_baseline_from_working_scope",
+    "purpose": "Publishes a new baseline version - copies the current baseline's requirements (or applies an approved immutable proposal) into a new snapshot and, by default, makes it current.",
+    "useWhen": [
+      "The owner approved the scope change and asked to publish the new baseline",
+      "Publishing an approved immutable proposal (pass changeSetId and expectedProposalFingerprint)",
+      "Publishing the first baseline of an unbaselined project on the owner's instruction"
+    ],
+    "avoidWhen": [
+      "Change still under review or publicationGate.shouldBlockPublication=true - get the change set approved first",
+      "Flipping current between existing baselines - use update_requirement_baseline"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "baseline name; <=300 chars in proposal mode"
+      },
+      {
+        "param": "version",
+        "required": false,
+        "source": "user",
+        "notes": "live mode default 'v<N+1>.0'; REQUIRED in proposal mode, <=100 chars, must not exist yet"
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "free text (<=20000 in proposal mode)"
+      },
+      {
+        "param": "publicationNotes",
+        "required": false,
+        "source": "user",
+        "notes": "why/what was approved (<=20000 in proposal mode)"
+      },
+      {
+        "param": "cloneFromBaselineId",
+        "required": false,
+        "source": "list_requirement_baselines -> id",
+        "notes": "live mode default = current baseline; proposal mode: omit"
+      },
+      {
+        "param": "isCurrent",
+        "required": false,
+        "source": "constant",
+        "notes": "default true; proposal mode accepts only true/omitted"
+      },
+      {
+        "param": "changeSetId",
+        "required": false,
+        "source": "list_change_sets -> id of the approved proposal",
+        "notes": "proposal mode only; passing it switches the tool to proposal mode; never pass it for a live change set (no scopeProposal): the call then fails with 'Immutable proposal not found'"
+      },
+      {
+        "param": "expectedProposalFingerprint",
+        "required": false,
+        "source": "get_change_set -> scopeProposal.contentFingerprint",
+        "notes": "required with changeSetId"
+      }
+    ],
+    "preconditions": [
+      "The owner explicitly instructed this publication",
+      "Live mode: if get_project_scope_resolution_context.publicationGate.shouldBlockPublication=true, an approved change set still matching the working scope exists (matchedApprovedChangeSetId not null)",
+      "Proposal mode: caller can manage the project; change set approved with approvedContentFingerprint = expectedProposalFingerprint; no requirement with an empty baselineId"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "not idempotent",
+    "returns": "Live mode: {baseline{id, name, version, isCurrent, previousBaselineId, ...}, publication{version, previousBaselineId, previousBaselineName}}. Proposal mode: {baseline{id:'transition-<fingerprint>', requirementCount, ...}, reused:false|true}.",
+    "pairsWith": [
+      "get_project_scope_resolution_context",
+      "get_change_set",
+      "list_requirement_baselines",
+      "list_requirements"
+    ],
+    "errors": [
+      {
+        "when": "Material baseline publication requires an approved change set for the current working scope",
+        "fix": "Working-scope delta is medium/high materiality. Run create_project_change_set_from_resolution, move it to in-review, wait for the owner's approval, then publish again WITHOUT editing requirements in between (any edit makes the approved snapshot stale)."
+      },
+      {
+        "when": "Immutable proposal not found",
+        "fix": "changeSetId was sent for a live change set (no scopeProposal). Run list_requirement_baselines first: if the version already exists, it was published. Else call again WITHOUT changeSetId and expectedProposalFingerprint and put the change set id in publicationNotes."
+      },
+      {
+        "when": "Publication requires name, version and current promotion",
+        "fix": "Proposal mode: pass name and version; omit isCurrent or send true."
+      },
+      {
+        "when": "Expected proposal fingerprint mismatch / Proposal fingerprint mismatch",
+        "fix": "Read get_change_set and copy scopeProposal.contentFingerprint exactly into expectedProposalFingerprint."
+      },
+      {
+        "when": "Publication requires approval of the exact proposal",
+        "fix": "The proposal is not approved (owner decision via update_change_set in-review -> approved)."
+      },
+      {
+        "when": "Proposal or base changed; create and review a fresh proposal",
+        "fix": "Live requirements, issues, costs or the source changed since the proposal. Create a new proposal (create_change_set dryRun -> create) and send it to review; rejecting or returning the old one to draft still works."
+      },
+      {
+        "when": "Baseline version already exists",
+        "fix": "Pick a new version string (check list_requirement_baselines)."
+      },
+      {
+        "when": "Reconcile unbaselined requirements before publication",
+        "fix": "Run list_requirements_awaiting_baseline, confirm with the user, run reconcile_orphan_requirements_into_baseline, retry."
+      },
+      {
+        "when": "Publication exceeds atomic write limit; split the proposal through review",
+        "fix": "Requirements + links + 10 exceed 480 writes; split into smaller proposals."
+      },
+      {
+        "when": "Publication replay mismatch",
+        "fix": "It was already published with other name/version/description/notes; read get_change_set.publicationBaselineId instead of retrying."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Live mode creates a NEW baseline on every call - never retry blindly; check list_requirement_baselines first.",
+        "verifiedFrom": "server.ts:10542"
+      },
+      {
+        "text": "The old baseline and its requirements stay intact; copies get new ids (previousRequirementId) and issues/cycles/milestones are re-pointed to them.",
+        "verifiedFrom": "src/server/immutableRequirementChangeSetCommands.ts:147-169"
+      },
+      {
+        "text": "A matching approved change set is auto-marked published.",
+        "verifiedFrom": "server.ts:30539-30550"
+      },
+      {
+        "text": "If baselines exist but none is current, the default clones nothing - pass cloneFromBaselineId.",
+        "verifiedFrom": "server.ts:30508"
+      },
+      {
+        "text": "Proposal mode is atomic and replay-safe (same args -> reused:true).",
+        "verifiedFrom": "src/server/immutableRequirementChangeSetCommands.ts:191-209"
+      }
+    ],
+    "verifiedFrom": "publishBaselineFromWorkingScopeCommand; createRequirementBaselineCommand; immutableRequirementChangeSetCommands.publish; assertImmutableProposalPublication"
+  },
+  {
+    "name": "publish_change_set",
+    "purpose": "Marks an approved live-scope change set as published against a baseline id; bookkeeping only, it creates or changes no baseline.",
+    "useWhen": [
+      "The owner asks to close an approved change set against a baseline that was already published by other means"
+    ],
+    "avoidWhen": [
+      "Normal publication - use publish_baseline_from_working_scope (creates the baseline and auto-publishes the matching approved change set)",
+      "Immutable proposals - always fails here; use publish_baseline_from_working_scope with changeSetId"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "changeSetId",
+        "required": true,
+        "source": "list_change_sets -> id, create_project_change_set_from_resolution -> changeSetId, or create_change_set -> id",
+        "notes": ""
+      },
+      {
+        "param": "publicationBaselineId",
+        "required": true,
+        "source": "list_requirement_baselines -> id",
+        "notes": "NOT validated by the server - must be the baseline that contains this change"
+      },
+      {
+        "param": "publicationBaselineName",
+        "required": false,
+        "source": "list_requirement_baselines -> name",
+        "notes": "optional label"
+      }
+    ],
+    "preconditions": [
+      "The owner explicitly instructed this",
+      "Change set status is approved and it is not an immutable proposal"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text 'Change set <id> published successfully.'",
+    "pairsWith": [
+      "get_change_set",
+      "list_requirement_baselines"
+    ],
+    "errors": [
+      {
+        "when": "Invalid change set transition from draft|in-review|rejected to published",
+        "fix": "It must be approved first (owner decision via update_change_set)."
+      },
+      {
+        "when": "Immutable proposal metadata cannot be edited; create a new proposal",
+        "fix": "The change set is an immutable proposal (has scopeProposal). Use update_change_set sending ONLY projectId, changeSetId, status, expectedProposalFingerprint; to change content create a new proposal with create_change_set."
+      },
+      {
+        "when": "Change set not found",
+        "fix": "Wrong changeSetId; re-list with list_change_sets."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Does not touch baselines or requirements.",
+        "verifiedFrom": "server.ts:39803-39810"
+      },
+      {
+        "text": "Calling it on an already-published change set silently overwrites its publicationBaselineId.",
+        "verifiedFrom": "server.ts:30367-30379"
+      },
+      {
+        "text": "Prefer publish_baseline_from_working_scope in every normal flow.",
+        "verifiedFrom": "server.ts:10533-10549"
+      }
+    ],
+    "verifiedFrom": "server.ts handler -> updateProjectChangeSetCommand(status 'published'); applyChangeSetStatusTransition; immutableRequirementChangeSetCommands.review (allow-list rejects publicationBaseline* keys)"
+  },
+  {
+    "name": "publish_project_baseline_from_resolution",
+    "purpose": "Publishes a new baseline from the live working scope (clones the current baseline, promotes it to current by default) and returns a JSON envelope with baselineId.",
+    "useWhen": [
+      "The owner instructed publishing the reviewed live working scope"
+    ],
+    "avoidWhen": [
+      "Publishing an immutable proposal - use publish_baseline_from_working_scope with changeSetId",
+      "publicationGate.shouldBlockPublication=true - get the change set approved first"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "baseline name"
+      },
+      {
+        "param": "version",
+        "required": false,
+        "source": "user",
+        "notes": "default 'v<N+1>.0'; duplicates are not rejected"
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "free text"
+      },
+      {
+        "param": "publicationNotes",
+        "required": false,
+        "source": "user",
+        "notes": "what was approved and by whom"
+      },
+      {
+        "param": "cloneFromBaselineId",
+        "required": false,
+        "source": "list_requirement_baselines -> id",
+        "notes": "default = current baseline"
+      },
+      {
+        "param": "isCurrent",
+        "required": false,
+        "source": "constant",
+        "notes": "default true"
+      }
+    ],
+    "preconditions": [
+      "The owner explicitly instructed this publication",
+      "If publicationGate.shouldBlockPublication=true, an approved change set still matching the working scope exists"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "not idempotent",
+    "returns": "{projectId, baselineId, mode:'execute', status:'published', auditContext, result{baseline{...}, publication{version, previousBaselineId, previousBaselineName}}}",
+    "pairsWith": [
+      "get_project_scope_resolution_context",
+      "update_project_change_set_status",
+      "list_requirement_baselines"
+    ],
+    "errors": [
+      {
+        "when": "Material baseline publication requires an approved change set for the current working scope",
+        "fix": "Working-scope delta is medium/high materiality. Run create_project_change_set_from_resolution, move it to in-review, wait for the owner's approval, then publish again WITHOUT editing requirements in between (any edit makes the approved snapshot stale)."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Live-mode twin of publish_baseline_from_working_scope (changeSetId is not forwarded).",
+        "verifiedFrom": "server.ts:10533-10549"
+      },
+      {
+        "text": "Every call creates a new baseline - never retry blindly.",
+        "verifiedFrom": "server.ts:10542"
+      },
+      {
+        "text": "requiresHumanReview:false in the response does not mean the owner's approval was unnecessary.",
+        "verifiedFrom": "server.ts:10925"
+      },
+      {
+        "text": "A matching approved change set is auto-marked published.",
+        "verifiedFrom": "server.ts:30539-30550"
+      }
+    ],
+    "verifiedFrom": "publishProjectBaselineFromResolutionCommand -> publishBaselineFromWorkingScopeCommand -> createRequirementBaselineCommand"
+  },
+  {
+    "name": "reconcile_orphan_requirements_into_baseline",
+    "purpose": "Attaches every non-deleted requirement with an empty or invalid baselineId to one target baseline (given, else current, else newest).",
+    "useWhen": [
+      "list_requirements_awaiting_baseline shows orphans and the user agreed which baseline they belong to",
+      "publish_baseline_from_working_scope failed with 'Reconcile unbaselined requirements before publication'"
+    ],
+    "avoidWhen": [
+      "Moving one requirement between baselines - use update_requirement with baselineId",
+      "No orphans (count 0) - nothing to do"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "baselineId",
+        "required": false,
+        "source": "list_requirement_baselines -> id",
+        "notes": "default = current baseline, else newest baseline"
+      }
+    ],
+    "preconditions": [
+      "User confirmed the target baseline after seeing the orphan list",
+      "Project has at least one baseline"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, baselineId (target), status:'reconciled', requestedCount, reconciledCount, reconciledRequirementIds[], auditContext}",
+    "pairsWith": [
+      "list_requirements_awaiting_baseline",
+      "get_project_scope_resolution_context"
+    ],
+    "errors": [
+      {
+        "when": "Target baseline not found",
+        "fix": "baselineId is not in this project, or the project has no baselines; check list_requirement_baselines."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "All orphans at once, no per-item selection.",
+        "verifiedFrom": "server.ts:10957-10973"
+      },
+      {
+        "text": "Reconciled requirements get updatedAt=now, so in the current baseline they count as 'changed' and can raise materiality.",
+        "verifiedFrom": "server.ts:10971-10973"
+      },
+      {
+        "text": "Old invalid baselineId values are lost; no audit or activity entry is written.",
+        "verifiedFrom": "server.ts:10969-10992"
+      }
+    ],
+    "verifiedFrom": "reconcileOrphanRequirementsIntoBaselineCommand; loadProjectScopeResolutionData"
+  },
+  {
+    "name": "update_change_set",
+    "purpose": "Edits a change set's title/summary or moves it through the review states (draft, in-review, approved, rejected, published).",
+    "useWhen": [
+      "Submitting a draft for review (status 'in-review')",
+      "Recording an approval or rejection the owner explicitly gave",
+      "Reviewing an immutable proposal (the only status tool that works for proposals)"
+    ],
+    "avoidWhen": [
+      "Publishing - use publish_baseline_from_working_scope (creates the baseline and auto-marks the matching approved change set published)",
+      "Changing a proposal's content - create a new proposal with create_change_set"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "changeSetId",
+        "required": true,
+        "source": "list_change_sets -> id, create_project_change_set_from_resolution -> changeSetId, or create_change_set -> id",
+        "notes": ""
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "draft|in-review|approved|rejected|published"
+      },
+      {
+        "param": "title",
+        "required": false,
+        "source": "user",
+        "notes": "live-scope change sets only"
+      },
+      {
+        "param": "summary",
+        "required": false,
+        "source": "user",
+        "notes": "live-scope change sets only"
+      },
+      {
+        "param": "expectedProposalFingerprint",
+        "required": false,
+        "source": "get_change_set -> scopeProposal.contentFingerprint",
+        "notes": "required for proposals"
+      },
+      {
+        "param": "publicationBaselineId",
+        "required": false,
+        "source": "list_requirement_baselines -> id",
+        "notes": "only with status published on live-scope change sets"
+      },
+      {
+        "param": "publicationBaselineName",
+        "required": false,
+        "source": "list_requirement_baselines -> name",
+        "notes": "optional label"
+      }
+    ],
+    "preconditions": [
+      "Status approved, rejected or published only on the owner's explicit instruction (GOV-MAX); never approve on your own judgment; record approved or rejected only when the owner's words in this conversation say so (quote them)",
+      "Transition allowed: draft->in-review|approved (approved only if reviewPolicy.requiresFormalReview=false), in-review->draft|approved|rejected, approved->draft|published, rejected->draft",
+      "Proposals: caller can manage the project and sends only projectId, changeSetId, status, expectedProposalFingerprint"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text 'Change set <id> updated successfully.' - confirm with get_change_set.",
+    "pairsWith": [
+      "get_change_set",
+      "publish_baseline_from_working_scope"
+    ],
+    "errors": [
+      {
+        "when": "Invalid change set transition from <X> to <Y>",
+        "fix": "Allowed: draft->in-review|approved (approved only if reviewPolicy.requiresFormalReview=false), in-review->draft|approved|rejected, approved->draft|published, rejected->draft, published->none. Read get_change_set and follow the chain."
+      },
+      {
+        "when": "Published change set requires a publication baseline",
+        "fix": "Do not publish through this tool; use publish_baseline_from_working_scope."
+      },
+      {
+        "when": "Immutable proposal metadata cannot be edited; create a new proposal",
+        "fix": "The change set is an immutable proposal (has scopeProposal). Use update_change_set sending ONLY projectId, changeSetId, status, expectedProposalFingerprint; to change content create a new proposal with create_change_set."
+      },
+      {
+        "when": "Expected proposal fingerprint mismatch / Proposal fingerprint mismatch",
+        "fix": "Read get_change_set and copy scopeProposal.contentFingerprint exactly into expectedProposalFingerprint."
+      },
+      {
+        "when": "Proposal or base changed; create and review a fresh proposal",
+        "fix": "Live requirements, issues, costs or the source changed since the proposal. Create a new proposal (create_change_set dryRun -> create) and send it to review; rejecting or returning the old one to draft still works."
+      },
+      {
+        "when": "Immutable proposals require atomic snapshot publication; metadata publication is forbidden",
+        "fix": "Publish with publish_baseline_from_working_scope passing changeSetId and expectedProposalFingerprint."
+      },
+      {
+        "when": "Change set not found",
+        "fix": "Wrong changeSetId; re-list with list_change_sets."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "The server does not check who approves (no independent-reviewer guard) - enforcing GOV-MAX is your job.",
+        "verifiedFrom": "server.ts:30379-30386"
+      },
+      {
+        "text": "Re-sending the same status is a no-op for live-scope change sets but an 'Invalid change set transition' error for proposals.",
+        "verifiedFrom": "server.ts:30379"
+      },
+      {
+        "text": "Setting publicationBaselineId on an approved live change set without publishing stops it from satisfying the publication gate.",
+        "verifiedFrom": "src/lib/changeSetStateMachine.ts:46-69"
+      },
+      {
+        "text": "Title/summary edits do not affect gate matching.",
+        "verifiedFrom": "server.ts:30361-30366"
+      }
+    ],
+    "verifiedFrom": "updateProjectChangeSetCommand; applyChangeSetStatusTransition (src/lib/changeSetStateMachine.ts); immutableRequirementChangeSetCommands.review; reviewImmutableRequirementChangeSet"
+  },
+  {
+    "name": "update_project_change_set_status",
+    "purpose": "Moves a live-scope change set to another review status and returns a JSON audit envelope.",
+    "useWhen": [
+      "Submitting a draft for review (status 'in-review')",
+      "Recording an approval or rejection the owner explicitly gave",
+      "Returning a change set to draft"
+    ],
+    "avoidWhen": [
+      "Immutable proposals - always fails here; use update_change_set with expectedProposalFingerprint",
+      "Publishing - use publish_project_baseline_from_resolution or publish_baseline_from_working_scope"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "changeSetId",
+        "required": true,
+        "source": "list_change_sets -> id, create_project_change_set_from_resolution -> changeSetId, or create_change_set -> id",
+        "notes": ""
+      },
+      {
+        "param": "status",
+        "required": true,
+        "source": "constant",
+        "notes": "draft|in-review|approved|rejected|published"
+      },
+      {
+        "param": "publicationBaselineId",
+        "required": false,
+        "source": "list_requirement_baselines -> id",
+        "notes": "only with status published"
+      },
+      {
+        "param": "publicationBaselineName",
+        "required": false,
+        "source": "list_requirement_baselines -> name",
+        "notes": "optional label"
+      }
+    ],
+    "preconditions": [
+      "Status approved, rejected or published only on the owner's explicit instruction (GOV-MAX); never approve on your own judgment; record approved or rejected only when the owner's words in this conversation say so (quote them)",
+      "Transition allowed: draft->in-review|approved (approved only if reviewPolicy.requiresFormalReview=false), in-review->draft|approved|rejected, approved->draft|published, rejected->draft",
+      "Change set is not an immutable proposal (no scopeProposal)"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, changeSetId, mode:'execute', status:'updated', requiresHumanReview (true for approved/published), auditContext}. Read get_change_set for the new status.",
+    "pairsWith": [
+      "create_project_change_set_from_resolution",
+      "get_change_set",
+      "publish_project_baseline_from_resolution"
+    ],
+    "errors": [
+      {
+        "when": "Invalid change set transition from <X> to <Y>",
+        "fix": "Allowed: draft->in-review|approved (approved only if reviewPolicy.requiresFormalReview=false), in-review->draft|approved|rejected, approved->draft|published, rejected->draft, published->none. Read get_change_set and follow the chain."
+      },
+      {
+        "when": "Published change set requires a publication baseline",
+        "fix": "Do not publish through this tool; use publish_project_baseline_from_resolution."
+      },
+      {
+        "when": "Immutable proposal metadata cannot be edited; create a new proposal",
+        "fix": "The change set is an immutable proposal (has scopeProposal). Use update_change_set sending ONLY projectId, changeSetId, status, expectedProposalFingerprint; to change content create a new proposal with create_change_set."
+      },
+      {
+        "when": "Change set not found",
+        "fix": "Wrong changeSetId; re-list with list_change_sets."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Same state machine as update_change_set, but it always forwards publicationBaseline* keys, so every call on an immutable proposal fails.",
+        "verifiedFrom": "src/server/immutableRequirementChangeSetCommands.ts:132-141"
+      },
+      {
+        "text": "The server does not enforce an independent reviewer.",
+        "verifiedFrom": "server.ts:30379-30386"
+      }
+    ],
+    "verifiedFrom": "updateProjectChangeSetStatusFromResolutionCommand -> updateProjectChangeSetCommand; applyChangeSetStatusTransition; immutableRequirementChangeSetCommands.review"
+  },
+  {
+    "name": "update_requirement",
+    "purpose": "Changes fields of an existing requirement: text, type, status, group, baseline or linked issues/cycles/milestones.",
+    "useWhen": [
+      "The user asked to correct or clarify a requirement, or to record its status (met, in-progress, not-met, obsolete)",
+      "Linking issues, cycles or milestones to a requirement for traceability"
+    ],
+    "avoidWhen": [
+      "Proposing a description rewrite for owner review without touching live scope - use create_change_set with requirementProposal.revisions",
+      "Removing it - use delete_requirement, or status 'obsolete' to keep history"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "requirementId",
+        "required": true,
+        "source": "list_requirements -> id",
+        "notes": "use the copy in the current baseline"
+      },
+      {
+        "param": "title",
+        "required": false,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "type",
+        "required": false,
+        "source": "constant",
+        "notes": "functional|non-functional|interface|business|technical"
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "pending|met|not-met|in-progress|obsolete"
+      },
+      {
+        "param": "groupId",
+        "required": false,
+        "source": "list_requirement_groups -> id",
+        "notes": "send \"\" to clear; null is ignored"
+      },
+      {
+        "param": "sourceDocumentId",
+        "required": false,
+        "source": "list_project_knowledge_items -> id",
+        "notes": "null clears"
+      },
+      {
+        "param": "issueId",
+        "required": false,
+        "source": "list_issues -> id",
+        "notes": "primary link; send \"\" to clear; null is ignored"
+      },
+      {
+        "param": "linkedIssueIds",
+        "required": false,
+        "source": "list_issues -> id",
+        "notes": "FULL desired list; replaces the current set"
+      },
+      {
+        "param": "linkedCycleIds",
+        "required": false,
+        "source": "list_cycles -> id",
+        "notes": "FULL desired list; replaces"
+      },
+      {
+        "param": "linkedMilestoneIds",
+        "required": false,
+        "source": "list_milestones -> id",
+        "notes": "FULL desired list; replaces"
+      }
+    ],
+    "preconditions": [
+      "The user/owner asked for this change (scope edits are governed - GOV-MAX)",
+      "Requirement exists and is not deleted (check list_requirements)",
+      "Linked work items belong to the requirement's baseline; cycles not bound to another requirement"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text 'Requirement <id> updated successfully.' - confirm with list_requirements.",
+    "pairsWith": [
+      "list_requirements",
+      "get_project_scope_resolution_context",
+      "create_project_change_set_from_resolution"
+    ],
+    "errors": [
+      {
+        "when": "Requirement not found",
+        "fix": "Wrong id; re-list with list_requirements on the current baseline."
+      },
+      {
+        "when": "Baseline not found / Requirement group not found",
+        "fix": "Use ids from list_requirement_baselines / list_requirement_groups."
+      },
+      {
+        "when": "Linked issue|cycle|milestone not found / does not belong to the selected baseline",
+        "fix": "Verify ids and that the work item is not bound to another baseline."
+      },
+      {
+        "when": "Linked cycle is already associated with another requirement",
+        "fix": "Unlink it from the other requirement first."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm requirements update --project <projectId> --requirement <requirementId> [--title <title>] [--description <text>] [--type <type>] [--status <status>] [--group <groupId>] [--source-document <docId>] [--clear-source-document] [--issue <issueId>] [--json]",
+    "gotchas": [
+      {
+        "text": "null for groupId/issueId/baselineId keeps the stored value (CLI --clear-group/--clear-issue therefore do nothing); clear with \"\" and, for issues, also send the full linkedIssueIds list.",
+        "verifiedFrom": "server.ts:31290-31350"
+      },
+      {
+        "text": "Any edit, even status, marks the requirement 'changed' in the working-scope delta.",
+        "verifiedFrom": "src/lib/projectWorkingScopeDelta.ts:71"
+      },
+      {
+        "text": "Every key you send is written - send only fields you change.",
+        "verifiedFrom": "server.ts:31290"
+      },
+      {
+        "text": "A soft-deleted requirement can still be 'updated' silently.",
+        "verifiedFrom": "server.ts:31276"
+      }
+    ],
+    "verifiedFrom": "updateRequirementCommand; validateRequirementStructure; mergeLinkedWorkItemIds (src/lib/requirementWorkItemState.ts); CLI handleRequirementUpdate / handleRequirementLinkIssue"
+  },
+  {
+    "name": "update_requirement_baseline",
+    "purpose": "Edits a baseline's name, version or description, or makes it the current baseline (demoting the previous current one).",
+    "useWhen": [
+      "The owner asks to rename or re-describe a baseline",
+      "The owner asks to restore an earlier baseline as the current approved scope"
+    ],
+    "avoidWhen": [
+      "Publishing new scope - use publish_baseline_from_working_scope",
+      "Editing requirements - use update_requirement"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "baselineId",
+        "required": true,
+        "source": "list_requirement_baselines -> id",
+        "notes": ""
+      },
+      {
+        "param": "name",
+        "required": false,
+        "source": "user",
+        "notes": "free text"
+      },
+      {
+        "param": "version",
+        "required": false,
+        "source": "user",
+        "notes": "free text"
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "free text"
+      },
+      {
+        "param": "isCurrent",
+        "required": false,
+        "source": "user",
+        "notes": "send true to promote; never send false (it leaves the project with no current baseline)"
+      }
+    ],
+    "preconditions": [
+      "The owner explicitly instructed this change",
+      "Baseline exists in the project",
+      "Promoting a non-current baseline while the working-scope delta is medium/high materiality requires a matching approved change set"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text 'Baseline <id> updated successfully.' - confirm with list_requirement_baselines.",
+    "pairsWith": [
+      "list_requirement_baselines",
+      "get_project_scope_resolution_context"
+    ],
+    "errors": [
+      {
+        "when": "Baseline not found",
+        "fix": "Wrong baselineId; re-list with list_requirement_baselines."
+      },
+      {
+        "when": "Material baseline publication requires an approved change set for the current working scope",
+        "fix": "Working-scope delta is medium/high materiality. Run create_project_change_set_from_resolution, move it to in-review, wait for the owner's approval, then publish again WITHOUT editing requirements in between (any edit makes the approved snapshot stale)."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Every key you send is written to the baseline as-is (no whitelist) - send only fields you mean to change.",
+        "verifiedFrom": "server.ts:30848-30868"
+      },
+      {
+        "text": "isCurrent=false on the current baseline is accepted and leaves no current baseline.",
+        "verifiedFrom": "server.ts:30852-30871"
+      },
+      {
+        "text": "Promoting does not re-point issues; the promoted baseline keeps its own requirement copies.",
+        "verifiedFrom": "server.ts:30848-30880"
+      }
+    ],
+    "verifiedFrom": "updateRequirementBaselineCommand; resolveBaselinePublicationApprovalGate"
+  },
+  {
+    "name": "update_requirement_group",
+    "purpose": "Renames a requirement group.",
+    "useWhen": [
+      "The user asks to rename a requirement group"
+    ],
+    "avoidWhen": [
+      "Moving requirements between groups - use update_requirement with groupId",
+      "Creating a group - use create_requirement_group"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Firestore project id"
+      },
+      {
+        "param": "groupId",
+        "required": true,
+        "source": "list_requirement_groups -> id",
+        "notes": ""
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "new name"
+      }
+    ],
+    "preconditions": [
+      "Group exists in the project"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text 'Requirement group <id> updated successfully.'",
+    "pairsWith": [
+      "list_requirement_groups"
+    ],
+    "errors": [
+      {
+        "when": "Requirement group not found",
+        "fix": "Wrong groupId; re-list with list_requirement_groups."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId with list_projects; the caller must belong to the project's workspace or team."
+      },
+      {
+        "when": "-32003 (tool not allowed for this API key/connection, or 'The requested resource is outside the credential scope')",
+        "fix": "Call get_mcp_connection_info. This tool is not exposed to OAuth connectors; use an API key or agent credential whose profile includes it, on a project of the credential's workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Only name is meaningful; any other key sent is written into the group document.",
+        "verifiedFrom": "server.ts:31737-31742"
+      }
+    ],
+    "verifiedFrom": "updateRequirementGroupCommand"
+  }
+]

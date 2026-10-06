@@ -1,0 +1,51 @@
+# API key profiles
+Load when: choosing or changing an API key profile, or rotating an API key
+Applies to: lpm-access    Source: lpm `src/lib/mcpToolCatalog.ts` (profile presets, `SENSITIVE_ADMIN_TOOLS`), `server.ts` `createApiKeyCommand`, `updateApiKeyCommand`, `authenticateApiKey`; cards {{tool:create_api_key}}, {{tool:update_api_key}}, {{tool:delete_api_key}}, {{tool:list_api_keys}}; catalog snapshot `profiles`
+## Summary
+- Pick the smallest preset that covers the job; `read-only` first, `custom` for a mixed or sensitive need, `full` only on the owner's explicit instruction.
+- No preset except `full` and `custom` contains an administration write or any of the 111 sensitive admin tools.
+- A key acts as the CALLING user. It is shown once at creation and never again.
+- Rotation of an API key = create a new key → the client swaps → revoke the old key. No rotate tool exists for API keys.
+- {{tool:update_api_key}} on a `custom` key must resend the full `allowedTools`, or the key ends up with no tools.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| `read-only` (142 tools) | every non-sensitive read tool (portfolio, planning, requirements, administration reads) | default for reporting and analysis agents; the server default when `accessProfile` is omitted or invalid on create |
+| `portfolio` (156) | non-sensitive portfolio reads and writes, plus planning reads | project activity work; no administration reads |
+| `planning` (134) | portfolio reads, planning reads and writes | cycles, milestones, labels, estimates |
+| `requirements` (146) | portfolio and planning reads, requirements reads and writes | requirements and baselines work |
+| `custom` | exactly the names in `allowedTools`; unknown names are dropped silently | list every tool; re-list after a write to see what was kept |
+| `full` (383) | every tool, including the 111 sensitive admin tools | only when the owner names the job that needs it |
+| `roadmap-owner-advisor` (36), `roadmap-owner-operator` (37) | owner-agent presets | rejected on API keys ("Owner profiles require a scoped MCP agent credential v2") → principal + `lpm_mcp_` credential |
+| sensitive admin tools | include {{tool:list_api_keys}}, {{tool:list_workspace_mcp_agent_credentials}}, {{tool:list_workspace_ai_credentials}}, {{tool:get_workspace_repository_credential}} and every credential write | a `read-only` key cannot even list its owner's keys |
+| principal and specialist reads | {{tool:list_workspace_agent_principals}}, {{tool:list_project_specialist_assignments}}, {{tool:get_project_specialist_governance_summary}} are in `read-only`, `full`, `custom` | an audit of agents works on a `read-only` key |
+| {{tool:update_api_key}} `accessProfile` omitted or invalid | keeps the current profile | send it only to change it |
+| {{tool:update_api_key}} `allowedTools` | replaced on every call; non-custom profiles clear it | for `custom`, always send the full list |
+| `status: revoked` (update) | reversible; requests get HTTP 403 "API key is revoked." | prefer it to delete |
+| {{tool:update_api_key}} `status` omitted | keeps the current status | send `status` only for a revoke or reactivate order |
+| {{tool:delete_api_key}} | permanent; clients then get "Invalid API key." | only on an explicit delete order |
+| {{tool:list_api_keys}} | only the caller's keys, newest first; `key` is always `""`; `keyPreview` = "…" + last 4 chars; revoked keys stay listed | there is no workspace-wide key audit; never ask for another user's keys |
+| `lastUsedAt` | last authenticated use | empty on an active key → candidate for revoke in a review |
+| header | clients send the key as `x-api-key` | never put it in a URL, a commit or a comment |
+| {{tool:create_api_key}} | not idempotent: every call creates another key; duplicate names are accepted; no `idempotencyKey` param (nor on update or delete) | list first; same name → ask; after a timeout, re-list, and a new row with that name means it was created: never call again |
+
+## Rules
+1. Name the job first, then the preset: reads only → `read-only`; one category → that preset; mixed or one sensitive tool → `custom` with the exact list.
+2. State which tools the chosen profile unlocks that the current one lacks, using the counts above.
+3. Never widen the key this session runs on; the key owner changes it.
+4. Rotate in this order: create (same profile and tools) → hand over once → owner confirms the swap → revoke the old key → delete later only if the owner asks. A rotate order that also says delete → ask "Revoke (reversible) instead?" with the create question.
+5. Revoking or deleting the key this agent uses locks this session out. Neither {{tool:list_api_keys}} nor {{tool:get_mcp_connection_info}} marks the current key: ask "Is this session running on key <name> (<keyPreview>)?" first.
+6. A lost secret cannot be read back: rotate.
+7. A key is never created for another person or for a test.
+
+## Examples
+```text
+example: "a dashboard agent only reads activities and roadmaps"
+-> read-only (142 tools); no create_api_key with full
+example: "CI must create activities and update one webhook"
+-> webhook tools are sensitive -> custom with the exact allowedTools list
+example: rotate key "ci-runner" (custom, 12 tools)
+-> create "ci-runner-2" custom with the same 12 names -> owner swaps the CI secret
+-> update_api_key(keyId=<old id>, accessProfile=custom, allowedTools=<same 12>, status=revoked)
+```

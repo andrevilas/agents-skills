@@ -4,11 +4,15 @@
   "status": "active",
   "upstream_repo": "https://github.com/mattpocock/skills.git",
   "default_branch": "main",
-  "upstream_ref": "main",
+  "upstream_ref": "f304057d61d3df3c9fd992ac2b6e3833cb9325fb",
   "imported_path": "skills/productivity/caveman/SKILL.md",
   "bundle_target_path": "external/caveman/codex/caveman",
   "synced_at": "2026-05-12",
   "synced_by": "codex",
   "local_patch_policy": "patch-in-agents-skills-only-when-explicitly-documented",
-  "notes": "Imported as a Codex-only external bundle. Persistence behavior should be reviewed before local modifications."
+  "notes": "Imported as a Codex-only external bundle. Persistence behavior should be reviewed before local modifications.",
+  "files_sha256": {
+    "README.md": "0d15fa9121432faa32cb9b31f2f45e4a66813cd8891f92d5e5283a9dfa0272d0",
+    "codex/caveman/SKILL.md": "b4bb6fe3bf3da222993ca0aee5e7c6f5368b182dd30ce1172e8f8e3280eb7052"
+  }
 }

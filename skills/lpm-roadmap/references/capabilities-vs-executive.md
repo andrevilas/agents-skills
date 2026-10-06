@@ -1,0 +1,41 @@
+# Roadmap capabilities vs executive capabilities
+Load when: the request mentions capabilities
+Applies to: lpm-roadmap    Source: cards {{tool:list_workspace_capabilities}}, {{tool:create_workspace_capability}}, {{tool:update_workspace_capability}}, {{tool:archive_workspace_capability}}, {{tool:preview_workspace_roadmap_change}}
+
+## Summary
+"Capability" names three different things in LPM. Pick the right one before any call:
+1. the **roadmap capability registry** (records with an id, linked to roadmap items) → this skill;
+2. the **executive-context capability list** (`portfolio.capabilities` strings, "unowned capability") → {{skill:lpm-executive-context}};
+3. a **project's owned capabilities** for intake routing (`routingProfile.ownedCapabilities`) → {{skill:lpm-workspace-admin}}.
+They are separate data: changing one never changes the others.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| registry record `{id, name, description, status, ownerUserId, tags[]}` | roadmap capability, read with {{tool:list_workspace_capabilities}} | `id` is the `capabilityId` of capability writes and `capability-link` change requests |
+| `status` `active` / `deferred` / `archived` | archived records are hidden unless `includeArchived=true` | search with `includeArchived=true` before creating |
+| item ↔ capability link | made by a change request `changeType: "capability-link"`, patch `{capabilityId, relationship?}` | relationship `defines`, `delivers` (default), `enables`, `extends`, `validates` |
+| create / update / archive | [O], API key only (no connector scope), not blocked by `enforce` mode | owner order required (SKILL.md row 10) |
+| names | not deduplicated by the server; roadmap import matches names ignoring case and accents | compare names the same way before creating |
+| `tags` on update | replaces the whole list; `[]` clears it | send the full list |
+| archive | logical: the record stays, existing item links stay, new links fail with `INVALID_ROADMAP_CAPABILITY_TARGET` | undo with update `status="active"` |
+| an archived name in a later roadmap import | creates a new capability instead of reusing the archived one | un-archive first when the owner wants the old record |
+| list result over 1 MB | returns `{items, truncated, returned, total, hint}` | report that the list is truncated |
+| executive `portfolio.capabilities` | plain strings in the workspace executive context, with ownership gaps | read and change them in {{skill:lpm-executive-context}} (owner-only apply) |
+| project `routingProfile.ownedCapabilities` | which project receives intake for a capability | edit through {{skill:lpm-workspace-admin}} |
+
+## Rules
+1. "Unowned capability", "capability sem dono", "who owns capability X in the operating model" → {{skill:lpm-executive-context}}.
+2. "Which project handles requests about capability X" (routing) → {{skill:lpm-workspace-admin}}.
+3. "List / create / rename / defer / archive a roadmap capability", "link item X to capability Y" → this skill.
+4. Before a create, list with `includeArchived=true`; a same-name record (any case or accent) → ask "reuse or update?".
+5. Linking an item to a capability is always a change request (`capability-link`), never a capability write.
+6. Capability writes are [O]: without the owner's order in this conversation, send the decision request and STOP.
+
+## Examples
+```text
+example: "link item Checkout v2 to capability Payments"
+  → list_workspace_capabilities(includeArchived=true) → capabilityId of "Payments"
+  → SKILL.md P1 with changeType "capability-link", patch {capabilityId}
+example: "a capacidade Pagamentos está sem dono" → lpm-executive-context
+```

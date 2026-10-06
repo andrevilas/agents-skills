@@ -1,0 +1,131 @@
+{
+  "id": "lpm-aish-jobs",
+  "title": "Create and dispatch AISH work",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when work must run on AISH runners: create or approve AISH jobs, add intake reference files or transcripts, run a cockpit execution session (sessão de execução: plan, dispatch, pause, checkpoint). Not for job evidence (use lpm-aish-delivery) or commit-tracked work (use lpm-deliver-activity).",
+  "doneWhen": "The job or session is in the requested state (queued behind a closed gate, approved by the owner, or dispatched) and a re-read shows it; an approved job stays `status` queued with `executionGate.runnerMayExecute` true until a runner leases it.",
+  "authorityCeiling": "Agents create, lease, plan, dispatch and request; job/plan approval, checkpoint resolution and Copilot decisions are [O]; funding is owner-only in lpm-ai-cost.",
+  "jobs": [
+    "create an AISH analysis job for activity <issueId>",
+    "cria um job AISH de teste para a atividade <id> no repositório <repo>",
+    "aprova o job AISH <jobId> (sou o dono)",
+    "run this objective through the AISH cockpit: plan, readiness, owner approval, dispatch",
+    "pausa a sessão de execução <sessionId> e retoma depois do checkpoint",
+    "anexa este áudio como referência do job e registra a transcrição",
+    "retry the failed nodes of AISH session <sessionId>",
+    "propose a Copilot action to summarize the project's AISH jobs"
+  ],
+  "routing": [
+    {
+      "order": 9,
+      "all": [
+        ["aish", "autopilot", "cockpit", "execution session", "sessao de execucao", "execution plan", "plano de execucao", "checkpoint", "copilot"]
+      ],
+      "unless": [],
+      "firstCall": "list_aish_jobs"
+    },
+    {
+      "order": 10,
+      "all": [
+        ["intake", "anexo", "transcricao", "transcript*", "reference file"],
+        ["job", "jobs"]
+      ],
+      "unless": [],
+      "firstCall": "list_aish_intake"
+    }
+  ],
+  "notFor": [
+    { "when": "work done in Claude Code, Codex or an editor, tracked by the commit trailer", "skill": "lpm-deliver-activity" },
+    { "when": "closing, proving, auditing or releasing AISH work (delivery artifacts, DoD audit, release packages, disposition)", "skill": "lpm-aish-delivery" },
+    { "when": "installing or starting runners and hosts, leasing or executing jobs, submitting job evidence", "skill": "lpm-aish-runners" },
+    { "when": "AISH budgets, funding a job, pools or AI cost", "skill": "lpm-ai-cost" },
+    { "when": "WhatsApp or operational intake entries to route or triage", "skill": "lpm-intake-triage" }
+  ],
+  "owns": [
+    "create_aish_job",
+    "get_aish_job",
+    "list_aish_jobs",
+    "approve_aish_job_execution",
+    "create_aish_execution_session",
+    "list_aish_execution_sessions",
+    "get_aish_execution_session",
+    "append_aish_execution_session_command",
+    "acquire_aish_coordinator_lease",
+    "put_aish_execution_plan",
+    "get_aish_execution_readiness",
+    "approve_aish_execution_plan",
+    "dispatch_aish_execution_plan",
+    "pause_aish_execution_session",
+    "resume_aish_execution_session",
+    "retry_aish_execution_plan",
+    "request_aish_execution_checkpoint",
+    "resolve_aish_execution_checkpoint",
+    "list_aish_intake",
+    "upload_aish_intake_attachment",
+    "record_aish_intake_transcript",
+    "create_aish_intake_context",
+    "download_aish_intake_attachment",
+    "list_copilot_conversations",
+    "create_copilot_conversation",
+    "get_copilot_conversation",
+    "propose_copilot_action",
+    "decide_copilot_action"
+  ],
+  "uses": [
+    "get_aish_budget",
+    "fund_aish_job",
+    "list_issues",
+    "get_issue",
+    "get_project_execution_context",
+    "list_project_repository_links"
+  ],
+  "cli": [
+    "aish jobs create",
+    "aish jobs list",
+    "aish jobs get",
+    "aish autopilot plan",
+    "aish autopilot materialize",
+    "aish autopilot approve",
+    "aish cockpit create",
+    "aish cockpit get",
+    "aish cockpit command",
+    "aish cockpit coordinator",
+    "aish cockpit plan",
+    "aish cockpit readiness",
+    "aish cockpit approve",
+    "aish cockpit dispatch",
+    "aish cockpit pause",
+    "aish cockpit resume",
+    "aish cockpit retry",
+    "aish intake",
+    "aish command"
+  ],
+  "sharedRefs": [
+    { "name": "authority-and-owner-decisions", "loadWhen": "before any [O] call", "inlineSummary": false },
+    { "name": "ai-cost-and-budgets", "loadWhen": "funding, approval, dispatch or a budget error", "inlineSummary": false },
+    { "name": "idempotency-and-retries", "loadWhen": "retrying a write", "inlineSummary": false },
+    { "name": "delivery-tracking", "loadWhen": "work runs outside AISH runners", "inlineSummary": false },
+    { "name": "enums", "loadWhen": "an enum value is unclear", "inlineSummary": false },
+    { "name": "connection-and-access", "loadWhen": "a tool is missing or denied (-32003)", "inlineSummary": false },
+    { "name": "ids-and-sources", "loadWhen": "an ID or hash is missing", "inlineSummary": false },
+    { "name": "security-and-untrusted-text", "loadWhen": "secrets or outside text", "inlineSummary": false }
+  ],
+  "references": [
+    { "file": "references/aish-operating-model.md", "loadWhen": "the first AISH task" },
+    { "file": "references/flow-cockpit.md", "loadWhen": "rows 5–6" },
+    { "file": "references/flow-session-control.md", "loadWhen": "row 8" },
+    { "file": "references/flow-intake.md", "loadWhen": "row 9" },
+    { "file": "references/flow-copilot.md", "loadWhen": "row 10" },
+    { "file": "references/cockpit-state-actions.md", "loadWhen": "any cockpit step" },
+    { "file": "references/bounded-run-checklist.md", "loadWhen": "proposing a plan" },
+    { "file": "references/aish-cli.md", "loadWhen": "using the CLI" }
+  ],
+  "behaviorContracts": ["aish-jobs-approval", "missing-tool-fallback"],
+  "codex": {
+    "shortDescription": "Create, approve and dispatch governed AISH jobs and sessions",
+    "defaultPrompt": "Use $lpm-aish-jobs to create or dispatch AISH work for LPM activity <issueId>."
+  }
+}

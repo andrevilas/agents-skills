@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "source": "design §2.28 (validator V6)",
+  "policy": [
+    "Steps use the canonical name only.",
+    "Both names are owned by the owner skill so coverage stays at 100 %.",
+    "An alias appears only in the generated tools.md and aliases.md, rendered as \"alias of `<canonical>`: do not use\".",
+    "A step may use an alias only when the alias is the one exposed on the agent's access path; every such exception is listed in stepExceptions."
+  ],
+  "renderAs": "alias of `{canonical}`: do not use",
+  "aliases": [
+    {
+      "alias": "bulk_update_project_issue_due_dates",
+      "canonical": "bulk_set_project_issue_due_dates",
+      "owner": "lpm-plan-work",
+      "note": ""
+    },
+    {
+      "alias": "draft_activity_from_governance_thread",
+      "canonical": "prepare_issue_draft_from_governance_thread",
+      "owner": "lpm-governance-decisions",
+      "note": "The alias ignores thread status (always `readyToCreate: true`). Never use it."
+    },
+    {
+      "alias": "draft_change_set_from_governance_thread",
+      "canonical": "prepare_change_set_draft_from_governance_thread",
+      "owner": "lpm-governance-decisions",
+      "note": ""
+    },
+    {
+      "alias": "draft_requirement_from_governance_thread",
+      "canonical": "prepare_requirement_draft_from_governance_thread",
+      "owner": "lpm-governance-decisions",
+      "note": ""
+    },
+    {
+      "alias": "list_project_decision_queue",
+      "canonical": "get_project_decision_inbox",
+      "owner": "lpm-governance-decisions",
+      "note": "Canonical has OAuth `portfolio:read`."
+    },
+    {
+      "alias": "reply_to_governance_thread",
+      "canonical": "reply_governance_thread",
+      "owner": "lpm-governance-decisions",
+      "note": "Canonical has OAuth `portfolio:manage`; also works on API keys."
+    },
+    {
+      "alias": "resolve_governance_thread_with_decision",
+      "canonical": "resolve_governance_thread_with_outcome",
+      "owner": "lpm-governance-decisions",
+      "note": "Same behavior."
+    },
+    {
+      "alias": "update_project_issue_due_date",
+      "canonical": "set_project_issue_due_date",
+      "owner": "lpm-plan-work",
+      "note": ""
+    }
+  ],
+  "stepExceptions": []
+}

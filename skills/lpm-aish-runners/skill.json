@@ -1,0 +1,120 @@
+{
+  "id": "lpm-aish-runners",
+  "title": "Operate AISH runners and hosts",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when operating AISH runner hosts (frota, drenar o host): install or start a runner, onboard or manage hosts (drain, suspend, reactivate, remove, legacy migration), lease and execute jobs, and submit job evidence, traces or consumption. Not for planning or approving jobs (use lpm-aish-jobs).",
+  "doneWhen": "The host shows the expected state in the fleet overview, or the leased job has submitted evidence and a terminal status.",
+  "authorityCeiling": "Telemetry and reads are [A]; lease, consumption, evidence submission and fleet/migration actions are [C].",
+  "jobs": [
+    "start an AISH runner for project <projectId> and run one approved job",
+    "onboard a new runner host: enrollment token, wizard, doctor, start",
+    "which runners of account <accountId> are online, busy or stale, and how many hours did they work?",
+    "drain the runner host <name> before maintenance, then suspend it",
+    "migrate the legacy project runner host into the runner account",
+    "build a non-CLI runner: session, lease, trace, consumption and evidence over MCP",
+    "iniciar o runner do AISH para o projeto e executar um job",
+    "drenar o host do runner antes da manutenção",
+    "token de enrollment para o host do runner",
+    "fazer rollback da migração legada do runner"
+  ],
+  "routing": [
+    {
+      "order": 3,
+      "all": [
+        ["runner*", "host", "hosts", "fleet", "frota"],
+        ["token", "tokens", "enroll*", "credential*", "credencia*"]
+      ],
+      "unless": ["api key", "chave de api", "lpm_mcp_"],
+      "firstCall": "get_aish_runner_management_overview"
+    },
+    {
+      "order": 6,
+      "all": [
+        ["runner", "runners", "host", "hosts", "fleet", "frota", "lease", "drain", "aish host", "aish runner"]
+      ],
+      "unless": [],
+      "firstCall": "get_aish_runner_management_overview"
+    }
+  ],
+  "notFor": [
+    { "when": "creating, approving or dispatching AISH jobs, cockpit sessions or intake files", "skill": "lpm-aish-jobs" },
+    { "when": "DoD audit, delivery artifacts, closing AISH jobs or release packages", "skill": "lpm-aish-delivery" },
+    { "when": "AISH budgets, funding, pools, consumption corrections or accounting", "skill": "lpm-ai-cost" },
+    { "when": "LPM API keys, `lpm_mcp_` agent credentials or provider keys", "skill": "lpm-access" },
+    { "when": "work done in Claude Code, Codex or an editor (commit trailer)", "skill": "lpm-deliver-activity" }
+  ],
+  "owns": [
+    "get_aish_runner_management_overview",
+    "preview_aish_runner_management_action",
+    "apply_aish_runner_management_action",
+    "preview_aish_legacy_runner_migration",
+    "apply_aish_legacy_runner_migration",
+    "rollback_aish_legacy_runner_migration",
+    "upsert_aish_runner_session",
+    "lease_aish_runner_job",
+    "submit_aish_job_evidence",
+    "record_aish_execution_trace",
+    "record_aish_consumption",
+    "claim_aish_intake_transcription"
+  ],
+  "uses": [
+    "get_aish_job",
+    "list_aish_jobs",
+    "list_aish_intake",
+    "get_aish_usage_report",
+    "list_aish_consumption"
+  ],
+  "cli": [
+    "aish runner start",
+    "aish host wizard",
+    "aish host enroll-wizard",
+    "aish host bootstrap",
+    "aish host doctor",
+    "aish host remote-access",
+    "aish host sync-repos",
+    "aish host monitor",
+    "aish host status",
+    "aish host heartbeat",
+    "aish host update-inventory",
+    "aish host start",
+    "aish hosts create-token",
+    "aish hosts enroll",
+    "aish hosts list",
+    "aish hosts usage",
+    "aish hosts rename",
+    "aish hosts remote-access",
+    "aish hosts revoke",
+    "aish accounts create",
+    "aish accounts list",
+    "aish accounts bind-workspace",
+    "aish accounts grants create",
+    "aish accounts grants revoke",
+    "aish fleet topology",
+    "aish fleet create",
+    "aish fleet transition",
+    "aish fleet rotate-credential"
+  ],
+  "sharedRefs": [
+    { "name": "security-and-untrusted-text", "loadWhen": "a token, credential or runner output appears", "inlineSummary": false },
+    { "name": "ai-cost-and-budgets", "loadWhen": "a funding or budget error stops the run", "inlineSummary": false },
+    { "name": "idempotency-and-retries", "loadWhen": "before retrying a write after a timeout", "inlineSummary": false },
+    { "name": "delivery-tracking", "loadWhen": "the work runs in Claude Code, Codex or an editor", "inlineSummary": false }
+  ],
+  "references": [
+    { "file": "references/host-onboarding.md", "loadWhen": "before a host, hosts, accounts or fleet CLI command" },
+    { "file": "references/runner-protocol.md", "loadWhen": "building or debugging a non-CLI runner" },
+    { "file": "references/executor-hygiene.md", "loadWhen": "before executing a leased job" },
+    { "file": "references/flow-cli-runner.md", "loadWhen": "decision row 1 of SKILL.md" },
+    { "file": "references/flow-host-onboarding.md", "loadWhen": "decision row 2 of SKILL.md" },
+    { "file": "references/flow-legacy-migration.md", "loadWhen": "decision row 5 of SKILL.md" },
+    { "file": "references/flow-mcp-runner.md", "loadWhen": "decision row 6 of SKILL.md" }
+  ],
+  "behaviorContracts": [],
+  "codex": {
+    "shortDescription": "Run AISH runners, onboard hosts and manage the fleet",
+    "defaultPrompt": "Use $lpm-aish-runners to start an AISH runner for LPM project <projectId> and run one approved job."
+  }
+}

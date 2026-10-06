@@ -1,0 +1,1681 @@
+[
+  {
+    "name": "adjust_aish_consumption",
+    "purpose": "Appends an owner-approved signed correction (delta) to one recorded consumption receipt; the original stays unchanged and budget counters are updated.",
+    "useWhen": [
+      "The owner explicitly asks to correct a wrong consumption receipt (e.g. the provider bill shows a different token count or amount) and provides evidence"
+    ],
+    "avoidWhen": [
+      "Recording new usage: use record_aish_consumption",
+      "Changing budget limits: use configure_aish_budget",
+      "Releasing the leftover reservation: use settle_aish_budget",
+      "Any case without an explicit owner instruction"
+    ],
+    "inputs": [
+      {
+        "param": "jobId",
+        "required": true,
+        "source": "list_aish_jobs -> [].id",
+        "notes": "must be the job of the original entry"
+      },
+      {
+        "param": "entryId",
+        "required": true,
+        "source": "list_aish_consumption -> entries[].id with kind 'observation' (or record_aish_consumption -> entry.id)",
+        "notes": "64 lowercase hex; never an adjustment id"
+      },
+      {
+        "param": "adjustmentId",
+        "required": true,
+        "source": "constant",
+        "notes": "generate once per correction, [A-Za-z0-9_-]{1,160}; reuse on retry"
+      },
+      {
+        "param": "deltas",
+        "required": true,
+        "source": "user",
+        "notes": "1-8 {metric, quantity}; distinct metrics present in the original entry; quantity is a signed decimal string (e.g. '-120'); resulting total per metric must stay >= 0; token counts integer"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8-1000 chars; no secrets"
+      },
+      {
+        "param": "evidenceSha256",
+        "required": true,
+        "source": "user",
+        "notes": "64 lowercase hex SHA-256 of the correcting evidence"
+      }
+    ],
+    "preconditions": [
+      "Caller is a managing user (MCP agent credentials are refused)",
+      "The owner explicitly approved the correction",
+      "entryId is an original observation of this job in this project"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "keyed by adjustmentId",
+    "returns": "{entry{id (adjustment entry id), kind 'adjustment', originalEntryId, facts (the deltas), reason, evidenceSha256, createdAt}, reused}",
+    "pairsWith": [
+      "list_aish_consumption",
+      "get_aish_budget"
+    ],
+    "errors": [
+      {
+        "when": "Only a managing user may adjust financial history.",
+        "fix": "Stop; the owner must do it."
+      },
+      {
+        "when": "Original consumption not found in the authorized scope.",
+        "fix": "entryId must be an observation of this jobId (not an adjustment)."
+      },
+      {
+        "when": "Adjustment metric is absent from original consumption.",
+        "fix": "Only adjust metrics present in the original entry."
+      },
+      {
+        "when": "Adjustment would make incurred consumption negative.",
+        "fix": "Reduce the negative delta."
+      },
+      {
+        "when": "Adjustment replay payload conflicts with recorded history.",
+        "fix": "adjustmentId already used with different content."
+      },
+      {
+        "when": "Duplicate adjustment metric.",
+        "fix": "One delta per metric."
+      },
+      {
+        "when": "Adjustment reason contains sensitive material.",
+        "fix": "Remove secrets from reason."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command adjust_aish_consumption --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Adjustments always point to the original observation; you cannot adjust an adjustment.",
+        "verifiedFrom": "src/server/aishConsumptionStore.ts:95"
+      },
+      {
+        "text": "Money deltas move budget/pool consumed and can trip the circuit breaker (pause).",
+        "verifiedFrom": "src/server/aishConsumptionStore.ts:114-115"
+      },
+      {
+        "text": "Nothing is ever rewritten or deleted.",
+        "verifiedFrom": "src/server/aishConsumptionStore.ts:112-117"
+      }
+    ],
+    "verifiedFrom": "aishConsumptionCommand('adjust') (server.ts); adjustAishConsumption (src/server/aishConsumptionStore.ts); adjustConsumptionSchema (src/lib/aishConsumption.ts); prepareAishBudgetConsumption (src/server/aishBudgetStore.ts)"
+  },
+  {
+    "name": "configure_aish_budget",
+    "purpose": "Creates or changes a project or activity AISH budget (currency, limit, paused) as a versioned financial decision of the owner.",
+    "useWhen": [
+      "The owner explicitly states the currency, limit, scope (project or a specific activity) and paused state to set",
+      "The owner explicitly asks to pause or resume a budget (paused true/false)"
+    ],
+    "avoidWhen": [
+      "The owner has not explicitly decided the values: present options with a recommendation instead",
+      "Funding one job: use fund_aish_job (also owner-only)",
+      "A shared cap across several projects: use configure_aish_financial_pool",
+      "Budget shows reconciliationRequired=true: no MCP tool can change it; escalate to the owner"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id, or constant null",
+        "notes": "null = project budget; must always be sent (pass null explicitly)"
+      },
+      {
+        "param": "currency",
+        "required": true,
+        "source": "user",
+        "notes": "ISO 4217, 3 uppercase letters (e.g. BRL); cannot change after creation"
+      },
+      {
+        "param": "limit",
+        "required": true,
+        "source": "user",
+        "notes": "positive decimal string, up to 18 integer digits and 12 decimals (e.g. '100.00'); must be >= consumed + reserved"
+      },
+      {
+        "param": "expectedVersion",
+        "required": true,
+        "source": "get_aish_budget -> budgets[].version (entry with the same issueId)",
+        "notes": "integer; 0 when creating"
+      },
+      {
+        "param": "commandId",
+        "required": true,
+        "source": "constant",
+        "notes": "generate once per decision, [A-Za-z0-9_-]{1,160}; reuse on retry"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8-1000 chars; no secrets"
+      },
+      {
+        "param": "paused",
+        "required": true,
+        "source": "user",
+        "notes": "boolean; true blocks new reservations/execution, false resumes"
+      }
+    ],
+    "preconditions": [
+      "Caller is a managing user of the project (MCP agent credentials are refused)",
+      "The owner explicitly instructed these exact values",
+      "Project belongs to a workspace",
+      "Activity budget: the activity exists and the project budget exists in the same currency",
+      "Budget is not reconciliationRequired"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "keyed by commandId",
+    "returns": "{budget{id, projectId, issueId, currency, limit, consumed, reserved, paused, version (= expectedVersion + 1), decisionId, financialPoolId?}, reused, decisionId}",
+    "pairsWith": [
+      "get_aish_budget",
+      "fund_aish_job",
+      "configure_aish_financial_pool"
+    ],
+    "errors": [
+      {
+        "when": "Financial authority requires a managing user.",
+        "fix": "Agent credential cannot decide; the owner must act."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Stop; only a project manager can set budgets."
+      },
+      {
+        "when": "Budget requires a canonical project workspace.",
+        "fix": "Project has no workspace; report to the owner."
+      },
+      {
+        "when": "Issue budget requires its project budget in the same currency.",
+        "fix": "The owner must first create the project budget (issueId null) in that currency."
+      },
+      {
+        "when": "Financial projection requires reconciliation before another budget decision.",
+        "fix": "Blocked; no MCP tool clears it. Escalate to the owner."
+      },
+      {
+        "when": "Budget policy version changed.",
+        "fix": "Re-read get_aish_budget and confirm the decision with the owner again."
+      },
+      {
+        "when": "Budget currency is immutable; use explicit reconciliation, never implicit FX.",
+        "fix": "Keep the original currency."
+      },
+      {
+        "when": "Budget limit cannot invalidate incurred or reserved commitments.",
+        "fix": "Limit must be >= consumed + reserved; ask the owner for a valid value."
+      },
+      {
+        "when": "Budget decision replay conflicts.",
+        "fix": "commandId already used with other values; new decision needs a new commandId."
+      },
+      {
+        "when": "Financial reason contains sensitive material.",
+        "fix": "Remove secrets from reason."
+      },
+      {
+        "when": "A positive explicit monetary cap is required.",
+        "fix": "limit must be a decimal string greater than zero."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command configure_aish_budget --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "The server only rejects MCP agent credentials: a call made with the owner's API key is treated as the owner, so the process rule (explicit owner instruction) is the real guard.",
+        "verifiedFrom": "server.ts:37878"
+      },
+      {
+        "text": "Budgets cannot be deleted and the currency is permanent.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:70"
+      },
+      {
+        "text": "Without a project budget all AISH spending is blocked.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:108-109"
+      },
+      {
+        "text": "paused=false is the only way to resume after a circuit breaker.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:114"
+      },
+      {
+        "text": "Alerts go to the decision maker at 80/90/100% committed.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:37-46"
+      }
+    ],
+    "verifiedFrom": "aishBudgetCommand('configure') (server.ts); configureAishBudget, notifyAishBudgetHealth (src/server/aishBudgetStore.ts); configureAishBudgetSchema (src/lib/aishFinancialPolicy.ts)"
+  },
+  {
+    "name": "configure_aish_financial_pool",
+    "purpose": "Creates or changes an aggregate spending cap shared by several project budgets (possibly across workspaces) plus attested external costs.",
+    "useWhen": [
+      "The owner explicitly instructs a shared cap (e.g. 'BRL 100 total for the pilot across projects A and B') with currency, limit, member projects and optional window",
+      "The owner explicitly asks to raise the pool limit, add member projects, or pause/resume the pool"
+    ],
+    "avoidWhen": [
+      "A single project's limit: use configure_aish_budget",
+      "Registering an infrastructure or external AI bill: use record_aish_financial_pool_cost",
+      "Removing a project from a pool: not supported (requires reconciliation)",
+      "Any case without an explicit owner instruction"
+    ],
+    "inputs": [
+      {
+        "param": "poolId",
+        "required": true,
+        "source": "existing: get_aish_budget -> pool.id or budgets[].financialPoolId; new: user",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "currency",
+        "required": true,
+        "source": "user",
+        "notes": "3 uppercase letters; must equal every member project budget currency; permanent"
+      },
+      {
+        "param": "limit",
+        "required": true,
+        "source": "user",
+        "notes": "positive decimal string; must be >= consumed + external + reserved"
+      },
+      {
+        "param": "projectIds",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "1-50 distinct ids; must include all current members (add only)"
+      },
+      {
+        "param": "window",
+        "required": true,
+        "source": "user",
+        "notes": "null, or {startsAt, endsAt} in UTC ISO ending with 'Z' (offsets rejected), startsAt < endsAt; only gates new reservations"
+      },
+      {
+        "param": "expectedVersion",
+        "required": true,
+        "source": "get_aish_financial_pool -> pool.version",
+        "notes": "integer; 0 when creating"
+      },
+      {
+        "param": "commandId",
+        "required": true,
+        "source": "constant",
+        "notes": "generate once per decision, [A-Za-z0-9_-]{1,160}; reuse on retry"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8-1000 chars; no secrets"
+      },
+      {
+        "param": "paused",
+        "required": true,
+        "source": "user",
+        "notes": "boolean; true blocks new execution in all member projects"
+      }
+    ],
+    "preconditions": [
+      "Caller manages EVERY member project, existing and new (MCP agent credentials are refused)",
+      "Each member has a project budget (issueId null) in the pool currency",
+      "A project being newly linked has reserved = 0 and no reconciliationRequired",
+      "No member belongs to another pool",
+      "The owner explicitly instructed these exact values"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "keyed by commandId",
+    "returns": "{pool{id, schema, currency, limit, consumed, external, reserved, paused, version (= expectedVersion + 1), projectIds, workspaceIds, window, decisionId}, reused, decisionId}",
+    "pairsWith": [
+      "configure_aish_budget",
+      "get_aish_financial_pool",
+      "get_aish_budget"
+    ],
+    "errors": [
+      {
+        "when": "Financial authority requires a managing user.",
+        "fix": "Agent credential cannot decide; the owner must act."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Caller must manage every member project; stop."
+      },
+      {
+        "when": "Pool member requires its configured project budget.",
+        "fix": "The owner must first create that project's budget with configure_aish_budget (issueId null)."
+      },
+      {
+        "when": "Pool member budget currency differs; no implicit FX.",
+        "fix": "Use members whose budgets are in the pool currency."
+      },
+      {
+        "when": "Project budget already belongs to another financial pool.",
+        "fix": "Remove that project from projectIds."
+      },
+      {
+        "when": "Link projects before funding jobs; open reservations require reconciliation.",
+        "fix": "Wait until that project's open reservations are settled, then retry."
+      },
+      {
+        "when": "Removing a pooled project requires reconciliation.",
+        "fix": "Include every current member in projectIds."
+      },
+      {
+        "when": "Financial pool version changed.",
+        "fix": "Re-read get_aish_financial_pool and confirm with the owner."
+      },
+      {
+        "when": "Financial pool currency is immutable; ...",
+        "fix": "Keep the original currency."
+      },
+      {
+        "when": "Pool limit cannot invalidate incurred or reserved commitments.",
+        "fix": "Limit must be >= consumed + external + reserved."
+      },
+      {
+        "when": "Financial pool requires reconciliation before another decision.",
+        "fix": "Blocked; no MCP tool clears it. Escalate."
+      },
+      {
+        "when": "Financial pool decision replay conflicts.",
+        "fix": "commandId already used with other values."
+      },
+      {
+        "when": "The command or resource is outside the credential scope.",
+        "fix": "Credential is scoped to another workspace; the owner must act."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command configure_aish_financial_pool --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Never replaces project budgets: every reservation must fit the project/activity budget AND the pool.",
+        "verifiedFrom": "src/lib/aishFinancialPolicy.ts:20"
+      },
+      {
+        "text": "Counters start at zero when a project is linked (earlier spend is not counted).",
+        "verifiedFrom": "src/server/aishFinancialPoolStore.ts:9-11"
+      },
+      {
+        "text": "Members can never be removed.",
+        "verifiedFrom": "src/server/aishFinancialPoolStore.ts:77"
+      },
+      {
+        "text": "A paused or reconciliationRequired pool blocks new execution in ALL member projects.",
+        "verifiedFrom": "src/server/aishFinancialPoolStore.ts:50-53"
+      }
+    ],
+    "verifiedFrom": "aishFinancialPoolCommand('configure') (server.ts); configureAishFinancialPool (src/server/aishFinancialPoolStore.ts); configureAishFinancialPoolSchema (src/lib/aishFinancialPolicy.ts); authorizeAishTransportCommand (src/server/aishTransportAuthority.ts)"
+  },
+  {
+    "name": "get_aish_accounting",
+    "purpose": "Computes the live canonical accounting projection for one activity (human labor, runner time, tokens, money, imports, mirrors, gaps) and its source fingerprint, without writing anything.",
+    "useWhen": [
+      "You need reconciled hours, tokens or cost evidence for one activity",
+      "You need projection.sourceFingerprint before reconcile_aish_accounting or import_aish_accounting",
+      "Checking whether the saved accounting snapshot is outdated (stale=true)"
+    ],
+    "avoidWhen": [
+      "Budget limits, health or reservations: use get_aish_budget",
+      "Summary with budgets and committed percent: use get_aish_financial_report",
+      "Runner hours across a runner account: use get_aish_usage_report"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id (same project)",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      }
+    ],
+    "preconditions": [
+      "Project exists and belongs to a workspace",
+      "Issue exists in that project",
+      "Caller can read the project",
+      "Each accounting source has at most 1000 records"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "projection{sourceFingerprint (64-hex), complete, buckets, intervals, gaps, importGaps, conflicts, rejected, facts, mirrors, sourceCounts, policy}, currentSnapshotId (or null), stale (true when the saved snapshot differs from live sources). Summary-exposure readers get facts/gaps/conflicts emptied and gapCount, conflictCount, rejectedCount instead.",
+    "pairsWith": [
+      "list_issues",
+      "reconcile_aish_accounting",
+      "import_aish_accounting",
+      "get_aish_financial_report"
+    ],
+    "errors": [
+      {
+        "when": "Canonical accounting requires an existing issue and project workspace.",
+        "fix": "Take issueId from list_issues of the same project."
+      },
+      {
+        "when": "Accounting source exceeds the bounded snapshot; no partial total or write is permitted.",
+        "fix": "Cannot be computed through MCP; tell the user, do not sum pages yourself."
+      },
+      {
+        "when": "You do not have access to this project",
+        "fix": "Stop; the user lacks read access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command get_aish_accounting --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Measured and estimated values, attempt sums and interval union are separate measures, not additive parts.",
+        "verifiedFrom": "src/lib/aishAccountingReconciliation.ts:52-57"
+      },
+      {
+        "text": "Rework is a subset, not extra.",
+        "verifiedFrom": "src/lib/aishAccountingReconciliation.ts:40-46"
+      },
+      {
+        "text": "Never add this projection to legacy actualHours.",
+        "verifiedFrom": "src/lib/accountingSourceAdapters.ts:42-49"
+      }
+    ],
+    "verifiedFrom": "aishAccountingCommand('get') (server.ts); reconcileAishAccounting(apply=false), readSources, projectSources (src/server/aishAccountingStore.ts); exposeAishAccounting (src/server/aishFinancialExposure.ts)"
+  },
+  {
+    "name": "get_aish_budget",
+    "purpose": "Reads every budget of a project (project-level and per-activity) with counters and health, the linked aggregate pool, and optionally one job's reservation with its settlement fingerprint.",
+    "useWhen": [
+      "Checking remaining capacity or health before asking the owner to fund or dispatch work",
+      "You need budgets[].version for configure_aish_budget",
+      "You need reservation.entriesHash for settle_aish_budget",
+      "Finding the pool id (pool.id or budgets[].financialPoolId)"
+    ],
+    "avoidWhen": [
+      "Cost breakdown of an activity: use get_aish_financial_report",
+      "Individual receipts: use list_aish_consumption",
+      "Pool cost list: use get_aish_financial_pool"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "jobId",
+        "required": false,
+        "source": "list_aish_jobs -> [].id",
+        "notes": "must belong to projectId; adds that job's reservation"
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project",
+      "If jobId is given, the job exists in that project"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "budgets[{id, projectId, issueId (null = project budget), currency, limit, consumed, reserved, paused, reconciliationRequired, version, financialPoolId, health{consumedLevel, committedLevel, available, exceeded}, updatedAt}], reservation (with jobId: {status reserved|claimed|settled, financial{currency, maxAmount, requireIssueBudget}, consumed, remaining, attemptId, entriesHash, entryCount, budgetIds}, else null), pool ({id, currency, limit, consumed, external, reserved, paused, window, projectIds, version, health} or null). Summary-exposure readers get no version and no reservation, pool.projectCount instead of projectIds, plus ledgerExposure.",
+    "pairsWith": [
+      "list_projects",
+      "list_aish_jobs",
+      "configure_aish_budget",
+      "settle_aish_budget",
+      "get_aish_financial_pool"
+    ],
+    "errors": [
+      {
+        "when": "Financial project scope is required.",
+        "fix": "Pass projectId from list_projects."
+      },
+      {
+        "when": "Financial job scope mismatch.",
+        "fix": "jobId does not exist or belongs to another project; take it from list_aish_jobs(projectId)."
+      },
+      {
+        "when": "Invalid financial job id.",
+        "fix": "Use the exact job id."
+      },
+      {
+        "when": "You do not have access to this project",
+        "fix": "Stop; the user lacks read access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command get_aish_budget --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Health levels: healthy, warning-80, critical-90, blocked-100, computed on committed = consumed + reserved.",
+        "verifiedFrom": "src/lib/aishFinancialPolicy.ts:39-43"
+      },
+      {
+        "text": "Amounts are decimal strings: compare them as decimals, not floats.",
+        "verifiedFrom": "src/lib/aishFinancialPolicy.ts:33-37"
+      },
+      {
+        "text": "Empty budgets[] means spending is blocked.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:108-109"
+      },
+      {
+        "text": "Project and activity budgets limit the same spend: never add them.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:99-117"
+      }
+    ],
+    "verifiedFrom": "aishBudgetCommand('get') (server.ts); getAishFinancialState (src/server/aishBudgetStore.ts); exposeAishBudgets, resolveAishLedgerExposure (src/server/aishFinancialExposure.ts); aishBudgetHealth (src/lib/aishFinancialPolicy.ts)"
+  },
+  {
+    "name": "get_aish_financial_pool",
+    "purpose": "Reads an aggregate financial pool: limit, consumed, external costs, reserved, health, window, member projects and up to 200 recorded external costs.",
+    "useWhen": [
+      "The owner asks how much of a shared cap (e.g. the pilot cap) is used",
+      "You need pool.version before configure_aish_financial_pool",
+      "Verifying a cost registered with record_aish_financial_pool_cost"
+    ],
+    "avoidWhen": [
+      "Caller only reads (does not manage) member projects: use get_aish_budget, which includes a pool summary",
+      "A single project's budget: use get_aish_budget"
+    ],
+    "inputs": [
+      {
+        "param": "poolId",
+        "required": true,
+        "source": "get_aish_budget -> pool.id or budgets[].financialPoolId, or user",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      }
+    ],
+    "preconditions": [
+      "Pool exists",
+      "Caller manages at least one member project",
+      "Not callable with a workspace-scoped MCP agent credential (no projectId to scope it)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "pool{id, currency, limit, consumed, external, reserved, paused, reconciliationRequired, version, projectIds, workspaceIds, window, health{consumedLevel, committedLevel, available, exceeded}}, costs[{id, category, currency, amount, occurredAt, evidenceSha256, reason, createdAt}] (oldest first, max 200), costsTruncated",
+    "pairsWith": [
+      "get_aish_budget",
+      "record_aish_financial_pool_cost",
+      "configure_aish_financial_pool"
+    ],
+    "errors": [
+      {
+        "when": "Financial pool not found.",
+        "fix": "Check poolId with get_aish_budget (pool.id)."
+      },
+      {
+        "when": "Financial pool access requires managing a member project.",
+        "fix": "Use get_aish_budget for the summary instead."
+      },
+      {
+        "when": "Financial pool scope is required.",
+        "fix": "poolId has an invalid format."
+      },
+      {
+        "when": "The command or resource is outside the credential scope.",
+        "fix": "Agent credentials cannot read pools; use an owner/API key session."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command get_aish_financial_pool --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Health uses consumed + external (committedLevel also adds reserved).",
+        "verifiedFrom": "src/server/aishFinancialPoolStore.ts:21-23"
+      },
+      {
+        "text": "costsTruncated=true means more than 200 costs exist and the list is incomplete; pool.external is still the complete total.",
+        "verifiedFrom": "src/server/aishFinancialPoolStore.ts:136-139"
+      }
+    ],
+    "verifiedFrom": "aishFinancialPoolCommand('get') (server.ts); getAishFinancialPool, aishFinancialPoolHealth (src/server/aishFinancialPoolStore.ts)"
+  },
+  {
+    "name": "get_aish_financial_report",
+    "purpose": "Reads one consistent financial snapshot for a project and one activity: canonical accounting buckets, completeness, project/issue budgets with committed percent, circuit breakers and the ledger visibility policy.",
+    "useWhen": [
+      "User asks how much AISH work on an activity cost or consumed versus its budgets",
+      "Before the owner makes a budget decision, to show current commitment and health",
+      "You need visibility.version before set_aish_financial_visibility"
+    ],
+    "avoidWhen": [
+      "One job's reservation or settlement fingerprint: use get_aish_budget with jobId",
+      "Raw consumption receipts: use list_aish_consumption",
+      "Runner hours across an account: use get_aish_usage_report",
+      "The accounting fingerprint and stale flag for reconciliation: use get_aish_accounting"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id (same project)",
+        "notes": "issue must exist in that project"
+      }
+    ],
+    "preconditions": [
+      "Project exists and belongs to a workspace",
+      "Issue exists in that project",
+      "Caller can read the project",
+      "Project has at most 1000 budgets, 1000 budget events and 1000 records per accounting source"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "schema 'aish-financial-report/1', exposure ('ledger' or 'summary'), canManage, visibility{readerExposure, version}, sourceFingerprint, complete, gapCount, conflictCount, buckets, facts (ledger only), budgets[{id, issueId, currency, limit, consumed, reserved, paused, reconciliationRequired, committedPercent, available}], circuitBreakers (ledger only, max 100), circuitBreakerCount, intervals, reportHash",
+    "pairsWith": [
+      "list_projects",
+      "list_issues",
+      "get_aish_budget",
+      "get_aish_accounting",
+      "set_aish_financial_visibility"
+    ],
+    "errors": [
+      {
+        "when": "Invalid financial report project.",
+        "fix": "Pass a real projectId from list_projects."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Verify the id with list_projects; stop if the user has no access."
+      },
+      {
+        "when": "Canonical accounting requires an existing issue and project workspace.",
+        "fix": "Take issueId from list_issues of the same project."
+      },
+      {
+        "when": "... exceeds the bounded snapshot ...",
+        "fix": "The report cannot be produced (no partial totals exist); tell the user."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command get_aish_financial_report --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "consumed/reserved/available are null when reconciliationRequired=true: treat as unknown, never zero.",
+        "verifiedFrom": "src/server/aishFinancialReportStore.ts:25-31"
+      },
+      {
+        "text": "A missing money bucket means cost unavailable, not zero.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:195-204"
+      },
+      {
+        "text": "Project and issue budgets are nested limits on the same spend: never add them.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:99-117"
+      },
+      {
+        "text": "Non-managing readers get the summary only unless the owner exposed the ledger.",
+        "verifiedFrom": "src/server/aishFinancialReportStore.ts:19-20"
+      }
+    ],
+    "verifiedFrom": "aishFinancialReportCommand('get') (server.ts); getAishFinancialReport (src/server/aishFinancialReportStore.ts); readAishAccountingProjection (src/server/aishAccountingStore.ts)"
+  },
+  {
+    "name": "get_aish_usage_report",
+    "purpose": "Reads an execution-time report (runner machine time in milliseconds) for one AISH runner account, with totals and groups by workspace, project, runner or job plus paginated per-attempt rows.",
+    "useWhen": [
+      "User asks how many runner hours AISH spent per project, workspace, runner or job in a period",
+      "Auditing time quality (exact vs lease-derived vs heartbeat-estimated vs unattributed) for a runner account",
+      "Preparing a time report for a date range of up to 366 days"
+    ],
+    "avoidWhen": [
+      "Money or budget questions: this report has no currency; use get_aish_budget or get_aish_financial_report",
+      "Reconciled hours/tokens/cost of one activity: use get_aish_accounting",
+      "Runner health, capacity or online status: use get_aish_runner_management_overview",
+      "Human work hours on activities: runner time is never human labor; use the issue data or get_project_analytics"
+    ],
+    "inputs": [
+      {
+        "param": "accountId",
+        "required": true,
+        "source": "user, or CLI 'lpm aish accounts list' (no MCP tool lists runner accounts)",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "from",
+        "required": false,
+        "source": "user",
+        "notes": "ISO datetime; default = to minus 30 days; interval is [from,to)"
+      },
+      {
+        "param": "to",
+        "required": false,
+        "source": "user",
+        "notes": "ISO datetime; default = now; must be after from; to-from at most 366 days"
+      },
+      {
+        "param": "groupBy",
+        "required": false,
+        "source": "constant",
+        "notes": "workspace | project | runner | job; default project; any other value silently becomes project"
+      },
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "filter; must be a workspace actively bound to the account"
+      },
+      {
+        "param": "projectId",
+        "required": false,
+        "source": "list_projects -> id",
+        "notes": "filter"
+      },
+      {
+        "param": "runnerId",
+        "required": false,
+        "source": "get_aish_runner_management_overview -> runners[].id",
+        "notes": "filter on runner/host id"
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "exact job status: queued | leased | running | completed | failed | canceled"
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "get_aish_usage_report -> nextCursor",
+        "notes": "only to fetch the next page of the same query"
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "rows per page; default 100; clamped to 1..500"
+      }
+    ],
+    "preconditions": [
+      "Runner account exists",
+      "Caller is the account owner/admin, or can read at least one workspace actively bound to the account",
+      "Credential is an API key whose profile includes the tool (not exposed to OAuth connectors)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "snapshotHash (hash of the whole filtered result), interval{from,to}, groupBy, filters, totals{durationMs, attemptCount, exactAttemptCount, estimatedAttemptCount, unattributedAttemptCount, runnerCount, projectCount}, quality counts, groups[{key, label, durationMs, attemptCount, ...}], rows[{attemptId, workspaceId, workspaceName, projectId, projectName, runnerId, runnerName, jobId, jobTitle, status, startedAt, finishedAt, durationMs, quality}], nextCursor (null on last page)",
+    "pairsWith": [
+      "get_aish_runner_management_overview",
+      "get_aish_job",
+      "get_aish_accounting"
+    ],
+    "errors": [
+      {
+        "when": "AISH runner account not found.",
+        "fix": "Confirm the accountId with the user or via 'lpm aish accounts list'."
+      },
+      {
+        "when": "You do not have permission to read this AISH runner account.",
+        "fix": "Stop; the account owner must grant access or bind a workspace you can read."
+      },
+      {
+        "when": "AISH usage workspace is not bound to this runner account.",
+        "fix": "Remove workspaceId or use a workspace bound to this account."
+      },
+      {
+        "when": "AISH usage report requires from before to.",
+        "fix": "Swap or correct the dates."
+      },
+      {
+        "when": "AISH usage report range cannot exceed 366 days.",
+        "fix": "Split into ranges of at most 366 days."
+      },
+      {
+        "when": "O relatório mudou. Atualize antes de continuar.",
+        "fix": "Data changed between pages; restart from the first page without cursor."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish usage report --account <accountId> [--from <iso>] [--to <iso>] [--group-by workspace|project|runner|job] [--workspace <id>] [--project <id>] [--runner <id>] [--status <status>] [--limit <n>] [--json]",
+    "gotchas": [
+      {
+        "text": "Hours = durationMs / 3,600,000.",
+        "verifiedFrom": "src/lib/aishUsageReports.ts:170"
+      },
+      {
+        "text": "totals and groups already cover ALL filtered rows: never sum pages.",
+        "verifiedFrom": "src/lib/aishUsageReports.ts:146-156"
+      },
+      {
+        "text": "Rows are clipped to [from,to).",
+        "verifiedFrom": "src/lib/aishUsageReports.ts:79-84"
+      },
+      {
+        "text": "snapshotHash must stay identical across pages; if it changes, restart.",
+        "verifiedFrom": "src/lib/aishUsageReports.ts:140"
+      },
+      {
+        "text": "Without workspaceId the report covers every workspace bound to the account.",
+        "verifiedFrom": "server.ts:20858-20860"
+      },
+      {
+        "text": "MCP uses limitCount, the CLI uses --limit.",
+        "verifiedFrom": "server.ts:20847"
+      }
+    ],
+    "verifiedFrom": "getAishUsageReportCommand, requireAishRunnerAccountReadAccess (server.ts); buildAishUsageReport, normalizeAishUsageInterval, resolveAishUsageGroupBy (src/lib/aishUsageReports.ts); handleAishUsageReport (src/cli/lpm.ts)"
+  },
+  {
+    "name": "get_owner_agent_usage",
+    "purpose": "Reads today's (UTC) code-search quota usage in one workspace: the workspace daily cap and leased count plus per-credential consumed counts.",
+    "useWhen": [
+      "search_workspace_code or Advisor code search may be hitting a daily quota",
+      "Before a batch of code searches, to check how much daily code-search quota is left",
+      "User asks how much of today's owner-agent code-search quota was used"
+    ],
+    "avoidWhen": [
+      "Advisor AI token budget (fallbackReason=ai_usage_limit_reached): not shown here; see get_workspace_ai_config for the AI policy",
+      "AISH runner hours: use get_aish_usage_report",
+      "Money or budgets: use get_aish_budget",
+      "You also need roadmap/projects/decisions: get_workspace_owner_context_bundle already embeds this usage"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "workspace id"
+      }
+    ],
+    "preconditions": [
+      "Caller can read the workspace"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "workspaceId, dateKey (YYYYMMDD, UTC), workspace{codeSearchLimit, codeSearchLeased, ...} (defaults to {codeSearchLeased: 0, codeSearchLimit: server daily cap} when nothing was used today), credentials[{id, credentialId, codeSearchLimit, codeSearchConsumed, updatedAt}], generatedAt",
+    "pairsWith": [
+      "list_workspaces",
+      "search_workspace_code"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Verify workspaceId with list_workspaces; stop if the user is not a member."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Counts only code searches, not AI tokens or money. Resets at 00:00 UTC.",
+        "verifiedFrom": "server.ts:7379-7388"
+      },
+      {
+        "text": "Not exposed to OAuth connectors.",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      },
+      {
+        "text": "With an MCP agent credential only that credential's row is returned; with a user API key you get up to 100 rows for all callers (ids like apikey_<id>, oauth_<grantId>, advisor_<userId>) and your own row is not singled out.",
+        "verifiedFrom": "server.ts:7382-7384"
+      },
+      {
+        "text": "workspace.codeSearchLeased counts leased blocks of capacity and can exceed real consumption.",
+        "verifiedFrom": "server.ts:7332-7356"
+      }
+    ],
+    "verifiedFrom": "getOwnerAgentUsageCommand, claimOwnerAgentCodeSearchQuota, requireWorkspaceRoadmapRead (server.ts); resolveCodeSearchQuotaSubject (src/server/codeSearchQuota.ts)"
+  },
+  {
+    "name": "import_aish_accounting",
+    "purpose": "Previews or applies a permanent import of historical accounting facts for one activity, where every imported fact is explicitly mapped as distinct or as a mirror of native facts.",
+    "useWhen": [
+      "The owner asks to bring historical hours/cost evidence from another system into an activity and supplies the data and the mappings",
+      "mode=preview to validate an import payload and obtain expectedFingerprint before the owner approves apply"
+    ],
+    "avoidWhen": [
+      "Recording live AISH job usage: use record_aish_consumption",
+      "Reconciling native data only: use reconcile_aish_accounting",
+      "Changing human actualHours or budgets: import never does either",
+      "Apply without explicit owner approval"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id (same project)",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "mode",
+        "required": true,
+        "source": "constant",
+        "notes": "preview | apply; always preview first"
+      },
+      {
+        "param": "expectedFingerprint",
+        "required": false,
+        "source": "import_aish_accounting (preview) -> expectedFingerprint",
+        "notes": "64-hex; required for apply"
+      },
+      {
+        "param": "import",
+        "required": true,
+        "source": "user",
+        "notes": "object {importId [A-Za-z0-9_-]{1,160} (idempotency key), origin{namespace, workspaceId, watermark, evidenceSha256}, facts[1..200 abs-accounting/1 facts], distinctSources[<=200 source refs], mirrors[<=200 {id, imported[], native[], evidenceSha256}], reason 8-1000 chars}; at most 600 KB; fact source.collection must start with '<namespace>/<workspaceId>/' and eventId with '<namespace>/<workspaceId>:'"
+      }
+    ],
+    "preconditions": [
+      "Caller is a managing user (MCP agent credentials are refused)",
+      "Project with workspace and the issue exist",
+      "Every imported fact is declared distinct or mirrored; mirrors match exactly on metric, basis, unit, currency and rework",
+      "No secrets in the payload",
+      "For apply: owner explicitly approved the reviewed preview"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "keyed by import.importId",
+    "returns": "preview: {reused: false, expectedFingerprint, projection (including the import), payloadHash}; apply: {reused: false, applied: true, payloadHash, reconciliationRequired: true}; replay of the same importId and payload: {reused: true, projection}",
+    "pairsWith": [
+      "get_aish_accounting",
+      "reconcile_aish_accounting"
+    ],
+    "errors": [
+      {
+        "when": "Historical accounting decisions require a managing user.",
+        "fix": "Stop; the owner must run it with their own access."
+      },
+      {
+        "when": "Historical accounting import exceeds its safe document bound.",
+        "fix": "Split into imports of at most 200 facts and 600 KB."
+      },
+      {
+        "when": "Accounting evidence contains sensitive material.",
+        "fix": "Remove secrets, tokens or paths from the payload."
+      },
+      {
+        "when": "Historical accounting import replay conflicts.",
+        "fix": "importId already used with different content; use a new importId only for a genuinely new import."
+      },
+      {
+        "when": "Import requires complete mappings and compatible source dimensions; ...",
+        "fix": "Map every fact in distinctSources or mirrors and make mirror dimensions match; then preview again."
+      },
+      {
+        "when": "Accounting sources changed before import; a reviewed fingerprint is required.",
+        "fix": "Run preview again, show the new projection to the owner, apply with the new expectedFingerprint."
+      },
+      {
+        "when": "Canonical accounting requires an existing issue and project workspace.",
+        "fix": "Use projectId/issueId from list_projects/list_issues."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command import_aish_accounting --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Preview writes nothing but still fails if any fact is unmapped.",
+        "verifiedFrom": "src/server/aishAccountingStore.ts:125-127"
+      },
+      {
+        "text": "Applied imports are permanent (no delete tool).",
+        "verifiedFrom": "src/server/aishAccountingStore.ts:110-131"
+      },
+      {
+        "text": "After apply, call get_aish_accounting then reconcile_aish_accounting.",
+        "verifiedFrom": "src/server/aishAccountingStore.ts:131"
+      },
+      {
+        "text": "Import never charges a budget or authorizes spend.",
+        "verifiedFrom": "src/server/aishAccountingStore.ts:110"
+      }
+    ],
+    "verifiedFrom": "aishAccountingCommand('import') (server.ts); importAishAccounting, importAccountingRequestSchema (src/server/aishAccountingStore.ts); accountingImportSchema (src/lib/aishAccountingReconciliation.ts); accountingFactSchema (src/lib/unifiedAccounting.ts)"
+  },
+  {
+    "name": "list_aish_consumption",
+    "purpose": "Lists the immutable consumption entries (observations and adjustments) of one AISH job, one page at a time.",
+    "useWhen": [
+      "Reviewing what was reported for a job before settle_aish_budget or adjust_aish_consumption",
+      "Finding the entryId of a receipt to correct"
+    ],
+    "avoidWhen": [
+      "Totals or budget balance: use get_aish_budget (pages are not totals)",
+      "Reconciled totals per activity: use get_aish_accounting",
+      "Caller is a non-managing reader and ledger exposure is summary: use get_aish_financial_report"
+    ],
+    "inputs": [
+      {
+        "param": "jobId",
+        "required": true,
+        "source": "list_aish_jobs -> [].id",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "list_aish_consumption -> nextCursor",
+        "notes": "64 lowercase hex"
+      },
+      {
+        "param": "limit",
+        "required": false,
+        "source": "constant",
+        "notes": "integer 1-100; default 50"
+      }
+    ],
+    "preconditions": [
+      "Job exists",
+      "Caller can read the project; non-managers additionally need readerExposure 'ledger' (set_aish_financial_visibility)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "entries[{id, kind observation|adjustment, originalEntryId, attemptId, facts[{metric, basis, quantity, unit, currency, gaps, ...}], evidenceSha256, actorKind, createdAt, reason}], nextCursor (null on last page), totalsScope 'not-computed'",
+    "pairsWith": [
+      "list_aish_jobs",
+      "adjust_aish_consumption",
+      "get_aish_budget",
+      "settle_aish_budget"
+    ],
+    "errors": [
+      {
+        "when": "Detailed ledger access is not enabled for project readers.",
+        "fix": "Use get_aish_financial_report, or ask the owner about set_aish_financial_visibility."
+      },
+      {
+        "when": "Invalid consumption job id. / AISH job not found.",
+        "fix": "Take jobId from list_aish_jobs."
+      },
+      {
+        "when": "Consumption history scope mismatch.",
+        "fix": "Data integrity problem; report to the user."
+      },
+      {
+        "when": "You do not have access to this project",
+        "fix": "Stop; the user lacks read access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command list_aish_consumption --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Ordered by entry id (a hash), not by time.",
+        "verifiedFrom": "src/server/aishConsumptionStore.ts:124"
+      },
+      {
+        "text": "Never add page quantities as a job total; adjustments are deltas of their originalEntryId.",
+        "verifiedFrom": "src/server/aishConsumptionStore.ts:109-112"
+      },
+      {
+        "text": "Loop with nextCursor until it is null to see everything.",
+        "verifiedFrom": "src/server/aishConsumptionStore.ts:129"
+      }
+    ],
+    "verifiedFrom": "aishConsumptionCommand('list') (server.ts); listAishConsumption (src/server/aishConsumptionStore.ts); listConsumptionSchema (src/lib/aishConsumption.ts); resolveAishLedgerExposure (src/server/aishFinancialExposure.ts)"
+  },
+  {
+    "name": "reconcile_aish_accounting",
+    "purpose": "Saves an immutable canonical accounting snapshot for one activity and marks it current, only if the sources still match the fingerprint you reviewed; never changes human actualHours.",
+    "useWhen": [
+      "After reviewing get_aish_accounting with the user, to record the reconciled snapshot",
+      "Right after import_aish_accounting apply (it returns reconciliationRequired: true)",
+      "get_aish_accounting shows stale=true and the user wants the snapshot refreshed"
+    ],
+    "avoidWhen": [
+      "Only reading numbers: use get_aish_accounting",
+      "Clearing a budget or pool reconciliationRequired flag: this tool does not touch budgets or pools, and no MCP tool clears that flag",
+      "Changing human hours: never done by this tool"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id (same project)",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "expectedFingerprint",
+        "required": true,
+        "source": "get_aish_accounting -> projection.sourceFingerprint",
+        "notes": "64 lowercase hex chars"
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the project (the server also accepts MCP agent credentials)",
+      "Sources unchanged since the fingerprint was read",
+      "Snapshot at most 800 KB and each source at most 1000 records"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projection, currentSnapshotId (64-hex), stale: false, reused (true when an identical snapshot already existed)}",
+    "pairsWith": [
+      "get_aish_accounting",
+      "get_aish_financial_report"
+    ],
+    "errors": [
+      {
+        "when": "Canonical reconciliation requires the current source fingerprint.",
+        "fix": "Pass expectedFingerprint from get_aish_accounting."
+      },
+      {
+        "when": "Accounting sources changed; review the current reconciliation.",
+        "fix": "Call get_aish_accounting again, review the new projection with the user, retry with the new fingerprint."
+      },
+      {
+        "when": "Accounting snapshot exceeds the safe document bound; no partial projection is persisted.",
+        "fix": "Cannot reconcile through MCP; report to the user."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Stop; a project manager must run it."
+      },
+      {
+        "when": "Validation error on expectedFingerprint",
+        "fix": "Use the exact 64-hex value, no prefix."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command reconcile_aish_accounting --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Same fingerprint always yields the same snapshot id (safe to retry).",
+        "verifiedFrom": "src/server/aishAccountingStore.ts:101-106"
+      },
+      {
+        "text": "Any later source change makes the snapshot stale again.",
+        "verifiedFrom": "src/server/aishAccountingStore.ts:97-100"
+      },
+      {
+        "text": "It does not modify budgets, reservations or actualHours.",
+        "verifiedFrom": "src/server/aishAccountingStore.ts:93-107"
+      }
+    ],
+    "verifiedFrom": "aishAccountingCommand('reconcile') (server.ts); reconcileAishAccounting(apply=true), reconciliationRequestSchema (src/server/aishAccountingStore.ts)"
+  },
+  {
+    "name": "record_aish_consumption",
+    "purpose": "Appends an immutable consumption receipt (tokens, tool calls, infrastructure, money) for one AISH job attempt and moves the job's budget counters from reserved to consumed.",
+    "useWhen": [
+      "You are the executor (or its operator) of a leased AISH job attempt and must report the real provider usage/cost of that attempt",
+      "Retrying a receipt that failed to send (same consumptionId and identical payload)"
+    ],
+    "avoidWhen": [
+      "Work done outside AISH runners (Claude Code, Codex, Gemini, editors): never invent jobs or attempts; track it with the 'LPM-Activity: <issueId>' commit trailer",
+      "Correcting a recorded receipt: use adjust_aish_consumption (owner only)",
+      "An invoice or infrastructure bill for a shared cap: use record_aish_financial_pool_cost",
+      "Authorizing spend: use fund_aish_job (owner only); this tool never authorizes spending",
+      "Runner processes: prefer the CLI 'lpm aish consumption record' (local outbox with retry)"
+    ],
+    "inputs": [
+      {
+        "param": "jobId",
+        "required": true,
+        "source": "lease_aish_runner_job -> job.id, or list_aish_jobs -> [].id",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "attemptId",
+        "required": true,
+        "source": "lease_aish_runner_job -> job.lease.leaseId (same as job.financialBudget.attemptId); also get_aish_job -> financialBudget.attemptId",
+        "notes": "must be the attempt created when this job was leased"
+      },
+      {
+        "param": "consumptionId",
+        "required": true,
+        "source": "constant",
+        "notes": "unique per receipt, [A-Za-z0-9_-]{1,160}; reuse the same value on retry"
+      },
+      {
+        "param": "occurredAt",
+        "required": true,
+        "source": "provider/executor",
+        "notes": "ISO datetime with offset; not before the attempt started, not in the future"
+      },
+      {
+        "param": "model",
+        "required": true,
+        "source": "provider/executor",
+        "notes": "[A-Za-z0-9._:/-]{1,160}; must be non-null when any item is ai-input or ai-output; otherwise null"
+      },
+      {
+        "param": "items",
+        "required": true,
+        "source": "provider/executor",
+        "notes": "1-8 objects, one per distinct metric: {metric: ai-input|ai-output|tool|infrastructure|money, basis: estimated|measured, quantity: non-negative decimal string, unit: millisecond|token|call|byte|currency, currency, rate}. ai-* use unit 'token' (integer); money uses unit 'currency' and currency like 'BRL'; non-money items use currency null; rate only for money ({amount, currency equal to item currency, perUnit, perQuantity > 0, source}) else null; token/millisecond/call/byte counts are integers"
+      },
+      {
+        "param": "evidenceSha256",
+        "required": true,
+        "source": "provider/executor",
+        "notes": "64 lowercase hex SHA-256 of the provider receipt/log"
+      }
+    ],
+    "preconditions": [
+      "Job exists and caller can manage its project",
+      "attemptId belongs to this job",
+      "occurredAt lies between attempt start and now",
+      "For money: the job has a funded reservation for this same attempt and currency",
+      "No secrets anywhere in the payload",
+      "API key with full/custom profile (not exposed to OAuth connectors)"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "keyed by consumptionId",
+    "returns": "{entry{id (64-hex; this is the entryId for adjust_aish_consumption), schema 'aish-consumption/1', jobId, attemptId, projectId, workspaceId, kind 'observation', facts[] (gaps such as executor-reported, execution-window-overrun, pricing-snapshot-missing, agent-unattributed), evidenceSha256, createdAt}, reused (true on identical replay)}",
+    "pairsWith": [
+      "lease_aish_runner_job",
+      "list_aish_consumption",
+      "get_aish_budget"
+    ],
+    "errors": [
+      {
+        "when": "Invalid consumption job id. / AISH job not found.",
+        "fix": "Use the jobId returned by lease_aish_runner_job or list_aish_jobs."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Stop; recording needs project manage access."
+      },
+      {
+        "when": "Consumption attempt or scope mismatch.",
+        "fix": "attemptId must be the lease id of this same job."
+      },
+      {
+        "when": "Consumption event is outside the recorded execution interval.",
+        "fix": "Use the real event time: not before the lease started and not in the future."
+      },
+      {
+        "when": "Consumption replay payload conflicts with recorded history.",
+        "fix": "Same consumptionId with different content: if it is a new event use a new consumptionId; if it is a correction ask the owner (adjust_aish_consumption)."
+      },
+      {
+        "when": "Token consumption requires the reported model. / One metric per consumption... / Metric and unit disagree. / Only money has a currency; money requires one. / Counter must be an integer.",
+        "fix": "Fix the items as described in the inputs notes."
+      },
+      {
+        "when": "Consumption metadata contains sensitive material.",
+        "fix": "Remove secrets, tokens or paths."
+      },
+      {
+        "when": "The command or resource is outside the credential scope.",
+        "fix": "Agent credential is scoped to another workspace."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish consumption record --file <receipt.json> [--transport rest|mcp] [--json] (queues in a local outbox; 'lpm aish consumption flush' retries); also lpm aish command record_aish_consumption --file <payload.json>",
+    "gotchas": [
+      {
+        "text": "Receipts are permanent and always kept, even over the cap.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:178"
+      },
+      {
+        "text": "A receipt for a job with no reservation, another attempt, an already settled job, a different currency, money above the job cap, or occurredAt after the lease expired trips the circuit breaker: the project/activity budgets (and pool) become paused and only the owner can resume.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:207-228"
+      },
+      {
+        "text": "Token-only receipts do not move money: missing money is not zero cost.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:195-204"
+      },
+      {
+        "text": "Never derive money from tokens unless the user gives the rate.",
+        "verifiedFrom": "src/server/aishConsumptionStore.ts:72"
+      }
+    ],
+    "verifiedFrom": "aishConsumptionCommand('record'), leaseAishRunnerJobCommand (server.ts); recordAishConsumption, readScope (src/server/aishConsumptionStore.ts); recordConsumptionSchema (src/lib/aishConsumption.ts); prepareAishBudgetConsumption (src/server/aishBudgetStore.ts); accountingFactSchema (src/lib/unifiedAccounting.ts)"
+  },
+  {
+    "name": "record_aish_financial_pool_cost",
+    "purpose": "Appends an attested external cost (infrastructure or external AI bill) to a financial pool; it is always recorded and pauses the pool when the cap is reached.",
+    "useWhen": [
+      "The owner provides a real bill (amount, currency, date, evidence hash) and explicitly asks to register it in the pool"
+    ],
+    "avoidWhen": [
+      "Usage of a specific AISH job attempt: use record_aish_consumption",
+      "Correcting a job receipt: use adjust_aish_consumption",
+      "Estimates or forecasts: only real, attested costs belong here",
+      "Any case without an explicit owner instruction"
+    ],
+    "inputs": [
+      {
+        "param": "poolId",
+        "required": true,
+        "source": "get_aish_budget -> pool.id, or user",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "costId",
+        "required": true,
+        "source": "constant",
+        "notes": "one stable id per bill (e.g. sanitized invoice number), [A-Za-z0-9_-]{1,160}; reuse on retry"
+      },
+      {
+        "param": "category",
+        "required": true,
+        "source": "user",
+        "notes": "infrastructure | ai-external"
+      },
+      {
+        "param": "currency",
+        "required": true,
+        "source": "user",
+        "notes": "must equal the pool currency (get_aish_financial_pool -> pool.currency)"
+      },
+      {
+        "param": "amount",
+        "required": true,
+        "source": "user",
+        "notes": "positive decimal string, up to 12 decimals"
+      },
+      {
+        "param": "occurredAt",
+        "required": true,
+        "source": "user",
+        "notes": "UTC ISO datetime ending with 'Z'; not in the future"
+      },
+      {
+        "param": "evidenceSha256",
+        "required": true,
+        "source": "user",
+        "notes": "64 lowercase hex SHA-256 of the bill"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8-1000 chars; no secrets"
+      }
+    ],
+    "preconditions": [
+      "Caller manages every member project of the pool (MCP agent credentials are refused)",
+      "Pool exists",
+      "The owner explicitly instructed it with real evidence"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "keyed by costId",
+    "returns": "{cost{id, poolId, category, currency, amount, occurredAt, evidenceSha256, reason, createdAt}, pool{... external, paused ...}, reused}",
+    "pairsWith": [
+      "get_aish_financial_pool"
+    ],
+    "errors": [
+      {
+        "when": "Financial pool not found.",
+        "fix": "Check poolId with get_aish_budget (pool.id)."
+      },
+      {
+        "when": "Financial authority requires a managing user.",
+        "fix": "Agent credential cannot record; the owner must act."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Caller must manage every member project; stop."
+      },
+      {
+        "when": "Financial pool currency differs; no implicit FX.",
+        "fix": "Ask the owner; never convert currencies yourself."
+      },
+      {
+        "when": "Pool cost cannot occur in the future.",
+        "fix": "Use the real bill date in UTC."
+      },
+      {
+        "when": "Financial pool cost replay conflicts.",
+        "fix": "costId already used with different content; check get_aish_financial_pool costs."
+      },
+      {
+        "when": "Financial reason contains sensitive material.",
+        "fix": "Remove secrets from reason."
+      },
+      {
+        "when": "The command or resource is outside the credential scope.",
+        "fix": "Agent credentials cannot reach pools."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command record_aish_financial_pool_cost --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Permanent: there is no delete.",
+        "verifiedFrom": "src/server/aishFinancialPoolStore.ts:104-125"
+      },
+      {
+        "text": "If consumed + external + reserved reaches the limit, the pool pauses and ALL member projects stop starting new executions until the owner changes the pool with configure_aish_financial_pool.",
+        "verifiedFrom": "src/server/aishFinancialPoolStore.ts:119-121"
+      }
+    ],
+    "verifiedFrom": "aishFinancialPoolCommand('record-cost') (server.ts); recordAishFinancialPoolCost (src/server/aishFinancialPoolStore.ts); recordAishFinancialPoolCostSchema (src/lib/aishFinancialPolicy.ts)"
+  },
+  {
+    "name": "set_aish_financial_visibility",
+    "purpose": "Records the owner's decision on whether non-managing project readers see only the financial summary or the detailed factory ledger.",
+    "useWhen": [
+      "The owner explicitly asks to let project readers see the detailed ledger (ledger) or to hide it again (summary)"
+    ],
+    "avoidWhen": [
+      "Just reading costs: use get_aish_financial_report",
+      "Changing who is a project member: use add_workspace_member or add_team_member",
+      "Any case without an explicit owner instruction"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "readerExposure",
+        "required": true,
+        "source": "user",
+        "notes": "summary | ledger"
+      },
+      {
+        "param": "expectedVersion",
+        "required": true,
+        "source": "get_aish_financial_report -> visibility.version",
+        "notes": "integer >= 0; 0 if never set"
+      },
+      {
+        "param": "commandId",
+        "required": true,
+        "source": "constant",
+        "notes": "generate once per decision, [A-Za-z0-9_-]{1,160}; reuse the same value on retry"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8-1000 chars; no secrets or tokens"
+      }
+    ],
+    "preconditions": [
+      "Caller is a managing user of the project (MCP agent credentials are refused)",
+      "The owner explicitly decided the exposure",
+      "expectedVersion equals the current visibility.version"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "keyed by commandId",
+    "returns": "{reused: boolean} only. Re-read get_aish_financial_report to confirm visibility.readerExposure and the new version (expectedVersion + 1).",
+    "pairsWith": [
+      "get_aish_financial_report"
+    ],
+    "errors": [
+      {
+        "when": "Ledger exposure requires a managing user.",
+        "fix": "Agent credential cannot decide; the owner must act with their own access."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Stop; only a project manager can change visibility."
+      },
+      {
+        "when": "Ledger visibility policy changed.",
+        "fix": "Re-read visibility.version and confirm with the owner before retrying."
+      },
+      {
+        "when": "Ledger visibility decision conflicts.",
+        "fix": "commandId already used with different values; use a new commandId only for a genuinely new decision."
+      },
+      {
+        "when": "Visibility reason contains sensitive material.",
+        "fix": "Remove secrets, tokens or paths from reason."
+      },
+      {
+        "when": "Invalid financial report project. / validation error",
+        "fix": "Check projectId format, readerExposure enum and reason length."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command set_aish_financial_visibility --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Managers always see the ledger; this only changes what non-managing readers get from get_aish_financial_report, get_aish_accounting, get_aish_budget and list_aish_consumption (list_aish_consumption is denied to readers under summary).",
+        "verifiedFrom": "server.ts:22112"
+      },
+      {
+        "text": "Revoking is another decision with the next version.",
+        "verifiedFrom": "src/server/aishFinancialReportStore.ts:56-61"
+      }
+    ],
+    "verifiedFrom": "aishFinancialReportCommand('visibility') (server.ts); setAishFinancialVisibility, financialVisibilitySchema (src/server/aishFinancialReportStore.ts); resolveAishLedgerExposure (src/server/aishFinancialExposure.ts)"
+  },
+  {
+    "name": "settle_aish_budget",
+    "purpose": "Closes a finished job's financial reservation: releases the unspent remaining amount back to the project/activity budgets and the pool, keeping all consumption history.",
+    "useWhen": [
+      "The owner explicitly instructs to settle a job that is completed, failed or canceled and all its consumption receipts are recorded"
+    ],
+    "avoidWhen": [
+      "Job is still queued, leased or running: wait",
+      "Correcting a receipt: use adjust_aish_consumption",
+      "Funding a job: use fund_aish_job",
+      "Any case without an explicit owner instruction"
+    ],
+    "inputs": [
+      {
+        "param": "jobId",
+        "required": true,
+        "source": "list_aish_jobs -> [].id (status completed, failed or canceled)",
+        "notes": "[A-Za-z0-9_-], up to 160 chars"
+      },
+      {
+        "param": "expectedEntriesHash",
+        "required": true,
+        "source": "get_aish_budget(projectId, jobId) -> reservation.entriesHash",
+        "notes": "64 lowercase hex"
+      },
+      {
+        "param": "evidenceSha256",
+        "required": true,
+        "source": "user",
+        "notes": "64 lowercase hex SHA-256 of the settlement evidence (e.g. provider bill export)"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8-1000 chars; no secrets"
+      }
+    ],
+    "preconditions": [
+      "Caller is a managing user of the job's project (MCP agent credentials are refused)",
+      "The owner explicitly instructed it",
+      "Job status is completed, failed or canceled",
+      "Job has a funded reservation",
+      "No new receipt since entriesHash was read",
+      "Budgets and pool are not reconciliationRequired",
+      "Every provider call with exposure is 'uncertain' with no incurred value"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "{reused: boolean} only. Re-read get_aish_budget(projectId, jobId): reservation.status = 'settled', remaining = '0', budgets show the freed amount.",
+    "pairsWith": [
+      "get_aish_job",
+      "list_aish_consumption",
+      "get_aish_budget"
+    ],
+    "errors": [
+      {
+        "when": "Financial authority requires a managing user.",
+        "fix": "Agent credential cannot settle; the owner must act."
+      },
+      {
+        "when": "Financial job scope mismatch. / Invalid financial job id.",
+        "fix": "Take jobId from list_aish_jobs."
+      },
+      {
+        "when": "Financial settlement scope mismatch.",
+        "fix": "The job has no reservation (never funded); nothing to settle."
+      },
+      {
+        "when": "Settlement requires a terminal job and complete consumption evidence.",
+        "fix": "Wait until the job is completed, failed or canceled."
+      },
+      {
+        "when": "Consumption changed before financial settlement.",
+        "fix": "Re-read get_aish_budget, review new entries with the owner, retry with the new entriesHash."
+      },
+      {
+        "when": "Unreconciled provider calls prevent financial settlement.",
+        "fix": "Stop and report to the owner; provider calls must be reconciled first."
+      },
+      {
+        "when": "Financial pool requires reconciliation before settlement. / Financial projection requires reconciliation before settlement.",
+        "fix": "Blocked; no MCP tool clears it. Escalate."
+      },
+      {
+        "when": "Financial settlement replay conflicts.",
+        "fix": "Job already settled with other values; do not retry."
+      },
+      {
+        "when": "Financial reason contains sensitive material.",
+        "fix": "Remove secrets from reason."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command settle_aish_budget --file <payload.json> [--transport rest|mcp] [--json]",
+    "gotchas": [
+      {
+        "text": "Irreversible: a settled job cannot run again (needs a new job), and any later receipt on it trips the circuit breaker.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:96"
+      },
+      {
+        "text": "Uncertain provider-call exposure is written off.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:298-308"
+      },
+      {
+        "text": "If the pool was paused but is under its cap after the release, settlement automatically un-pauses the pool, re-opening execution for all member projects: tell the owner.",
+        "verifiedFrom": "src/server/aishBudgetStore.ts:316-323"
+      }
+    ],
+    "verifiedFrom": "aishBudgetCommand('settle') (server.ts); settleAishBudgetReservation (src/server/aishBudgetStore.ts); settleAishBudgetSchema (src/lib/aishFinancialPolicy.ts)"
+  }
+]

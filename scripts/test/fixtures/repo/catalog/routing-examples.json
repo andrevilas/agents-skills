@@ -1,0 +1,5 @@
+{ "schemaVersion": 1, "entries": [
+  { "id": "collision/c02", "prompt": ["commit the roadmap import", "commitar a importacao do roadmap"], "expected": "lpm-roadmap", "decidedBy": 29, "collision": true, "says": "commit", "about": "a roadmap import" },
+  { "id": "collision/c01", "prompt": ["commit this fix", "commita a correcao"], "expected": "lpm-deliver-activity", "decidedBy": 15, "collision": true, "says": "commit", "about": "code for an activity" },
+  { "id": "basic/start", "prompt": "the tool is missing", "expected": "lpm-start" }
+] }

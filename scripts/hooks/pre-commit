@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# agents-skills pre-commit hook (design §5.9, §5.11). Opt in once per clone:
+#   git config core.hooksPath scripts/hooks
+# Runs the same gate as CI: all validators plus the V15 drift rebuild, then the router eval.
+# When it fails on drift, run `node scripts/skills.mjs build`, stage the regenerated files and commit again.
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node (>= 20) is required for scripts/skills.mjs" >&2
+  exit 1
+fi
+
+node scripts/skills.mjs check
+node scripts/skills.mjs eval --router

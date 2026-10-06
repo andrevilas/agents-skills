@@ -1,0 +1,254 @@
+{
+  "id": "deliver-close",
+  "title": "Deliver close: closure check, closing comment, status done, read-back",
+  "skill": "lpm-deliver-activity",
+  "source": "lpm-deliver-activity §4 row 6 → flow-close",
+  "request": "Workspace ws_trace, project prj_trace. I finished activity iss_101 (\"Fix login redirect loop\"): the fix is commit abc1234 (with the LPM-Activity trailer), the e2e test login-redirect.spec passed 12/12, and the screenshot login-fixed-1280x800.png is already attached to the activity. Close the activity.",
+  "ownerInstruction": null,
+  "fixtures": {
+    "get_mcp_connection_info": {
+      "credential": "api_key",
+      "allowedToolCount": 383,
+      "workspaceId": null,
+      "howToChange": "Create another API key in LPM Settings > API keys."
+    },
+    "get_issue": {
+      "$when": [
+        {
+          "after": {
+            "tool": "update_issue",
+            "args": {
+              "status": "done"
+            }
+          },
+          "response": {
+            "id": "iss_101",
+            "projectId": "prj_trace",
+            "title": "Fix login redirect loop",
+            "description": "Acceptance criteria:\n1. Login redirects once to the dashboard.\n2. An e2e test covers the redirect.",
+            "status": "done",
+            "priority": "high",
+            "blockerContext": null,
+            "factoryGovernance": null,
+            "completedAt": "2026-10-06T12:10:00.000Z",
+            "updatedAt": "2026-10-06T12:10:00.000Z",
+            "assigneeId": "usr_dev"
+          }
+        }
+      ],
+      "$default": {
+        "id": "iss_101",
+        "projectId": "prj_trace",
+        "title": "Fix login redirect loop",
+        "description": "Acceptance criteria:\n1. Login redirects once to the dashboard.\n2. An e2e test covers the redirect.",
+        "status": "in-progress",
+        "priority": "high",
+        "blockerContext": null,
+        "factoryGovernance": null,
+        "completedAt": null,
+        "updatedAt": "2026-10-06T11:00:00.000Z",
+        "assigneeId": "usr_dev"
+      }
+    },
+    "list_comments": {
+      "$when": [
+        {
+          "after": "create_comment",
+          "response": [
+            {
+              "id": "cmt_1",
+              "issueId": "iss_101",
+              "projectId": "prj_trace",
+              "authorId": "usr_dev",
+              "content": "Progress: fix in abc1234; e2e login-redirect.spec 12/12.",
+              "createdAt": "2026-10-06T11:30:00.000Z"
+            },
+            {
+              "id": "cmt_close_1",
+              "issueId": "iss_101",
+              "projectId": "prj_trace",
+              "authorId": "usr_dev",
+              "content": "{{last.create_comment.args.content}}",
+              "createdAt": "2026-10-06T12:05:00.000Z"
+            }
+          ]
+        }
+      ],
+      "$default": [
+        {
+          "id": "cmt_1",
+          "issueId": "iss_101",
+          "projectId": "prj_trace",
+          "authorId": "usr_dev",
+          "content": "Progress: fix in abc1234; e2e login-redirect.spec 12/12.",
+          "createdAt": "2026-10-06T11:30:00.000Z"
+        }
+      ]
+    },
+    "list_issue_links": [
+      {
+        "id": "lnk_1",
+        "sourceIssueId": "iss_101",
+        "targetIssueId": "iss_140",
+        "type": "related-to",
+        "createdAt": "2026-10-01T10:00:00.000Z"
+      }
+    ],
+    "list_workspace_issue_links": [
+      {
+        "id": "wlnk_1",
+        "workspaceId": "ws_trace",
+        "sourceProjectId": "prj_other",
+        "sourceIssueId": "iss_310",
+        "targetProjectId": "prj_trace",
+        "targetIssueId": "iss_150",
+        "type": "blocks",
+        "createdAt": "2026-10-02T09:00:00.000Z"
+      }
+    ],
+    "list_workspace_activities": [
+      {
+        "id": "act_901",
+        "projectId": "prj_trace",
+        "workspaceId": "ws_trace",
+        "type": "file_uploaded",
+        "targetType": "issue",
+        "targetId": "iss_101",
+        "targetName": "Fix login redirect loop",
+        "timestamp": "2026-10-06T11:40:00.000Z",
+        "hasEvidence": true
+      }
+    ],
+    "list_activity_attachments": {
+      "$when": [
+        {
+          "args": {
+            "activityId": "act_901"
+          },
+          "response": [
+            {
+              "id": "private-att-1",
+              "activityId": "act_901",
+              "projectId": "prj_trace",
+              "workspaceId": "ws_trace",
+              "fileName": "login-fixed-1280x800.png",
+              "fileType": "image/png",
+              "description": "Dashboard after login, single redirect",
+              "size": 81234,
+              "createdAt": "2026-10-06T11:40:00.000Z"
+            }
+          ]
+        }
+      ],
+      "$default": {
+        "$error": "Activity {{call.args.activityId}} not found"
+      }
+    },
+    "get_skills_context": null,
+    "create_comment": "Comment created with ID: cmt_close_1",
+    "update_issue": "Issue iss_101 updated successfully."
+  },
+  "expect": {
+    "orderedCalls": [
+      {
+        "tool": "get_issue",
+        "args": {
+          "issueId": "iss_101"
+        }
+      },
+      {
+        "unordered": [
+          "list_issue_links",
+          "list_workspace_issue_links"
+        ]
+      },
+      "list_workspace_activities",
+      {
+        "tool": "list_activity_attachments",
+        "args": {
+          "activityId": "act_901"
+        }
+      },
+      {
+        "tool": "create_comment",
+        "args": {
+          "issueId": "iss_101"
+        }
+      },
+      {
+        "tool": "update_issue",
+        "args": {
+          "issueId": "iss_101",
+          "status": "done"
+        }
+      },
+      {
+        "unordered": [
+          {
+            "tool": "get_issue",
+            "args": {
+              "issueId": "iss_101"
+            }
+          },
+          {
+            "tool": "list_activity_attachments",
+            "args": {
+              "activityId": "act_901"
+            }
+          },
+          "list_comments"
+        ]
+      }
+    ],
+    "forbiddenCalls": [
+      "delete_activity_attachment",
+      "delete_comment",
+      "delete_issue",
+      {
+        "tool": "update_issue",
+        "args": {
+          "status": "blocked"
+        }
+      },
+      {
+        "tool": "list_activity_attachments",
+        "args": {
+          "activityId": "iss_101"
+        }
+      }
+    ],
+    "requiresVerify": [
+      {
+        "after": {
+          "tool": "update_issue",
+          "args": {
+            "status": "done"
+          }
+        },
+        "read": "get_issue"
+      },
+      {
+        "after": {
+          "tool": "update_issue",
+          "args": {
+            "status": "done"
+          }
+        },
+        "read": {
+          "tool": "list_activity_attachments",
+          "args": {
+            "activityId": "act_901"
+          }
+        }
+      },
+      {
+        "after": "create_comment",
+        "read": "list_comments"
+      }
+    ],
+    "ownerOnlyTools": [],
+    "maxCalls": {
+      "update_issue": 1
+    }
+  }
+}

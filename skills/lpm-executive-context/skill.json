@@ -1,0 +1,81 @@
+{
+  "id": "lpm-executive-context",
+  "title": "Workspace executive context",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when reviewing or changing the LPM workspace executive context (contexto executivo): readiness (prontidão), gaps, operating model, executive roles, routing/escalation policy, unowned domains or capabilities (sem dono), alignment. Not for project settings (use lpm-workspace-admin).",
+  "doneWhen": "The apply returned an `auditEventId`, the read-back shows the patch with `lastReviewedAt` = `appliedAt` and its closed gap ids are gone, or the review-only report was delivered.",
+  "authorityCeiling": "Reads and drafts [A]; the apply [O], only for the exact patch the workspace owner approved; routing-profile and description fixes [C].",
+  "jobs": [
+    "o workspace está pronto para operação assistida? gere o relatório de prontidão",
+    "quais papéis executivos estão sem responsável no workspace?",
+    "o domínio <nome> está sem dono: qual projeto assume?",
+    "list the executive context gaps of workspace <workspaceId> by gap id",
+    "draft an operating model and a routing policy for the owner to review",
+    "set the executive context mission to the text the owner gave",
+    "apply the executive-context patch the owner approved",
+    "check project alignment and fix the misaligned routing profile"
+  ],
+  "routing": [
+    {
+      "order": 33,
+      "all": [
+        ["readiness", "prontidao", "executive context", "contexto executivo", "mission", "missao", "operating model", "modelo operacional", "executive roles", "routing policy", "politica de roteamento", "escalation policy", "unowned", "sem dono", "alignment", "alinhamento"]
+      ],
+      "unless": [],
+      "firstCall": "generate_workspace_readiness_report"
+    }
+  ],
+  "notFor": [
+    { "when": "project settings, project governance roles, members, or a project's routing profile outside a gap fix", "skill": "lpm-workspace-admin" },
+    { "when": "roadmap capability records (ids, owners, item links)", "skill": "lpm-roadmap" },
+    { "when": "routing one concrete intake entry or WhatsApp protocol to a project", "skill": "lpm-intake-triage" },
+    { "when": "project or portfolio delivery health, risks or a weekly review", "skill": "lpm-review-health" },
+    { "when": "budgets, AI limits, AI models or AISH money", "skill": "lpm-ai-cost" },
+    { "when": "API keys, agent credentials or agent principals", "skill": "lpm-access" }
+  ],
+  "owns": [
+    "get_workspace_executive_context",
+    "list_workspace_context_gaps",
+    "list_unowned_domains_or_capabilities",
+    "list_missing_governance_assignments",
+    "draft_workspace_operating_model",
+    "draft_workspace_routing_policy",
+    "apply_workspace_context_update",
+    "validate_workspace_context_completeness",
+    "validate_workspace_project_alignment",
+    "generate_workspace_readiness_report"
+  ],
+  "uses": [
+    "list_workspace_members",
+    "update_project",
+    "update_workspace",
+    "get_project",
+    "get_workspace_read_model"
+  ],
+  "cli": [],
+  "sharedRefs": [
+    {
+      "name": "authority-and-owner-decisions",
+      "loadWhen": "an [O] apply is next, or the owner's order is missing and you write the decision request",
+      "inlineSummary": false
+    },
+    {
+      "name": "idempotency-and-retries",
+      "loadWhen": "an apply or a routing-profile update timed out or returned an unclear result",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    { "file": "references/patch-semantics.md", "loadWhen": "you draft, edit, apply or read back an executive-context patch" },
+    { "file": "references/gap-ids.md", "loadWhen": "you read a readiness report, a validation or a gap list" },
+    { "file": "references/flow-claim-unowned.md", "loadWhen": "decision row 5" }
+  ],
+  "behaviorContracts": ["missing-tool-fallback"],
+  "codex": {
+    "shortDescription": "Review and change the LPM workspace executive context",
+    "defaultPrompt": "Use $lpm-executive-context to review the readiness of LPM workspace <workspaceId>."
+  }
+}

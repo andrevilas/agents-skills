@@ -1,15 +1,207 @@
 {
   "id": "lpm-workspace-admin",
-  "name": "LPM Workspace Admin",
-  "version": "1.1.0",
-  "supported_agents": [
-    "codex",
-    "antigravity"
+  "title": "Workspaces, projects and people (+ project kickoff)",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when creating or kicking off (kickoff, novo projeto) an LPM project or workspace, changing its settings, roles, routing profile, archive or delete, or managing members and teams. Not for cycles, milestones or labels alone (use lpm-plan-work) or credentials (use lpm-access).",
+  "doneWhen": "The change is visible on re-read; a delete came only after a completed export or the owner's quoted skip; a kickoff passes every flow-kickoff.md exit criterion.",
+  "authorityCeiling": "Creates and settings [C], team create [A]; roles, routing and moves need an owner instruction; delete_project [O].",
+  "jobs": [
+    "quero fazer o kickoff de um novo projeto para o time de checkout",
+    "crie o projeto Mobile App Rewrite com a chave MOBR no workspace <nome>",
+    "defina o product owner e o delivery lead do projeto <nome>",
+    "edite o perfil de roteamento do projeto para cobrir o domínio pagamentos",
+    "arquive o projeto <nome>; depois veja se a baseline ainda está atual",
+    "adicione <pessoa> ao workspace como member",
+    "create a new workspace for the logistics area",
+    "rename the project and change its description",
+    "delete the duplicated test project after exporting it",
+    "create a team, add two members and remove the old one",
+    "who is the user behind this ownerId?",
+    "adicione o Joao ao time de checkout",
+    "renomeie o time Plataforma",
+    "quem é o product owner do projeto Checkout?"
   ],
-  "canonical_source": "shared/overview.md",
-  "targets": {
-    "codex": "targets/codex/lpm-workspace-admin",
-    "antigravity": "targets/antigravity/lpm-workspace-admin"
-  },
-  "description": "Workspace governance and structural administration over the LPM MCP."
+  "routing": [
+    {
+      "order": 14,
+      "note": "kickoff",
+      "all": [
+        [
+          "kickoff",
+          "kick-off",
+          "kick off",
+          "novo projeto",
+          "new project",
+          "start a project",
+          "iniciar um projeto",
+          "iniciar projeto",
+          "comecar um projeto"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "list_projects → references/flow-kickoff.md"
+    },
+    {
+      "order": 35,
+      "all": [
+        [
+          "workspace",
+          "project",
+          "projeto",
+          "project settings",
+          "routing profile",
+          "member",
+          "members",
+          "membro",
+          "membros",
+          "team",
+          "teams",
+          "equipe*",
+          "time de",
+          "o time",
+          "ao time",
+          "do time",
+          "user id",
+          "usuario",
+          "ownerId",
+          "quem e o usuario"
+        ]
+      ],
+      "unless": [
+        "assign*",
+        "atribu*",
+        "assignee",
+        "responsavel",
+        "activity",
+        "atividade",
+        "cycle",
+        "ciclo",
+        "milestone",
+        "marco",
+        "label"
+      ],
+      "firstCall": "list_workspaces"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "cycles, milestones, labels or activities of an existing project, or who is assigned to an activity",
+      "skill": "lpm-plan-work"
+    },
+    {
+      "when": "API keys, agent credentials or principals, AI provider keys, the workspace GitHub token",
+      "skill": "lpm-access"
+    },
+    {
+      "when": "workspace AI settings, models, budgets or limits",
+      "skill": "lpm-ai-cost"
+    },
+    {
+      "when": "linking, scanning or indexing a repository outside a kickoff",
+      "skill": "lpm-code-index"
+    },
+    {
+      "when": "requirements or baselines outside a kickoff",
+      "skill": "lpm-requirements-scope"
+    },
+    {
+      "when": "executive context, mission, readiness or the unowned-domains report",
+      "skill": "lpm-executive-context"
+    }
+  ],
+  "owns": [
+    "create_workspace",
+    "update_workspace",
+    "create_project",
+    "update_project",
+    "archive_project",
+    "unarchive_project",
+    "delete_project",
+    "list_workspace_members",
+    "add_workspace_member",
+    "remove_workspace_member",
+    "get_user",
+    "list_teams",
+    "get_team",
+    "create_team",
+    "update_team",
+    "delete_team",
+    "list_team_members",
+    "add_team_member",
+    "remove_team_member"
+  ],
+  "uses": [
+    "list_workspaces",
+    "get_workspace",
+    "list_projects",
+    "get_project",
+    "list_unowned_domains_or_capabilities",
+    "create_export_request",
+    "list_requirement_baselines",
+    "list_issues",
+    "get_project_execution_context",
+    "create_cycle",
+    "list_milestones",
+    "create_milestone",
+    "list_labels",
+    "create_label",
+    "create_project_repository_link",
+    "scan_project_repository_readonly",
+    "create_requirement_baseline",
+    "update_requirement_baseline",
+    "create_requirement",
+    "list_export_requests",
+    "list_api_keys",
+    "get_cycle",
+    "list_requirements"
+  ],
+  "cli": [],
+  "sharedRefs": [
+    {
+      "name": "naming-conventions",
+      "loadWhen": "before naming a project key or team",
+      "inlineSummary": false
+    },
+    {
+      "name": "authority-and-owner-decisions",
+      "loadWhen": "before delete_project or a kickoff baseline step",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/routing-profile.md",
+      "loadWhen": "before editing a routing profile"
+    },
+    {
+      "file": "references/destructive-ops.md",
+      "loadWhen": "before archive, unarchive, delete or member removal"
+    },
+    {
+      "file": "references/roles.md",
+      "loadWhen": "for member, team or governance-role changes"
+    },
+    {
+      "file": "references/flow-kickoff.md",
+      "loadWhen": "decision row 3 (kickoff)"
+    },
+    {
+      "file": "references/flow-project-admin.md",
+      "loadWhen": "decision rows 4, 5, 6 or 8"
+    },
+    {
+      "file": "references/flow-people.md",
+      "loadWhen": "decision row 10"
+    }
+  ],
+  "behaviorContracts": [
+    "missing-tool-fallback"
+  ],
+  "codex": {
+    "shortDescription": "Create and kick off LPM projects; manage members and teams",
+    "defaultPrompt": "Use $lpm-workspace-admin to create or change LPM project <name>, its workspace, members or teams."
+  }
 }

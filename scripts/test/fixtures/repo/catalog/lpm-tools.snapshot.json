@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "tools": [
+    { "name": "create_activity_attachment", "category": "portfolio", "accessLevel": "write", "sensitive": false, "oauthScope": null, "profiles": ["full", "portfolio", "custom"], "required": ["activityId", "projectId", "url"], "params": { "activityId": "string", "projectId": "string", "url": "string" } },
+    { "name": "create_workspace_roadmap", "category": "roadmap", "accessLevel": "write", "sensitive": false, "oauthScope": "roadmap:manage", "profiles": ["full", "custom"], "required": ["workspaceId", "name"], "params": { "workspaceId": "string", "name": "string" } },
+    { "name": "delete_activity_attachment", "category": "portfolio", "accessLevel": "write", "sensitive": false, "oauthScope": null, "profiles": ["full", "custom"], "required": ["activityId", "attachmentId", "projectId"], "params": { "activityId": "string", "attachmentId": "string", "projectId": "string" } },
+    { "name": "get_issue", "category": "portfolio", "accessLevel": "read", "sensitive": false, "oauthScope": "portfolio:read", "profiles": ["full", "read-only", "portfolio", "custom"], "required": ["issueId", "projectId"], "params": { "issueId": "string", "projectId": "string" } },
+    { "name": "get_mcp_connection_info", "category": "workspace", "accessLevel": "read", "sensitive": false, "oauthScope": "workspace:read", "profiles": ["full", "read-only", "portfolio", "custom"], "required": [], "params": {} },
+    { "name": "get_orphan_report", "category": "workspace", "accessLevel": "read", "sensitive": false, "oauthScope": null, "profiles": ["full", "custom"], "required": [], "params": {} },
+    { "name": "list_activity_attachments", "category": "portfolio", "accessLevel": "read", "sensitive": false, "oauthScope": null, "profiles": ["full", "read-only", "portfolio", "custom"], "required": ["activityId", "projectId"], "params": { "activityId": "string", "projectId": "string" } },
+    { "name": "list_workspace_activities", "category": "portfolio", "accessLevel": "read", "sensitive": false, "oauthScope": null, "profiles": ["full", "read-only", "portfolio", "custom"], "required": ["workspaceId"], "params": { "workspaceId": "string", "projectId": "string", "limit": "number" } },
+    { "name": "set_project_issue_due_date", "category": "portfolio", "accessLevel": "write", "sensitive": false, "oauthScope": null, "profiles": ["full", "portfolio", "custom"], "required": ["issueId", "projectId"], "params": { "issueId": "string", "projectId": "string", "dueDate": "string" } },
+    { "name": "update_project_issue_due_date", "category": "portfolio", "accessLevel": "write", "sensitive": false, "oauthScope": null, "profiles": ["full", "portfolio", "custom"], "required": ["issueId", "projectId"], "params": { "issueId": "string", "projectId": "string", "dueDate": "string" } },
+    { "name": "upload_activity_attachment", "category": "portfolio", "accessLevel": "write", "sensitive": false, "oauthScope": null, "profiles": ["full", "portfolio", "custom"], "required": ["activityId", "contentBase64", "fileName", "projectId"], "params": { "activityId": "string", "contentBase64": "string", "fileName": "string", "projectId": "string", "idempotencyKey": "string" } }
+  ],
+  "hashes": { "namesHash": "sha256:fixture", "schemaHash": "sha256:fixture", "cliHash": "sha256:fixture" }
+}

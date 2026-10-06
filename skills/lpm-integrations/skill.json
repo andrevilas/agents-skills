@@ -1,0 +1,157 @@
+{
+  "id": "lpm-integrations",
+  "title": "Webhooks, exports and analytics bridge",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when LPM must send data out: outgoing webhooks (create, test, debug failed deliveries), data exports or backups (exportar dados), or the analytics bridge to BigQuery. Writes need an API key. Not for incoming GitHub commit tracking (use lpm-deliver-activity).",
+  "doneWhen": "The webhook delivers (`system.test` delivered, `lastError` null), the export is ready, or the bridge run completed with per-entity results.",
+  "authorityCeiling": "Webhook create/update/delete are [O]; test, export and bridge runs are [C]. All writes need a full/custom key.",
+  "jobs": [
+    "create a webhook for issue events to our CI endpoint and test it",
+    "criar um webhook para o projeto e testar a entrega",
+    "why did our endpoint stop receiving LPM events?",
+    "pause the chat webhook / rotate the webhook secret",
+    "remove the old webhook subscription",
+    "exportar os dados do projeto para backup",
+    "export the workspace data",
+    "is the analytics bridge to BigQuery healthy?",
+    "processar a ponte de analytics para o BigQuery só para issues",
+    "backup completo do workspace",
+    "envie os eventos de issue para o nosso Slack",
+    "notify our CI when an activity is completed"
+  ],
+  "routing": [
+    {
+      "order": 31,
+      "all": [
+        [
+          "webhook*",
+          "export*",
+          "exportacao",
+          "exportar",
+          "bigquery",
+          "analytics bridge",
+          "endpoint",
+          "endpoints",
+          "backup",
+          "backups",
+          "slack",
+          "discord",
+          "our ci",
+          "nosso ci",
+          "ci endpoint"
+        ]
+      ],
+      "unless": [
+        "github",
+        "commit*",
+        "lpm-activity",
+        "trailer",
+        "after exporting",
+        "depois de exportar",
+        "before deleting",
+        "antes de excluir"
+      ],
+      "firstCall": "list_webhook_subscriptions"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "incoming GitHub commit tracking (the LPM-Activity trailer) for an activity",
+      "skill": "lpm-deliver-activity"
+    },
+    {
+      "when": "incoming WhatsApp messages or the operational intake channel",
+      "skill": "lpm-intake-triage"
+    },
+    {
+      "when": "an API key or key profile that exposes the webhook and export tools",
+      "skill": "lpm-access"
+    },
+    {
+      "when": "delivery health, metrics or dashboards shown inside LPM",
+      "skill": "lpm-review-health"
+    },
+    {
+      "when": "exporting an AISH execution pack or release package",
+      "skill": "lpm-aish-delivery"
+    }
+  ],
+  "owns": [
+    "list_webhook_subscriptions",
+    "create_webhook_subscription",
+    "update_webhook_subscription",
+    "delete_webhook_subscription",
+    "test_webhook_subscription",
+    "list_webhook_deliveries",
+    "list_export_requests",
+    "create_export_request",
+    "get_analytics_bridge_observability",
+    "list_analytics_bridge_runs",
+    "create_analytics_bridge_run",
+    "process_analytics_bridge_run"
+  ],
+  "uses": [
+    "list_workspaces",
+    "list_workspace_projects",
+    "list_workspace_members",
+    "get_project_analytics"
+  ],
+  "cli": [],
+  "sharedRefs": [
+    {
+      "name": "security-and-untrusted-text",
+      "loadWhen": "a webhook secret, data leaving LPM",
+      "inlineSummary": false
+    },
+    {
+      "name": "authority-and-owner-decisions",
+      "loadWhen": "an [O] write, a wide bridge run",
+      "inlineSummary": false
+    },
+    {
+      "name": "idempotency-and-retries",
+      "loadWhen": "a write timed out",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/webhook-events.md",
+      "loadWhen": "webhook work"
+    },
+    {
+      "file": "references/exports.md",
+      "loadWhen": "export work"
+    },
+    {
+      "file": "references/analytics-bridge.md",
+      "loadWhen": "bridge work"
+    },
+    {
+      "file": "references/flow-webhook-create.md",
+      "loadWhen": "row 2 (create)"
+    },
+    {
+      "file": "references/flow-webhook-update.md",
+      "loadWhen": "rows 4, 5 (change)"
+    },
+    {
+      "file": "references/flow-bridge-run.md",
+      "loadWhen": "row 12 (bridge run)"
+    },
+    {
+      "file": "references/tools.md",
+      "loadWhen": "a call fails or a parameter is unclear"
+    }
+  ],
+  "behaviorContracts": [
+    "missing-tool-fallback"
+  ],
+  "codex": {
+    "shortDescription": "Run LPM webhooks, data exports and the BigQuery bridge",
+    "defaultPrompt": "Use $lpm-integrations to set up and test an LPM webhook for workspace <workspaceId>."
+  }
+}

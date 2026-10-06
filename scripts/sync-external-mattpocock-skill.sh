@@ -63,6 +63,13 @@ if [[ ! -f "$SOURCE_FILE" ]]; then
   exit 1
 fi
 
+# Delete stale files first (design §5.10): copying over an existing bundle kept files that
+# upstream had removed, so the bundle drifted from its source.
+if [[ -z "$DEST_DIR" || "$DEST_DIR" == "/" ]]; then
+  echo "Refusing to sync into an empty or root destination: '$DEST_DIR'" >&2
+  exit 1
+fi
+rm -rf "$DEST_DIR"
 mkdir -p "$DEST_DIR"
 cp -R "$SOURCE_DIR/." "$DEST_DIR/"
 

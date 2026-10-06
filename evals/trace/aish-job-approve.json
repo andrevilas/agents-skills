@@ -1,0 +1,233 @@
+{
+  "id": "aish-job-approve",
+  "title": "AISH job approve: owner order for one job, gate and funding checks, approve the exact manifest, read-back",
+  "skill": "lpm-aish-jobs",
+  "source": "lpm-aish-jobs §4 row 4 → P2 Approve one job",
+  "request": "Project prj_trace. AISH job job_77 (\"Add CSV export tests\", activity iss_102) is queued and already funded. Approve its execution.",
+  "ownerInstruction": "I am the project owner: approve AISH job job_77 to run, exactly as queued.",
+  "fixtures": {
+    "get_mcp_connection_info": {
+      "credential": "api_key",
+      "allowedToolCount": 383,
+      "workspaceId": null,
+      "howToChange": "Create another API key in LPM Settings > API keys."
+    },
+    "get_aish_job": {
+      "$when": [
+        {
+          "after": "approve_aish_job_execution",
+          "response": {
+            "id": "job_77",
+            "projectId": "prj_trace",
+            "issueId": "iss_102",
+            "title": "Add CSV export tests",
+            "status": "queued",
+            "intent": {
+              "type": "test",
+              "prompt": "Add tests for the CSV export of activities."
+            },
+            "executionGate": {
+              "state": "executing",
+              "requiredCheckpoint": "execution-approval",
+              "runnerMayExecute": true,
+              "approvedBy": "usr_owner",
+              "approvedManifestHash": "sha256:9f2c1e0d4b7a",
+              "approvedAt": "2026-10-06T12:00:00.000Z",
+              "approvalReason": "{{last.approve_aish_job_execution.args.reason}}"
+            },
+            "executionManifestHash": "sha256:9f2c1e0d4b7a",
+            "workflowBinding": null,
+            "financialBudget": {
+              "currency": "USD",
+              "maxAmount": "5.00",
+              "requireIssueBudget": false,
+              "attemptId": null,
+              "remaining": "5.00"
+            },
+            "targetHostId": null,
+            "evidence": []
+          }
+        }
+      ],
+      "$default": {
+        "id": "job_77",
+        "projectId": "prj_trace",
+        "issueId": "iss_102",
+        "title": "Add CSV export tests",
+        "status": "queued",
+        "intent": {
+          "type": "test",
+          "prompt": "Add tests for the CSV export of activities."
+        },
+        "executionGate": {
+          "state": "waiting-approval",
+          "requiredCheckpoint": "execution-approval",
+          "runnerMayExecute": false,
+          "approvedBy": null
+        },
+        "executionManifestHash": "sha256:9f2c1e0d4b7a",
+        "workflowBinding": null,
+        "financialBudget": {
+          "currency": "USD",
+          "maxAmount": "5.00",
+          "requireIssueBudget": false,
+          "attemptId": null,
+          "remaining": "5.00"
+        },
+        "targetHostId": null,
+        "evidence": []
+      }
+    },
+    "get_aish_budget": {
+      "$when": [
+        {
+          "args": {
+            "jobId": "job_77"
+          },
+          "response": {
+            "budgets": [
+              {
+                "id": "bud_1",
+                "projectId": "prj_trace",
+                "issueId": null,
+                "currency": "USD",
+                "limit": "50.00",
+                "consumed": "4.10",
+                "reserved": "5.00",
+                "paused": false,
+                "reconciliationRequired": false,
+                "version": 3
+              }
+            ],
+            "reservation": {
+              "status": "reserved",
+              "financial": {
+                "currency": "USD",
+                "maxAmount": "5.00",
+                "requireIssueBudget": false
+              },
+              "consumed": "0",
+              "remaining": "5.00"
+            },
+            "pool": null
+          }
+        }
+      ],
+      "$default": {
+        "budgets": [
+          {
+            "id": "bud_1",
+            "projectId": "prj_trace",
+            "issueId": null,
+            "currency": "USD",
+            "limit": "50.00",
+            "consumed": "4.10",
+            "reserved": "5.00",
+            "paused": false,
+            "reconciliationRequired": false,
+            "version": 3
+          }
+        ],
+        "reservation": null,
+        "pool": null
+      }
+    },
+    "approve_aish_job_execution": {
+      "id": "job_77",
+      "projectId": "prj_trace",
+      "issueId": "iss_102",
+      "title": "Add CSV export tests",
+      "status": "queued",
+      "intent": {
+        "type": "test",
+        "prompt": "Add tests for the CSV export of activities."
+      },
+      "executionGate": {
+        "state": "executing",
+        "requiredCheckpoint": "execution-approval",
+        "runnerMayExecute": true,
+        "approvedBy": "usr_owner",
+        "approvedManifestHash": "sha256:9f2c1e0d4b7a",
+        "approvedAt": "2026-10-06T12:00:00.000Z",
+        "approvalReason": "{{call.args.reason}}"
+      },
+      "executionManifestHash": "sha256:9f2c1e0d4b7a",
+      "workflowBinding": null,
+      "financialBudget": {
+        "currency": "USD",
+        "maxAmount": "5.00",
+        "requireIssueBudget": false,
+        "attemptId": null,
+        "remaining": "5.00"
+      },
+      "targetHostId": null,
+      "evidence": []
+    },
+    "list_aish_jobs": [
+      {
+        "id": "job_77",
+        "projectId": "prj_trace",
+        "issueId": "iss_102",
+        "title": "Add CSV export tests",
+        "status": "queued"
+      }
+    ]
+  },
+  "expect": {
+    "orderedCalls": [
+      {
+        "tool": "get_aish_job",
+        "args": {
+          "jobId": "job_77"
+        }
+      },
+      {
+        "tool": "get_aish_budget",
+        "args": {
+          "projectId": "prj_trace",
+          "jobId": "job_77"
+        }
+      },
+      {
+        "tool": "approve_aish_job_execution",
+        "args": {
+          "jobId": "job_77",
+          "expectedManifestHash": "sha256:9f2c1e0d4b7a"
+        }
+      },
+      {
+        "tool": "get_aish_job",
+        "args": {
+          "jobId": "job_77"
+        }
+      }
+    ],
+    "forbiddenCalls": [
+      "fund_aish_job",
+      "create_aish_job",
+      "approve_aish_execution_plan",
+      "dispatch_aish_execution_plan",
+      "lease_aish_runner_job"
+    ],
+    "requiresVerify": [
+      {
+        "after": "approve_aish_job_execution",
+        "read": {
+          "tool": "get_aish_job",
+          "args": {
+            "jobId": "job_77"
+          }
+        }
+      }
+    ],
+    "ownerOnlyTools": [
+      "approve_aish_job_execution"
+    ],
+    "maxCalls": {
+      "approve_aish_job_execution": 1
+    }
+  },
+  "requireArgs": [
+    "approve_aish_job_execution"
+  ]
+}

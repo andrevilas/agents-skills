@@ -1,0 +1,61 @@
+# Requirement fields
+Load when: before a requirement write
+Applies to: lpm-requirements-scope    Source: cards {{tool:create_requirement}}, {{tool:update_requirement}}, {{tool:delete_requirement}}, {{tool:list_requirements}}, {{tool:list_requirement_groups}}, {{tool:create_requirement_group}}, {{tool:delete_requirement_group}} (`createRequirementCommand`, `updateRequirementCommand`, `deleteRequirementCommand`, `validateRequirementStructure`, `src/lib/requirementWorkItemState.ts`); CLI snapshot `requirements *`
+
+## Summary
+A requirement is scope, not work: it lives in one baseline and links to activities, cycles and milestones.
+{{tool:create_requirement}} needs 6 fields: projectId, baselineId, title, description, type, status ("pending" for new scope).
+Link lists replace the stored list: always send the FULL desired list.
+Any create or edit in the current baseline (even a status change) shows as `changed` in the working-scope delta.
+Prefer status `obsolete` over {{tool:delete_requirement}}: a delete strips every link for good and the delta never shows it.
+Requirement status is never synced from activity status: set it yourself, and `met` only with done work.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| `projectId`, `baselineId` | required on create; baselineId = the `isCurrent` baseline | a non-current baseline is accepted but invisible to the delta |
+| `title` | short statement | check {{tool:list_requirements}} for the same title first (no duplicate check) |
+| `description` | testable statement / acceptance intent | required on create |
+| `type` | `functional`, `non-functional`, `interface`, `business`, `technical` | not validated by the server: copy it exactly |
+| `status` | `pending`, `met`, `not-met`, `in-progress`, `obsolete` | new scope = `pending`; never auto-synced from activity status |
+| `groupId` | from {{tool:list_requirement_groups}} → `id` | update: `""` clears, `null` is ignored |
+| `issueId` | primary linked activity, from {{tool:list_issues}} → `id` | update: `""` clears, `null` is ignored; also send the full `linkedIssueIds` |
+| `linkedIssueIds`, `linkedCycleIds`, `linkedMilestoneIds` | arrays of linked work | FULL desired list; it replaces the stored set (left-out ids are unlinked) |
+| linked work item with another `baselineId` | "does not belong to the selected baseline" | link only work of this baseline |
+| a cycle | can belong to one requirement only | "Linked cycle is already associated with another requirement" → unlink it there first |
+| `sourceDocumentId` | project knowledge item, from {{tool:list_project_knowledge_items}} → `id` | not validated; `null` clears |
+| create result | plain text "Requirement created with ID: <id>" | parse the id after "ID: " |
+| update | every key you send is written | send only the fields you change |
+| soft-deleted requirement | an update on it "succeeds" silently | confirm the id in {{tool:list_requirements}} first |
+| published baseline | holds its own copies with new ids (`previousRequirementId` points to the older copy) | use ids from the current baseline |
+| {{tool:list_requirements}} | not paginated; over 1 MB → `{items, truncated: true}` | filter by groupId, status or type |
+| {{tool:delete_requirement}} | soft delete; clears issue, cycle, milestone, parent and dependency links for good; no restore | prefer `obsolete`; state the deletion in the change-set summary |
+| groups | project-wide, shared by all baselines; names not unique; unordered | reuse an existing `name`; sort by name yourself |
+| {{tool:create_requirement_group}} | no duplicate or empty-name check | list first; a retry creates a duplicate |
+| {{tool:delete_requirement_group}} | deletes the group in every baseline; its requirements get `groupId: null` and a new `updatedAt` | they show as `changed` and can raise materiality |
+| side effects | create/update fire webhooks `requirement_created` / `requirement_updated` and a semantic re-index | none for the agent to do |
+| CLI `--clear-group`, `--clear-issue` | send `null`, which the server ignores | clear with {{tool:update_requirement}} and `""` instead |
+| document analysis (`requirementsDocumentAnalysis`) | a workspace AI feature flag; runs only in the web UI (Requirements → Análise de documento) | no MCP tool or CLI runs it; ask the owner to run it, then review the drafts |
+
+## Rules
+1. Resolve baselineId and groupId before any create; never guess them.
+2. State the intent of each write: authoring, refinement, deprecation or structural cleanup.
+3. Keep traceability: when you edit links, re-send every link you keep.
+4. Never create a new baseline for wording edits; edit the requirement in the current baseline.
+5. Set `met` only when at least one issue, cycle or milestone is linked and every linked activity has `status == "done"` (its evidence is checked by lpm-deliver-activity closure), or the owner states it is met. Zero links → "not met yet: no linked delivery".
+6. A linked activity that is missing, `done` or `canceled` while the requirement is `pending` is a traceability review item: report it.
+7. Never infer coverage from activity titles when requirement records exist.
+
+## Examples
+```text
+example: create_requirement(projectId="p1", baselineId="b-current", title="Export CSV",
+  description="A manager can export the activity list as CSV with all visible columns.",
+  type="functional", status="pending", linkedIssueIds=["i1"]) → "Requirement created with ID: r9"
+
+example: link a second activity to r9 that already links i1:
+  update_requirement(projectId="p1", requirementId="r9", linkedIssueIds=["i1", "i2"])   (not ["i2"])
+
+example: CLI equivalents
+  lpm requirements list --project p1 --baseline b-current --status pending --json
+  lpm requirements link-issue --project p1 --requirement r9 --issue i2 --json
+```

@@ -1,9 +1,0 @@
-{
-  "id": "software-project-orchestrator",
-  "name": "Software Project Orchestrator",
-  "version": "1.2.0",
-  "agent": "antigravity",
-  "type": "operational-playbook",
-  "entrypoint": "PLAYBOOK.md",
-  "description": "Adapter bundle for using the Software Project Orchestrator with Antigravity-style agent workflows."
-}

@@ -1,0 +1,76 @@
+{
+  "id": "roadmap-item-create-owner-order",
+  "title": "Roadmap item create in enforce mode on the owner's explicit order: duplicate check, create_workspace_roadmap_item as a draft (no lifecycle, never changeType create), list read-back",
+  "skill": "lpm-roadmap",
+  "source": "lpm-roadmap §4 row 10 → references/flow-structure-write.md steps 1-3, 6, 11",
+  "request": "Workspace ws_trace (roadmap governance mode: enforce), roadmap rm_1. Add a new roadmap item \"Offline mode\" (priority medium) to the roadmap.",
+  "ownerInstruction": "I am the workspace owner and I order you to create the roadmap item \"Offline mode\" (priority medium) in roadmap rm_1 of workspace ws_trace now.",
+  "fixtures": {
+    "get_mcp_connection_info": {
+      "credential": "api_key",
+      "allowedToolCount": 383,
+      "workspaceId": null,
+      "howToChange": "Create another API key in LPM Settings > API keys."
+    },
+    "get_workspace": {
+      "id": "ws_trace",
+      "name": "Trace workspace",
+      "ownerId": "usr_owner",
+      "roadmapGovernanceEnabled": true,
+      "roadmapGovernanceMode": "enforce",
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "list_workspace_members": [
+      { "id": "usr_owner", "workspaceId": "ws_trace", "userId": "usr_owner", "userEmail": "owner@trace.example", "role": "owner", "status": "active" },
+      { "id": "usr_dev", "workspaceId": "ws_trace", "userId": "usr_dev", "userEmail": "dev@trace.example", "role": "member", "status": "active" }
+    ],
+    "list_workspace_roadmaps": [
+      { "id": "rm_1", "workspaceId": "ws_trace", "title": "2026 product roadmap", "status": "active", "ownerUserId": "usr_owner" }
+    ],
+    "list_workspace_roadmap_items": {
+      "$when": [
+        {
+          "after": "create_workspace_roadmap_item",
+          "response": [
+            { "id": "ri_11", "roadmapId": "rm_1", "title": "Checkout redesign", "lifecycle": "approved", "priority": "high", "isArchived": false, "updatedAt": "2026-10-06T12:00:00.000Z" },
+            { "id": "ri_50", "roadmapId": "rm_1", "title": "Offline mode", "lifecycle": "draft", "priority": "medium", "isArchived": false, "updatedAt": "2026-10-06T12:05:00.000Z" }
+          ]
+        }
+      ],
+      "$default": [
+        { "id": "ri_11", "roadmapId": "rm_1", "title": "Checkout redesign", "lifecycle": "approved", "priority": "high", "isArchived": false, "updatedAt": "2026-10-06T12:00:00.000Z" }
+      ]
+    },
+    "create_workspace_roadmap_item": {
+      "id": "ri_50",
+      "roadmapId": "rm_1",
+      "title": "Offline mode",
+      "lifecycle": "draft",
+      "priority": "medium",
+      "isArchived": false,
+      "updatedAt": "2026-10-06T12:05:00.000Z"
+    }
+  },
+  "expect": {
+    "orderedCalls": [
+      { "tool": "list_workspace_roadmap_items", "args": { "workspaceId": "ws_trace", "roadmapId": "rm_1" } },
+      { "tool": "create_workspace_roadmap_item", "args": { "workspaceId": "ws_trace", "roadmapId": "rm_1", "title": "Offline mode", "priority": "medium" } },
+      { "tool": "list_workspace_roadmap_items", "args": { "workspaceId": "ws_trace", "roadmapId": "rm_1" } }
+    ],
+    "forbiddenCalls": [
+      { "tool": "create_workspace_roadmap_item", "args": { "lifecycle": "approved" } },
+      { "tool": "create_workspace_roadmap_item", "args": { "lifecycle": "reviewed" } },
+      { "tool": "create_workspace_roadmap_item", "args": { "lifecycle": "draft" } },
+      { "tool": "preview_workspace_roadmap_change", "args": { "changeType": "create" } },
+      { "tool": "submit_workspace_roadmap_change", "args": { "changeType": "create" } },
+      "apply_workspace_roadmap_change",
+      "batch_workspace_roadmap_changes",
+      "commit_workspace_roadmap_item_bulk"
+    ],
+    "requiresVerify": [
+      { "after": "create_workspace_roadmap_item", "read": "list_workspace_roadmap_items" }
+    ],
+    "ownerOnlyTools": ["create_workspace_roadmap_item"],
+    "maxCalls": { "create_workspace_roadmap_item": 1 }
+  }
+}

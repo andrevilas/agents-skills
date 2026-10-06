@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "tools": [
+    {
+      "name": "configure_aish_budget",
+      "category": "aish",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "profiles": [
+        "full",
+        "custom"
+      ],
+      "required": [
+        "workspaceId"
+      ],
+      "params": {
+        "workspaceId": "string"
+      }
+    },
+    {
+      "name": "create_api_key",
+      "category": "access",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "profiles": [
+        "full",
+        "custom"
+      ],
+      "required": [
+        "name",
+        "workspaceId"
+      ],
+      "params": {
+        "name": "string",
+        "workspaceId": "string"
+      }
+    },
+    {
+      "name": "create_comment",
+      "category": "portfolio",
+      "accessLevel": "write",
+      "sensitive": false,
+      "oauthScope": "portfolio:manage",
+      "profiles": [
+        "full",
+        "portfolio",
+        "custom"
+      ],
+      "required": [
+        "content",
+        "issueId",
+        "projectId"
+      ],
+      "params": {
+        "content": "string",
+        "idempotencyKey": "string",
+        "issueId": "string",
+        "projectId": "string"
+      }
+    },
+    {
+      "name": "get_issue",
+      "category": "portfolio",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": "portfolio:read",
+      "profiles": [
+        "full",
+        "read-only",
+        "portfolio",
+        "custom"
+      ],
+      "required": [
+        "issueId",
+        "projectId"
+      ],
+      "params": {
+        "issueId": "string",
+        "projectId": "string"
+      }
+    },
+    {
+      "name": "get_mcp_connection_info",
+      "category": "workspace",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": "workspace:read",
+      "profiles": [
+        "full",
+        "read-only",
+        "portfolio",
+        "custom"
+      ],
+      "required": [],
+      "params": {}
+    },
+    {
+      "name": "list_comments",
+      "category": "portfolio",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": "portfolio:read",
+      "profiles": [
+        "full",
+        "read-only",
+        "portfolio",
+        "custom"
+      ],
+      "required": [
+        "issueId",
+        "projectId"
+      ],
+      "params": {
+        "issueId": "string",
+        "projectId": "string"
+      }
+    },
+    {
+      "name": "list_workspaces",
+      "category": "workspace",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": "workspace:read",
+      "profiles": [
+        "full",
+        "read-only",
+        "portfolio",
+        "custom"
+      ],
+      "required": [],
+      "params": {}
+    },
+    {
+      "name": "search_help_articles",
+      "category": "knowledge",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": "workspace:read",
+      "profiles": [
+        "full",
+        "read-only",
+        "portfolio",
+        "custom"
+      ],
+      "required": [
+        "query"
+      ],
+      "params": {
+        "query": "string"
+      }
+    },
+    {
+      "name": "set_project_issue_due_date",
+      "category": "portfolio",
+      "accessLevel": "write",
+      "sensitive": false,
+      "oauthScope": null,
+      "profiles": [
+        "full",
+        "portfolio",
+        "custom"
+      ],
+      "required": [
+        "dueDate",
+        "issueId",
+        "projectId"
+      ],
+      "params": {
+        "dueDate": "string",
+        "issueId": "string",
+        "projectId": "string"
+      }
+    },
+    {
+      "name": "update_issue",
+      "category": "portfolio",
+      "accessLevel": "write",
+      "sensitive": false,
+      "oauthScope": "portfolio:manage",
+      "profiles": [
+        "full",
+        "portfolio",
+        "custom"
+      ],
+      "required": [
+        "issueId",
+        "projectId"
+      ],
+      "params": {
+        "issueId": "string",
+        "projectId": "string",
+        "status": "string"
+      }
+    },
+    {
+      "name": "update_project_issue_due_date",
+      "category": "portfolio",
+      "accessLevel": "write",
+      "sensitive": false,
+      "oauthScope": null,
+      "profiles": [
+        "full",
+        "portfolio",
+        "custom"
+      ],
+      "required": [
+        "dueDate",
+        "issueId",
+        "projectId"
+      ],
+      "params": {
+        "dueDate": "string",
+        "issueId": "string",
+        "projectId": "string"
+      }
+    }
+  ],
+  "hashes": {
+    "namesHash": "sha256:9acb881cd8985cbc8d01c7081f73f0c09a120025736b20810c9459b993bd647f",
+    "schemaHash": "sha256:4b748ac983f2bd3078d80503d4c582ca34879ec0d133f77b3db70ca8e4661995",
+    "cliHash": "sha256:97f503684ebaa05e1306b31ac2e9d1661eb5daca534b06425bfc75d36ee74bbd"
+  }
+}

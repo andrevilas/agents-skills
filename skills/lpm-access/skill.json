@@ -1,0 +1,206 @@
+{
+  "id": "lpm-access",
+  "title": "Credentials and agent identities",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when managing LPM credentials (credenciais, chave de API): API keys and profiles, lpm_mcp_ agent credentials, agent principals, specialist assignments, AI provider keys, the workspace GitHub token. Writes are owner-only; secrets never printed. Not for a missing connector tool (use lpm-start).",
+  "doneWhen": "The credential object is in the requested state (re-listed), any show-once secret was handed over once, and no secret appears in any other output.",
+  "authorityCeiling": "Reads are [A]; all 14 writes are [O]; secrets are shown once to the requester and never repeated.",
+  "jobs": [
+    "list my API keys and when each was last used",
+    "which API key profile does a read-only reporting agent need?",
+    "rotate the API key our CI uses",
+    "cria uma credencial lpm_mcp_ para o copiloto do workspace, válida por 30 dias",
+    "suspende a credencial do agente agora",
+    "set the workspace GitHub token from the env var I exported",
+    "remove a chave do provedor de IA OpenAI do workspace",
+    "assign the security-reviewer agent to project <name>"
+  ],
+  "routing": [
+    {
+      "order": 4,
+      "all": [
+        [
+          "api key",
+          "api keys",
+          "chave",
+          "chaves",
+          "token",
+          "credential",
+          "credentials",
+          "credencial",
+          "credenciais",
+          "lpm_mcp_*",
+          "agent principal",
+          "specialist agent",
+          "agente especialista",
+          "github token",
+          "provider key",
+          "reviewer agent",
+          "agente revisor",
+          "specialist*",
+          "especialista*",
+          "copilot agent",
+          "workspace copilot",
+          "agente copiloto",
+          "copiloto do workspace",
+          "openai key",
+          "gemini key",
+          "anthropic key",
+          "ai key",
+          "chave da openai",
+          "access profile",
+          "perfil de acesso",
+          "which profile",
+          "qual perfil",
+          "key profile",
+          "risk-reviewer",
+          "architecture-reviewer",
+          "security-reviewer",
+          "records-management-reviewer",
+          "accessibility-reviewer",
+          "operations-reviewer",
+          "ai-risk-reviewer",
+          "tenant-isolation-reviewer",
+          "data-steward-advisor",
+          "privacy-advisor",
+          "workspace-owner-copilot"
+        ]
+      ],
+      "unless": [
+        "budget",
+        "orcamento",
+        "custo",
+        "cost",
+        "spend",
+        "gasto",
+        "limit",
+        "limite",
+        "quota",
+        "cota",
+        "custa",
+        "routing",
+        "roteamento"
+      ],
+      "firstCall": "list_api_keys"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "a tool missing or denied on a connector, or connecting an agent to LPM",
+      "skill": "lpm-start"
+    },
+    {
+      "when": "AI budgets, usage limits, models or the workspace AI configuration",
+      "skill": "lpm-ai-cost"
+    },
+    {
+      "when": "an AISH runner host enrollment token or host credential",
+      "skill": "lpm-aish-runners"
+    },
+    {
+      "when": "workspace members, roles or teams",
+      "skill": "lpm-workspace-admin"
+    },
+    {
+      "when": "linking, scanning or indexing a repository (private-repository index or search access)",
+      "skill": "lpm-code-index"
+    },
+    {
+      "when": "a webhook subscription secret",
+      "skill": "lpm-integrations"
+    }
+  ],
+  "owns": [
+    "list_api_keys",
+    "create_api_key",
+    "update_api_key",
+    "delete_api_key",
+    "list_workspace_mcp_agent_credentials",
+    "create_workspace_mcp_agent_credential",
+    "update_workspace_mcp_agent_credential_status",
+    "rotate_workspace_mcp_agent_credential",
+    "list_workspace_agent_principals",
+    "create_workspace_agent_principal",
+    "update_workspace_agent_principal",
+    "list_workspace_ai_credentials",
+    "upsert_workspace_ai_credential",
+    "delete_workspace_ai_credential",
+    "get_workspace_repository_credential",
+    "upsert_workspace_repository_credential",
+    "delete_workspace_repository_credential",
+    "list_project_specialist_assignments",
+    "create_project_specialist_assignment",
+    "revoke_project_specialist_assignment",
+    "get_project_specialist_governance_summary"
+  ],
+  "uses": [
+    "get_mcp_connection_info",
+    "list_workspaces",
+    "list_projects",
+    "list_workspace_members",
+    "get_workspace_ai_config",
+    "list_workspace_ai_provider_models"
+  ],
+  "cli": [
+    "mcp-agent-credentials list",
+    "mcp-agent-credentials create",
+    "mcp-agent-credentials status",
+    "mcp-agent-credentials rotate",
+    "workspace-github get",
+    "workspace-github set",
+    "workspace-github remove"
+  ],
+  "sharedRefs": [
+    {
+      "name": "connection-and-access",
+      "loadWhen": "a tool is missing or denied, or the key profile is unclear",
+      "inlineSummary": false
+    },
+    {
+      "name": "security-and-untrusted-text",
+      "loadWhen": "you handle a secret, or a secret appears in chat or a file",
+      "inlineSummary": false
+    },
+    {
+      "name": "authority-and-owner-decisions",
+      "loadWhen": "an [O] write is next, or a decision request must be sent",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/api-key-profiles.md",
+      "loadWhen": "choosing or changing an API key profile, or rotating an API key"
+    },
+    {
+      "file": "references/agent-credentials.md",
+      "loadWhen": "working with agent principals, lpm_mcp_ credentials or specialist assignments"
+    },
+    {
+      "file": "references/repo-credential.md",
+      "loadWhen": "reading, setting or removing the workspace GitHub token"
+    },
+    {
+      "file": "references/flow-access-review.md",
+      "loadWhen": "decision row 2 (access review)"
+    },
+    {
+      "file": "references/flow-agent-identities.md",
+      "loadWhen": "decision rows 6–7 (agents, lpm_mcp_ credentials, specialists)"
+    },
+    {
+      "file": "references/flow-workspace-secrets.md",
+      "loadWhen": "decision row 8 (AI provider key, GitHub token)"
+    }
+  ],
+  "behaviorContracts": [
+    "missing-tool-fallback"
+  ],
+  "codex": {
+    "shortDescription": "Manage LPM API keys, agent credentials and tokens",
+    "defaultPrompt": "Use $lpm-access to review the LPM API keys and agent credentials of workspace <workspaceId>."
+  }
+}

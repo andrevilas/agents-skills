@@ -1,0 +1,1663 @@
+[
+  {
+    "name": "apply_workspace_context_update",
+    "purpose": "Writes an owner-approved patch to the workspace executive context (mandate, executive roles, portfolio policies, delivery settings, financial settings) with validation and an audit event.",
+    "useWhen": [
+      "The owner approved a specific patch (often draft.proposedPatch from draft_workspace_operating_model or draft_workspace_routing_policy) and asked you to apply it",
+      "The owner told you who holds an executive role (portfolio-owner, operations-lead, finance-owner, routing-owner) and asked you to record it"
+    ],
+    "avoidWhen": [
+      "You only want to see a proposal -> draft_workspace_operating_model / draft_workspace_routing_policy",
+      "Changing which project owns a domain or capability -> update_project routingProfile",
+      "Roadmap items or capability records -> roadmap change tools / create_workspace_capability",
+      "The owner has not approved the exact patch: present it and wait"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user (or draft.proposedPatch.reason)",
+        "notes": "Non-empty text; stored in the audit trail."
+      },
+      {
+        "param": "patch",
+        "required": true,
+        "source": "draft_workspace_operating_model / draft_workspace_routing_policy -> draft.proposedPatch.patch, or built from the owner's instructions",
+        "notes": "Object touching at least one of: mandate{mission, operatingModel, strategicIntent, successCriteria[]}, governance{assignmentsToAdd[{role, userId}], assignmentsToRemove[{role, userId}], assignments[{role, userId}], missingRoles[], escalationPolicy, decisionPolicy}, portfolio{domains[], capabilities[], systems[], priorityRules[], routingPolicySummary}, delivery{curationSlaHours >= 0, releasePolicy, operationalCadence}, financial{currency ISO 4217, hourlyRateDefault >= 0, budgetPolicy}. role enum: workspace-owner|portfolio-owner|operations-lead|finance-owner|routing-owner. userId from list_workspace_members -> userId."
+      },
+      {
+        "param": "confirmSensitiveChanges",
+        "required": false,
+        "source": "constant true, only after the owner explicitly approved this exact patch",
+        "notes": "Required for sensitive fields (see gotchas); otherwise the call fails."
+      },
+      {
+        "param": "requestedBy",
+        "required": false,
+        "source": "list_workspace_members -> userId of the owner who requested it",
+        "notes": "Defaults to the caller; stored as assignedBy on new role assignments."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an admin member",
+      "The owner explicitly approved the exact patch (GOV-MAX); financial fields are always the owner's decision",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "not idempotent: no key; last writer wins; re-read executiveContext.metadata.lastReviewedAt before any retry",
+    "returns": "{workspace, executiveContext (the new stored context), review{sensitivity safe|sensitive, requiresHumanConfirmation, touchedAreas[]}, validationIssues[], changedFields[], auditEventId, appliedAt}",
+    "pairsWith": [
+      "draft_workspace_operating_model",
+      "draft_workspace_routing_policy",
+      "generate_workspace_readiness_report",
+      "validate_workspace_project_alignment"
+    ],
+    "errors": [
+      {
+        "when": "You do not have permission to update this workspace executive context",
+        "fix": "Caller is not owner/admin. Hand the approved patch to the owner; do not look for another credential."
+      },
+      {
+        "when": "Sensitive workspace executive context changes require human confirmation",
+        "fix": "Show the patch to the owner; retry with confirmSensitiveChanges=true only after explicit approval."
+      },
+      {
+        "when": "Workspace executive context patch is invalid",
+        "fix": "Details are not returned over MCP. Check: reason not empty, patch has at least one of mandate/governance/portfolio/delivery/financial, every role is in the enum and every userId is a non-empty string."
+      },
+      {
+        "when": "Workspace executive context <field> must be an array of strings / must be a non-negative number",
+        "fix": "Send arrays of strings for list fields and numbers >= 0 for curationSlaHours and hourlyRateDefault."
+      },
+      {
+        "when": "Cannot read properties of undefined (reading 'trim')",
+        "fix": "An assignment is missing role or userId; send both as strings."
+      },
+      {
+        "when": "Workspace executive context not found",
+        "fix": "Re-check workspaceId with list_workspaces."
+      },
+      {
+        "when": "-32003 This API key is not allowed to call MCP tool",
+        "fix": "The key's access profile excludes this write tool; ask the owner. Never create or swap keys yourself."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Sensitive (needs confirmSensitiveChanges=true): any governance assignment change, decisionPolicy, escalationPolicy, priorityRules, routingPolicySummary, releasePolicy and any financial field.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1097-1117"
+      },
+      {
+        "text": "Text and number fields: null does NOT clear a value (keeps the current one, despite the schema note on currency); an empty string clears it, and a derived default may then reappear on read.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1091-1096"
+      },
+      {
+        "text": "Array fields (successCriteria, domains, capabilities, systems, priorityRules) REPLACE the stored list.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:246-265"
+      },
+      {
+        "text": "governance.assignments only upserts by role and never removes; remove with assignmentsToRemove (role AND userId must match the current holder).",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1041-1055"
+      },
+      {
+        "text": "A missing-role blocker clears only by assigning the role; a missingRoles override does not stick.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1081-1084"
+      },
+      {
+        "text": "userId is not checked against membership.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1041-1064"
+      },
+      {
+        "text": "Reads may show the old context for about 5 s (read cache).",
+        "verifiedFrom": "server.ts:8851"
+      },
+      {
+        "text": "Re-run generate_workspace_readiness_report after every apply.",
+        "verifiedFrom": "server.ts:10066-10072"
+      },
+      {
+        "text": "Each call writes the WHOLE context, computed from a read model that may be up to 5 s old, and appends a new audit event: a concurrent change or two applies in a row can revert fields. Re-read get_workspace_executive_context (metadata.lastReviewedAt) before any retry or second apply.",
+        "verifiedFrom": "server.ts:9926-9998"
+      }
+    ],
+    "verifiedFrom": "applyWorkspaceExecutiveContextUpdateCommand (validateWorkspaceExecutiveContextUpdatePatch, reviewWorkspaceExecutiveContextUpdatePatch, applyWorkspaceExecutiveContextUpdatePatch, normalizeWorkspaceExecutiveContext)"
+  },
+  {
+    "name": "archive_workspace_capability",
+    "purpose": "Logically archives a roadmap capability with a reason, hiding it from default listings and blocking new links to it.",
+    "useWhen": [
+      "The user asked to retire a capability that is obsolete or a duplicate"
+    ],
+    "avoidWhen": [
+      "Only pausing it -> update_workspace_capability status 'deferred'",
+      "Renaming or merging text -> update_workspace_capability",
+      "Removing an executive-context capability string -> apply_workspace_context_update portfolio.capabilities (owner-only)"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      },
+      {
+        "param": "capabilityId",
+        "required": true,
+        "source": "list_workspace_capabilities -> id",
+        "notes": "Firestore document ID."
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty text; stored as archiveReason and in the audit event."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an admin member",
+      "The capability exists in this workspace",
+      "The user explicitly confirmed the archive",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "The capability after archiving: {id, ..., status:'archived', archivedAt, archivedBy, archiveReason, updatedAt, updatedBy}",
+    "pairsWith": [
+      "list_workspace_capabilities"
+    ],
+    "errors": [
+      {
+        "when": "Workspace capability archive requires a reason.",
+        "fix": "Ask the user for the reason and pass it."
+      },
+      {
+        "when": "Workspace capability not found",
+        "fix": "Get the ID from list_workspace_capabilities."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap",
+        "fix": "Caller is not owner/admin; ask a workspace admin."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap capability-archive --workspace <workspaceId> --capability <capabilityId> --reason <text> --confirm [--json]",
+    "gotchas": [
+      {
+        "text": "Record is kept (logical archive).",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:900-914"
+      },
+      {
+        "text": "Existing roadmap item capability links are NOT removed; new capability-link changes to it fail with INVALID_ROADMAP_CAPABILITY_TARGET.",
+        "verifiedFrom": "server.ts:13331-13352"
+      },
+      {
+        "text": "Hidden from list_workspace_capabilities unless includeArchived=true.",
+        "verifiedFrom": "server.ts:37164-37168"
+      },
+      {
+        "text": "Undo with update_workspace_capability status 'active'.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:883-886"
+      },
+      {
+        "text": "A later roadmap import with the same name creates a new capability instead of reusing the archived one.",
+        "verifiedFrom": "server.ts:13331-13352"
+      },
+      {
+        "text": "Re-archiving just overwrites archivedAt and reason.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:900-914"
+      }
+    ],
+    "verifiedFrom": "archiveWorkspaceCapabilityCommand (buildWorkspaceCapabilityArchivePatch)"
+  },
+  {
+    "name": "create_workspace_capability",
+    "purpose": "Creates a new roadmap capability record in the workspace (a named business capability that roadmap items can be linked to).",
+    "useWhen": [
+      "The user asked to add a capability to the workspace roadmap catalog",
+      "A roadmap item must be linked to a capability that does not exist yet (create, then submit a capability-link change)"
+    ],
+    "avoidWhen": [
+      "A capability with the same name exists (list_workspace_capabilities, includeArchived=true) -> update_workspace_capability, or un-archive it with update_workspace_capability status 'active'",
+      "Bulk creation from a roadmap file -> preview_workspace_roadmap_import / commit_workspace_roadmap_import (creates capabilities by name)",
+      "Declaring which project owns a capability for routing -> update_project routingProfile.ownedCapabilities"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "Trimmed, must not be empty. Not deduplicated by the server."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Free text."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "enum active|deferred; default active. 'archived' is rejected."
+      },
+      {
+        "param": "ownerUserId",
+        "required": false,
+        "source": "list_workspace_members -> userId",
+        "notes": "Defaults to the caller; not checked against membership."
+      },
+      {
+        "param": "tags",
+        "required": false,
+        "source": "user",
+        "notes": "Array of strings; trimmed, empty ones dropped."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an admin member",
+      "No capability with the same name exists (check list_workspace_capabilities with includeArchived=true)",
+      "The user asked for or approved this roadmap catalog change (GOV-MAX)",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "{id (capabilityId), workspaceId, name, description, status, ownerUserId, tags[], archivedAt:null, archivedBy:null, archiveReason:null, createdAt, createdBy, updatedAt, updatedBy}",
+    "pairsWith": [
+      "list_workspace_capabilities",
+      "preview_workspace_roadmap_change",
+      "submit_workspace_roadmap_change"
+    ],
+    "errors": [
+      {
+        "when": "You do not have permission to manage this workspace roadmap",
+        "fix": "Caller is not owner/admin; ask a workspace admin."
+      },
+      {
+        "when": "Workspace capability name is required.",
+        "fix": "Pass a non-empty name."
+      },
+      {
+        "when": "Invalid workspace capability status: <value>. / Use the archive command to archive a workspace capability.",
+        "fix": "Use status active or deferred, or omit it."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap capability-create --workspace <workspaceId> --name <text> [--description <text>] [--status <active|deferred>] [--owner <userId>] [--tags <tag; tag>] [--json]",
+    "gotchas": [
+      {
+        "text": "Retrying after a timeout creates a duplicate: list first and only create if the name is absent.",
+        "verifiedFrom": "server.ts:13257"
+      },
+      {
+        "text": "Not gated by roadmap governance enforce mode, so the agent must get confirmation itself.",
+        "verifiedFrom": "server.ts:13246-13285"
+      },
+      {
+        "text": "Linking items to the capability is a separate governed change (changeType capability-link, patch {capabilityId}).",
+        "verifiedFrom": "server.ts:13246-13285"
+      }
+    ],
+    "verifiedFrom": "createWorkspaceCapabilityCommand (buildWorkspaceCapability, assertAllowedCapabilityStatus)"
+  },
+  {
+    "name": "draft_workspace_operating_model",
+    "purpose": "Builds, without saving, a proposed executive-context patch for the workspace operating model: mandate (operating model, strategic intent, success criteria), decision and escalation policies, operational cadence and release policy.",
+    "useWhen": [
+      "Readiness shows missing mandate or governance gaps and the owner asked for a proposal",
+      "The owner asks how the workspace should operate and wants a starting text to edit"
+    ],
+    "avoidWhen": [
+      "Priority rules, routing policy or curation SLA -> draft_workspace_routing_policy",
+      "Assigning executive roles: drafts never assign roles; build a governance.assignmentsToAdd patch with the owner for apply_workspace_context_update",
+      "Saving anything -> apply_workspace_context_update (owner-only)"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace, executiveContext, generatedAt, draft{draftType:'operating-model', title, summary, rationale[], assumptions[], sourceGapIds[], proposedPatch{workspaceId, reason, patch{mandate{operatingModel, strategicIntent, successCriteria[]}, governance{decisionPolicy, escalationPolicy}, delivery{operationalCadence, releasePolicy}}}, review{sensitivity, requiresHumanConfirmation, touchedAreas[]}, validationIssues[], requiresHumanConfirmation, generatedAt}}. draft is null when the context cannot be built.",
+    "pairsWith": [
+      "list_workspace_context_gaps",
+      "apply_workspace_context_update",
+      "generate_workspace_readiness_report"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "Tool not listed or -32003 on an OAuth connector",
+        "fix": "Needs an LPM API key; call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Nothing is persisted; safe to call any number of times.",
+        "verifiedFrom": "server.ts:9852-9884"
+      },
+      {
+        "text": "Deterministic English template text, no AI call or AI budget use.",
+        "verifiedFrom": "server.ts:9852-9884"
+      },
+      {
+        "text": "Fields that already have a value are copied unchanged; only empty fields get default text.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:837-920"
+      },
+      {
+        "text": "This draft is always 'sensitive' (it touches decisionPolicy, escalationPolicy and releasePolicy), so applying it needs the owner's explicit approval and confirmSensitiveChanges=true.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:889-920"
+      },
+      {
+        "text": "Show the owner proposedPatch.patch before applying.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:837"
+      },
+      {
+        "text": "Same server cost as get_workspace_read_model.",
+        "verifiedFrom": "server.ts:9853-9854"
+      }
+    ],
+    "verifiedFrom": "draftWorkspaceOperatingModelCommand (buildWorkspaceOperatingModelDraft, buildWorkspaceExecutiveDraftBase)"
+  },
+  {
+    "name": "draft_workspace_routing_policy",
+    "purpose": "Builds, without saving, a proposed executive-context patch for intake routing: priority rules, routing policy summary, escalation policy and curation SLA in hours.",
+    "useWhen": [
+      "Gaps include missing-routing-policy, missing-priority-policy, unowned-domain or unowned-capability and the owner asked for a proposal",
+      "Before enabling more automated intake routing in a workspace"
+    ],
+    "avoidWhen": [
+      "Mandate, cadence or release policy -> draft_workspace_operating_model",
+      "Routing one concrete intake entry -> preview_workspace_routing then review_workspace_routing",
+      "Saving anything -> apply_workspace_context_update (owner-only)"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace, executiveContext, generatedAt, draft{draftType:'routing-policy', title, summary, rationale[], assumptions[], sourceGapIds[], proposedPatch{workspaceId, reason, patch{portfolio{priorityRules[], routingPolicySummary}, governance{escalationPolicy}, delivery{curationSlaHours}}}, review{sensitivity, requiresHumanConfirmation, touchedAreas[]}, validationIssues[], requiresHumanConfirmation, generatedAt}}. draft is null when the context cannot be built.",
+    "pairsWith": [
+      "list_workspace_context_gaps",
+      "apply_workspace_context_update",
+      "generate_workspace_readiness_report"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "Tool not listed or -32003 on an OAuth connector",
+        "fix": "Needs an LPM API key; call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Nothing is persisted; deterministic English template text, no AI call.",
+        "verifiedFrom": "server.ts:9884-9916"
+      },
+      {
+        "text": "Existing values are copied unchanged; empty fields get defaults.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:966-1016"
+      },
+      {
+        "text": "Default curationSlaHours = the smallest project operationalCurationSlaHours, capped at 24 (24 when no project sets one).",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:966-979"
+      },
+      {
+        "text": "Always 'sensitive' (priorityRules, routingPolicySummary, escalationPolicy), so applying it needs explicit owner approval and confirmSensitiveChanges=true.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:982-1016"
+      },
+      {
+        "text": "The draft does not change project routing profiles; routing quality still depends on them (update_project routingProfile).",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:977-1007"
+      }
+    ],
+    "verifiedFrom": "draftWorkspaceRoutingPolicyCommand (buildWorkspaceRoutingPolicyDraft, buildDerivedPriorityRules)"
+  },
+  {
+    "name": "generate_workspace_readiness_report",
+    "purpose": "Computes the canonical readiness verdict for the workspace executive context: combined status, score, blockers, warnings and next actions from the completeness and alignment checks.",
+    "useWhen": [
+      "Answering 'is this workspace ready for assisted or agent operation?' or 'what is missing?'",
+      "After every approved apply_workspace_context_update (the runbook treats this report as the closure signal)",
+      "Start of an owner session, to decide what to propose first"
+    ],
+    "avoidWhen": [
+      "You need every gap including details per type -> list_workspace_context_gaps",
+      "You need the context values themselves -> get_workspace_executive_context"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "On an OAuth connector bound to a single workspace it may be omitted."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "On OAuth connectors the grant has scope workspace:read"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace, executiveContext, report{version:1, workspaceId, status complete|partial|blocked, score 0-100 (average of completeness and alignment scores), blockers[gap], warnings[gap], nextActions[] (max 6), generatedAt}, generatedAt}. report is null when the context cannot be built.",
+    "pairsWith": [
+      "list_workspace_context_gaps",
+      "draft_workspace_operating_model",
+      "draft_workspace_routing_policy",
+      "apply_workspace_context_update"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "JSON-RPC -32003",
+        "fix": "Call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Despite 'generate', nothing is stored; deterministic, no AI cost.",
+        "verifiedFrom": "server.ts:10066-10072"
+      },
+      {
+        "text": "A new workspace is normally 'blocked' because 4 executive roles are unassigned.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1244-1265"
+      },
+      {
+        "text": "blockers = missing roles, critical gaps and misaligned project routing profiles; warnings = the other gaps.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1190-1191"
+      },
+      {
+        "text": "nextActions are Portuguese text from the gaps.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1277"
+      },
+      {
+        "text": "Same server cost as get_workspace_read_model.",
+        "verifiedFrom": "server.ts:10067-10068"
+      }
+    ],
+    "verifiedFrom": "generateWorkspaceReadinessReportCommand (buildWorkspaceExecutiveReadinessReport)"
+  },
+  {
+    "name": "get_workspace_executive_context",
+    "purpose": "Returns the workspace's merged executive context: mandate, executive role assignments, portfolio policies, delivery and financial settings, and completeness metadata.",
+    "useWhen": [
+      "Before drafting or applying an executive context patch, to see current values",
+      "To find who holds an executive role (governance.assignments) or which roles are missing (governance.missingRoles)",
+      "To read priority rules, routing policy summary or curation SLA before triaging or routing intake"
+    ],
+    "avoidWhen": [
+      "You need the canonical ready/not-ready verdict -> generate_workspace_readiness_report",
+      "You need the list of gaps with suggested actions -> list_workspace_context_gaps",
+      "You need portfolio health, decisions or finance rollups -> get_workspace_owner_surface or get_workspace_read_model"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "On an OAuth connector bound to a single workspace it may be omitted."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "On OAuth connectors the grant has scope workspace:read"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace{id, name, access.canManage, ...}, executiveContext{version:1, workspaceId, mandate{mission, operatingModel, strategicIntent, successCriteria[]}, governance{assignments[{role, userId, source, assignedAt, assignedBy}], missingRoles[], escalationPolicy, decisionPolicy}, portfolio{domains[], capabilities[], systems[], projectCount, priorityRules[], routingPolicySummary}, delivery{curationSlaHours, releasePolicy, operationalCadence}, financial{currency, hourlyRateDefault, budgetPolicy}, metadata{completenessStatus, completenessScore 0-100, lastReviewedAt, updatedAt}}}",
+    "pairsWith": [
+      "list_workspaces",
+      "list_workspace_context_gaps",
+      "draft_workspace_operating_model",
+      "draft_workspace_routing_policy"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace (also when the workspaceId does not exist)",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "JSON-RPC -32003",
+        "fix": "Call get_mcp_connection_info to see which scopes/tools this connection has."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Builds the full workspace read model internally (same server cost as get_workspace_read_model) and returns only the context.",
+        "verifiedFrom": "server.ts:9794-9799"
+      },
+      {
+        "text": "The 5 executive roles are workspace-owner, portfolio-owner, operations-lead, finance-owner, routing-owner.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:20-24"
+      },
+      {
+        "text": "metadata.completenessStatus is a simple field score (>=85 complete, >=50 partial, else blocked) and can disagree with the readiness verdict; use generate_workspace_readiness_report for the verdict.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:286-292"
+      },
+      {
+        "text": "portfolio.domains/capabilities/systems are plain strings merged with the project routing profiles; they are NOT the roadmap capability records of list_workspace_capabilities.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:465-468"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceExecutiveContextCommand -> getWorkspaceReadModelCommand (buildWorkspaceExecutiveContext, mergeWorkspaceExecutiveContext)"
+  },
+  {
+    "name": "get_workspace_owner_context_bundle",
+    "purpose": "Returns a compact deterministic snapshot of a workspace for owner agents: projects, roadmap counts, high-priority roadmap risks, decisions needing action, repository index freshness and today's code-search quota, with a version for change detection.",
+    "useWhen": [
+      "Starting an owner-agent session and you need one cheap-to-transfer overview",
+      "Polling: pass the previous version as sinceVersion to learn whether projects, roadmap or repositories changed",
+      "Checking repository index freshness before code questions"
+    ],
+    "avoidWhen": [
+      "Mandate or readiness (always null here) -> get_workspace_executive_context / generate_workspace_readiness_report",
+      "Full decision details -> get_workspace_decision_inbox",
+      "Full roadmap -> get_workspace_roadmap_overview",
+      "Portfolio health and finance numbers -> get_workspace_owner_surface"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      },
+      {
+        "param": "sinceVersion",
+        "required": false,
+        "source": "get_workspace_owner_context_bundle -> version (previous call)",
+        "notes": "If equal to the current version the bundle is omitted."
+      },
+      {
+        "param": "detailLevel",
+        "required": false,
+        "source": "constant",
+        "notes": "enum standard|compact; default standard."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "API key or scoped MCP agent credential (roadmap-owner profiles); not exposed to OAuth connectors"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspaceId, version, unchanged:false, executive{name, mandate, readiness}, roadmap{roadmapCount, itemCount, allocationCount, materializationCount, counts}, activeRisks[{itemId, title, priority, governanceLifecycle, materializationState}], decisionQueue[], projects[{id, name, status, ownerId, updatedAt, repositoryCount}], repositories[{repositoryLinkId, repositoryUrl, componentName, projectIds[], activeIndexVersionId, commitSha, freshness, updatedAt}], budget{dateKey, workspace{codeSearchLimit, codeSearchLeased, ...}, credentials[]}, sourceRefs, generatedAt}. Compact adds retrievalHints and shrinks lists. When sinceVersion matches: only {workspaceId, version, unchanged:true, generatedAt}.",
+    "pairsWith": [
+      "list_workspaces",
+      "get_workspace_decision_inbox",
+      "get_workspace_roadmap_overview",
+      "search_workspace_code"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace roadmap / You do not have access to this workspace",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "Tool not listed or -32003 on an OAuth connector",
+        "fix": "Needs an LPM API key or agent credential; call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "executive.mandate and executive.readiness are ALWAYS null (server bug: it reads fields the executive-context result does not have); use get_workspace_executive_context and generate_workspace_readiness_report.",
+        "verifiedFrom": "server.ts:7448-7451"
+      },
+      {
+        "text": "version only covers workspace, roadmaps, roadmap items, projects and repositories: new decisions or code-search usage do not change it, so unchanged:true can hide them.",
+        "verifiedFrom": "server.ts:7426-7464"
+      },
+      {
+        "text": "budget is today's (UTC) code-search quota, not the AI token budget.",
+        "verifiedFrom": "server.ts:7408"
+      },
+      {
+        "text": "Caps: standard 100 projects, 50 repositories, 20 risks, 20 decisions; compact 50 projects, 20 repositories, 5 risks, 5 decisions and drops repositoryUrl and ownerId.",
+        "verifiedFrom": "server.ts:7410-7428"
+      },
+      {
+        "text": "activeRisks = urgent/high roadmap items not fully materialized.",
+        "verifiedFrom": "server.ts:7433-7440"
+      },
+      {
+        "text": "No model call, but the server still does all reads on every call (sinceVersion saves payload, not work).",
+        "verifiedFrom": "server.ts:7401-7409"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceOwnerContextBundleCommand (getOwnerAgentUsageCommand, buildCompactOwnerAgentContext, digestOwnerRoadmapChange)"
+  },
+  {
+    "name": "get_workspace_owner_surface",
+    "purpose": "Returns the workspace owner's executive dashboard (ownerView: health, governance coverage, finance rollups, dependencies, decisions, risks, per-project summaries) without the executive context.",
+    "useWhen": [
+      "The owner asks for portfolio status, health, risks or pending decisions across projects",
+      "You need ownerView.copilot.executiveBrief / readyQuestions or ownerView.projects[] summaries"
+    ],
+    "avoidWhen": [
+      "You also need the executive context -> get_workspace_read_model",
+      "Compact, pollable snapshot with roadmap, repository freshness and code-search quota -> get_workspace_owner_context_bundle",
+      "A filtered decision list -> get_workspace_decision_inbox",
+      "On an OAuth connector (not available there) -> get_workspace_read_model"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace{id, name, access.canManage, ...}, ownerView{generatedAt, workspace{projectCount, memberCount, ...}, governance{projectsMissingProjectOwner, ...}, portfolio{healthStatus, blockedIssuesOpen, overdueIssues, completionRate, throughput30d, projectsWithoutCurrentBaseline}, finance{currency, currencyMode, forecastCost, recognizedCost, actualCost, costVariance, ...}, dependencies{crossProjectEdgeCount, strongestDependencyPairs[]}, activity, attention{priorityProjectCount, requiresImmediateAttentionCount, recommendedProject}, decisions{pendingCount, unresolvedCount, actionRequiredCount, items[]}, copilot{mode:'grounded-read-only', executiveBrief, readyQuestions[], facts[]}, projects[], risks[]}}",
+    "pairsWith": [
+      "list_workspaces",
+      "get_workspace_decision_inbox",
+      "get_project_owner_surface"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "Tool not listed or -32003 on an OAuth connector",
+        "fix": "Use get_workspace_read_model instead (workspace:read), or an LPM API key."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Same server cost as get_workspace_read_model (it builds the whole read model and drops executiveContext); only the payload is smaller.",
+        "verifiedFrom": "server.ts:9786-9791"
+      },
+      {
+        "text": "copilot text is deterministic, not an AI answer.",
+        "verifiedFrom": "server.ts:8850-8860"
+      },
+      {
+        "text": "Finance numbers are rollups for reporting; they never authorize budget or pool changes (owner-only).",
+        "verifiedFrom": "docs/governance/workspace-governance.md:11"
+      },
+      {
+        "text": "Archived projects are excluded.",
+        "verifiedFrom": "server.ts:8861"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceOwnerSurfaceCommand -> getWorkspaceReadModelCommand"
+  },
+  {
+    "name": "get_workspace_read_model",
+    "purpose": "Returns the full aggregated workspace read model in one payload: the workspace record, the owner executive summary (ownerView) and the merged executive context.",
+    "useWhen": [
+      "You need ownerView and executiveContext together in one call, e.g. for a full executive briefing to the owner",
+      "You need per-project executive summaries (ownerView.projects[]) or portfolio risk signals (ownerView.risks[])",
+      "You are on an OAuth connector (ChatGPT/Claude) and need the owner dashboard: get_workspace_owner_surface is not available there"
+    ],
+    "avoidWhen": [
+      "You only need the owner dashboard numbers -> get_workspace_owner_surface (same data minus executiveContext, API key only)",
+      "You only need mandate, roles and policies -> get_workspace_executive_context",
+      "You poll repeatedly or need roadmap, repository freshness and code-search budget -> get_workspace_owner_context_bundle with sinceVersion",
+      "You need to know what is missing -> generate_workspace_readiness_report or list_workspace_context_gaps"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID. On an OAuth connector bound to a single workspace it may be omitted (the grant's workspace is used)."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member (any role)",
+      "On OAuth connectors the grant has scope workspace:read and covers this workspace"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace{id, name, ownerId, description, access.canManage, ...}, ownerView{generatedAt, workspace{projectCount, memberCount, ...}, governance{projectsMissingProjectOwner, projectsMissingProductOwner, projectsMissingDeliveryLead}, portfolio{healthStatus healthy|watch|critical, blockedIssuesOpen, overdueIssues, completionRate, throughput30d, projectsWithoutCurrentBaseline}, finance{currency, currencyMode, forecastCost, actualCost, ...}, dependencies, activity, attention{priorityProjectCount, recommendedProject}, decisions{pendingCount, actionRequiredCount, items[]}, copilot{executiveBrief, readyQuestions[]}, projects[], risks[]}, executiveContext{mandate, governance, portfolio, delivery, financial, metadata}}. workspace.access.canManage=true means the caller can use owner/admin write tools.",
+    "pairsWith": [
+      "list_workspaces",
+      "generate_workspace_readiness_report",
+      "list_workspace_context_gaps"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace (also returned when the workspaceId does not exist)",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "RESPONSE_TOO_LARGE (result over the 1,000,000-byte MCP response cap; nothing is returned)",
+        "fix": "Use get_workspace_owner_surface or get_workspace_executive_context, or get_workspace_owner_context_bundle with detailLevel=compact."
+      },
+      {
+        "when": "JSON-RPC -32003 (OAuth scope or API-key allow-list denied)",
+        "fix": "Call get_mcp_connection_info to see granted scopes/tools; on ChatGPT a new scope needs removing and reinstalling the connector and ticking the box."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Heaviest read in this group: it loads every issue, cycle, milestone, baseline, requirement, governance thread, execution and ledger entry of every non-archived project.",
+        "verifiedFrom": "server.ts:8895-8938"
+      },
+      {
+        "text": "Large workspaces can exceed the 1 MB response cap (error, not truncation). Cached about 5 s per user.",
+        "verifiedFrom": "src/server/mcpResponseLimit.ts:76-92"
+      },
+      {
+        "text": "executiveContext is merged: stored values win, otherwise derived defaults are shown (mission falls back to workspace.description, operatingModel to 'workspace-first', workspace-owner role derived from the owner membership).",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:434-473"
+      },
+      {
+        "text": "Archived projects are excluded.",
+        "verifiedFrom": "server.ts:8861"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceReadModelCommand (buildWorkspaceOwnerExecutiveSummary, buildWorkspaceExecutiveContext)"
+  },
+  {
+    "name": "list_unowned_domains_or_capabilities",
+    "purpose": "Returns only the ownership-coverage gaps: executive-context domains and capabilities that no project claims, plus projects whose routing profile points to another workspace.",
+    "useWhen": [
+      "Before routing intake, to see which areas have no owning project",
+      "validate_workspace_project_alignment reported warnings or blockers and you need the individual items"
+    ],
+    "avoidWhen": [
+      "All gap types -> list_workspace_context_gaps",
+      "Only a status/score for alignment -> validate_workspace_project_alignment",
+      "Roadmap capability records (ids, owners, tags) -> list_workspace_capabilities"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace, executiveContext, generatedAt, unownedDomains[gap], unownedCapabilities[gap], alignmentIssues[gap]} where each gap is {id, gapType, severity, title, detail, evidence[], suggestedAction, requiresHumanConfirmation} as in list_workspace_context_gaps.",
+    "pairsWith": [
+      "list_workspace_projects",
+      "update_project",
+      "validate_workspace_project_alignment"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "Tool not listed or -32003 on an OAuth connector",
+        "fix": "Needs an LPM API key; call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "'Capabilities' here are executive-context strings matched against project routingProfile.ownedCapabilities, not roadmap capability records.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:759-776"
+      },
+      {
+        "text": "A domain or capability counts as owned when at least one non-archived project's routingProfile lists it (routingProfile.domains / routingProfile.ownedCapabilities).",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:759-776"
+      },
+      {
+        "text": "Fix by claiming it on the right project with update_project routingProfile (confirm with the user), or by removing it from the context with apply_workspace_context_update portfolio.domains/capabilities (owner-only; that list is replaced, not merged).",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:759-777"
+      },
+      {
+        "text": "Strings that come from a project's routing profile cannot be removed through the context.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:465-468"
+      },
+      {
+        "text": "alignmentIssues usually means a project's routingProfile.workspaceId is stale: re-save the routingProfile with update_project.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:776-808"
+      }
+    ],
+    "verifiedFrom": "listWorkspaceOwnershipCoverageCommand -> listWorkspaceExecutiveContextGapsCommand (buildWorkspaceExecutiveContextGaps)"
+  },
+  {
+    "name": "list_workspace_capabilities",
+    "purpose": "Lists the workspace's roadmap capability records (id, name, status, owner, tags).",
+    "useWhen": [
+      "You need a capabilityId for update_workspace_capability, archive_workspace_capability or a roadmap capability-link change",
+      "Before create_workspace_capability, to check the name does not already exist"
+    ],
+    "avoidWhen": [
+      "You also need roadmaps, items, links and counts -> get_workspace_roadmap_overview",
+      "Executive-context capability ownership gaps -> list_unowned_domains_or_capabilities"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "On an OAuth connector bound to a single workspace it may be omitted."
+      },
+      {
+        "param": "includeArchived",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean, default false (archived capabilities hidden)."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "On OAuth connectors the grant has scope workspace:read"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Array of {id, workspaceId, name, description, status active|deferred|archived, ownerUserId, tags[], archivedAt, archivedBy, archiveReason, createdAt, createdBy, updatedAt, updatedBy}",
+    "pairsWith": [
+      "create_workspace_capability",
+      "update_workspace_capability",
+      "archive_workspace_capability",
+      "submit_workspace_roadmap_change"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Re-check workspaceId with list_workspaces; the caller must be a workspace member."
+      },
+      {
+        "when": "JSON-RPC -32003",
+        "fix": "Call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": "lpm roadmap status --workspace <workspaceId> [--include-archived] --json (read .capabilities; the table view shows only the count)",
+    "gotchas": [
+      {
+        "text": "Reads the whole roadmap dataset and returns only capabilities.",
+        "verifiedFrom": "server.ts:37164-37169"
+      },
+      {
+        "text": "No paging; a result over 1 MB comes back as {items, truncated, returned, total, hint}.",
+        "verifiedFrom": "src/server/mcpResponseLimit.ts:44-47"
+      },
+      {
+        "text": "These records are separate from the executive-context capability strings used by list_unowned_domains_or_capabilities.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:465-468"
+      },
+      {
+        "text": "Name matching elsewhere (roadmap import) ignores case and accents, so compare names that way.",
+        "verifiedFrom": "server.ts:13333-13352"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceRoadmapOverviewCommand (readWorkspaceRoadmapData, buildWorkspaceRoadmapOverview)"
+  },
+  {
+    "name": "list_workspace_context_gaps",
+    "purpose": "Lists every structured gap in the workspace executive context (missing roles, mission, priority/routing policy, currency, unowned domains/capabilities, misaligned project routing profiles) with severity, evidence and a suggested action.",
+    "useWhen": [
+      "Diagnosing why the readiness report is blocked or partial",
+      "Building a to-do list for the owner to complete the executive context",
+      "Choosing which draft to generate (sourceGapIds of the drafts refer to these gap ids)"
+    ],
+    "avoidWhen": [
+      "Only domain/capability ownership and project alignment -> list_unowned_domains_or_capabilities",
+      "Only missing executive roles -> list_missing_governance_assignments",
+      "You want a status and score verdict -> generate_workspace_readiness_report"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "API key access: this tool is not exposed to OAuth connectors"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace, executiveContext, generatedAt, items[{id (e.g. 'missing-governance-role:finance-owner', 'unowned-domain:<name>'), workspaceId, gapType missing-governance-role|missing-mandate|missing-priority-policy|missing-routing-policy|missing-financial-context|unowned-domain|unowned-capability|inconsistent-project-alignment, severity low|medium|high|critical, title, detail, evidence[], suggestedAction, requiresHumanConfirmation}]}",
+    "pairsWith": [
+      "get_workspace_executive_context",
+      "draft_workspace_operating_model",
+      "draft_workspace_routing_policy",
+      "apply_workspace_context_update",
+      "generate_workspace_readiness_report"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "Tool not listed or -32003 on an OAuth connector",
+        "fix": "This tool needs an LPM API key (x-api-key); call get_mcp_connection_info to confirm what the connection allows."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "title, detail and suggestedAction are in Portuguese; evidence is in English.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:692-698"
+      },
+      {
+        "text": "Severity: missing workspace-owner or portfolio-owner = critical, other missing roles = high, unowned domain/capability = high, project routing profile pointing to another workspace = critical.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:691-731"
+      },
+      {
+        "text": "All gaps except missing mission have requiresHumanConfirmation=true: report them to the owner, do not fix silently.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:686-703"
+      },
+      {
+        "text": "Fix map: missing-governance-role -> apply_workspace_context_update governance.assignmentsToAdd (owner approval); missing-mandate -> mandate.mission; missing-priority-policy/missing-routing-policy -> draft_workspace_routing_policy; missing-financial-context -> financial.currency (owner-only) or harmonize project currencies; unowned-domain/capability and inconsistent-project-alignment -> update_project routingProfile.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:721-763"
+      },
+      {
+        "text": "items is empty when the context cannot be built.",
+        "verifiedFrom": "server.ts:9813-9823"
+      },
+      {
+        "text": "Same server cost as get_workspace_read_model.",
+        "verifiedFrom": "server.ts:9802-9808"
+      }
+    ],
+    "verifiedFrom": "listWorkspaceExecutiveContextGapsCommand (buildWorkspaceExecutiveContextGaps)"
+  },
+  {
+    "name": "preview_workspace_routing",
+    "purpose": "Ranks which projects of the workspace should receive an intake entry or an ad hoc report, with scores, signals and an outcome, without saving anything.",
+    "useWhen": [
+      "Before review_workspace_routing, to choose the project(s) and show the options to the user",
+      "Someone describes a bug or request and you need to suggest which project owns it (ad hoc title + description, no intake entry needed)"
+    ],
+    "avoidWhen": [
+      "Recording the decision or creating project entries -> review_workspace_routing",
+      "The target project is already known -> create_operational_entry in that project",
+      "Changing the routing policy -> draft_workspace_routing_policy"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id (or get_protocol -> workspaceId)",
+        "notes": "Firestore document ID."
+      },
+      {
+        "param": "intakeEntryId",
+        "required": false,
+        "source": "get_protocol -> intakeEntryId (or user, from the web intake screen)",
+        "notes": "If given, its title/description/technicalContext/affectedArea are used unless you override them."
+      },
+      {
+        "param": "title",
+        "required": false,
+        "source": "user",
+        "notes": "Required together with description when no intakeEntryId."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Required together with title when no intakeEntryId."
+      },
+      {
+        "param": "technicalContext",
+        "required": false,
+        "source": "user",
+        "notes": "Free text; improves matching."
+      },
+      {
+        "param": "affectedArea",
+        "required": false,
+        "source": "user",
+        "notes": "Free text, e.g. module or screen name."
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "Number of candidates, 1-10, default 5."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspaceId, intakeEntryId|null, outcome single-project|multi-project|ambiguous|no-match, reasonCode out_of_portfolio_scope|insufficient_routing_evidence|null, confidence 0-1, rationale, candidates[{projectId, projectName, projectKey, score, confidence, rationale, routingProfileCompleteness, signals{ownershipScore, semanticScore, dependencyScore, historicalScore, matchedTerms[], excludedTerms[]}}], generatedAt}",
+    "pairsWith": [
+      "get_protocol",
+      "review_workspace_routing"
+    ],
+    "errors": [
+      {
+        "when": "Workspace routing preview requires title and description or a valid intake entry",
+        "fix": "Pass both title and description, or a valid intakeEntryId."
+      },
+      {
+        "when": "Workspace intake entry not found",
+        "fix": "Get intakeEntryId from get_protocol(protocolCode) or ask the user."
+      },
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Check workspaceId; the caller must be a workspace member."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm operational-intake routing-preview --workspace <workspaceId> --intake <entryId> [--limit <count>] [--json]",
+    "gotchas": [
+      {
+        "text": "Deterministic keyword scoring (ownership 45%, semantic 30%, dependency 15%, routing history 10%); no AI call, nothing saved.",
+        "verifiedFrom": "src/lib/workspaceRouting.ts:353-357"
+      },
+      {
+        "text": "Top score < 0.35 = no-match; a close second (>= 0.5 and within 0.1) = ambiguous; both high (>= 0.72 and >= 0.64, within 0.06) = multi-project.",
+        "verifiedFrom": "src/lib/workspaceRouting.ts:250-263"
+      },
+      {
+        "text": "Ambiguous, multi-project and no-match need a human decision.",
+        "verifiedFrom": "src/lib/workspaceRouting.ts:316-328"
+      },
+      {
+        "text": "Quality depends on project routing profiles (update_project routingProfile).",
+        "verifiedFrom": "src/lib/workspaceRouting.ts:334-344"
+      },
+      {
+        "text": "Archived projects and projects of other workspaces are never candidates.",
+        "verifiedFrom": "src/lib/workspaceRouting.ts:334-341"
+      },
+      {
+        "text": "The CLI only supports intake mode (no ad hoc title/description).",
+        "verifiedFrom": "src/cli/lpm.ts:316"
+      }
+    ],
+    "verifiedFrom": "previewWorkspaceRoutingCommand (rankWorkspaceRoutingCandidates, resolveOutcome, resolveReasonCode)"
+  },
+  {
+    "name": "record_workspace_delivery_receipt",
+    "purpose": "Records that a reply to a protocol requester (e.g. a WhatsApp intake) is pending, was sent or failed, and updates the intake's delivery status and the protocol's public status; it does not send anything.",
+    "useWhen": [
+      "You or the integration actually attempted to deliver the protocol reply to the requester and must log the outcome",
+      "A delivery failed and the failure must be visible in the protocol lineage"
+    ],
+    "avoidWhen": [
+      "Sending the message itself: use the messaging channel's own tool; this tool only logs",
+      "Attaching evidence files to the protocol -> create_protocol_evidence_attachment",
+      "Reading delivery history -> get_protocol / get_protocol_lineage"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "get_protocol -> workspaceId (or list_workspaces -> id)",
+        "notes": "Firestore document ID."
+      },
+      {
+        "param": "intakeEntryId",
+        "required": true,
+        "source": "get_protocol -> intakeEntryId (or user, from the web intake screen)",
+        "notes": "The intake entry must carry a protocol."
+      },
+      {
+        "param": "status",
+        "required": true,
+        "source": "constant matching what really happened",
+        "notes": "enum pending|sent|failed."
+      },
+      {
+        "param": "protocolCode",
+        "required": false,
+        "source": "user (protocol code given to the requester) or get_protocol -> protocolCode",
+        "notes": "Defaults to the intake's protocol; uppercased; must match ^[A-Z0-9][A-Z0-9-]{4,80}$ and equal the intake's protocol."
+      },
+      {
+        "param": "channel",
+        "required": false,
+        "source": "constant",
+        "notes": "Default 'whatsapp'."
+      },
+      {
+        "param": "recipientRefHash",
+        "required": false,
+        "source": "intake requester hash (default)",
+        "notes": "A hash reference, never a raw phone number or name. Defaults to the intake requester's externalRefHash."
+      },
+      {
+        "param": "attemptedAt",
+        "required": false,
+        "source": "user/integration",
+        "notes": "ISO 8601; default now."
+      },
+      {
+        "param": "sentAt",
+        "required": false,
+        "source": "user/integration",
+        "notes": "ISO 8601; default now when status=sent, else null."
+      },
+      {
+        "param": "errorMessage",
+        "required": false,
+        "source": "integration error text",
+        "notes": "For status=failed. Never include tokens or secrets."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member (any role)",
+      "The intake entry exists and has a protocol (WhatsApp/EvolutionAPI intake)",
+      "The delivery attempt really happened; never record 'sent' for a message nobody sent",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "{id (receipt id), workspaceId, intakeEntryId, protocolCode, channel, recipientRefHash, status, attemptedAt, sentAt, errorMessage, createdAt}",
+    "pairsWith": [
+      "get_protocol",
+      "get_protocol_lineage"
+    ],
+    "errors": [
+      {
+        "when": "Workspace intake entry not found",
+        "fix": "Get the right intakeEntryId from get_protocol(protocolCode) -> intakeEntryId."
+      },
+      {
+        "when": "Protocol code is invalid",
+        "fix": "The intake has no protocol and none was passed, or the code is malformed; pass the exact code from get_protocol."
+      },
+      {
+        "when": "Delivery protocol does not match intake protocol",
+        "fix": "Use the protocolCode of this intake entry (get_protocol -> protocolCode) or omit it."
+      },
+      {
+        "when": "Delivery status is invalid",
+        "fix": "Use pending, sent or failed."
+      },
+      {
+        "when": "Delivery recipientRefHash is required",
+        "fix": "The intake has no requester hash; pass recipientRefHash (a hash, not a phone number)."
+      },
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Check workspaceId; the caller must be a workspace member."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm operational-intake delivery-record --workspace <workspaceId> --intake <entryId> --status <pending|sent|failed> [--protocol <code>] [--recipient <hash>] [--channel <name>] [--error-message <text>] [--json]",
+    "gotchas": [
+      {
+        "text": "Only logs; nothing is sent.",
+        "verifiedFrom": "server.ts:16558-16600"
+      },
+      {
+        "text": "It overwrites the protocol's public status text ('Protocolo enviado ao solicitante' / 'Falha ao enviar resposta ao solicitante' / 'Resposta ao solicitante pendente') and the intake deliveryStatus.",
+        "verifiedFrom": "server.ts:16596"
+      },
+      {
+        "text": "Every call adds a new receipt (no dedupe): do not retry a call that succeeded.",
+        "verifiedFrom": "server.ts:16573"
+      },
+      {
+        "text": "Any member, even a viewer, can call it.",
+        "verifiedFrom": "server.ts:16559"
+      },
+      {
+        "text": "The CLI cannot set attemptedAt/sentAt.",
+        "verifiedFrom": "server.ts:16581-16582"
+      }
+    ],
+    "verifiedFrom": "recordWorkspaceDeliveryReceiptCommand (getWorkspaceIntakeEntryCommand, normalizeProtocolCode, normalizeProtocolDeliveryStatus)"
+  },
+  {
+    "name": "review_workspace_routing",
+    "purpose": "Records the routing decision for a workspace intake entry (approve one project, split across projects, reject or defer) and, when approving, creates 'request' operational entries in the chosen project(s).",
+    "useWhen": [
+      "The user/owner confirmed which project(s) should receive an intake entry",
+      "The user/owner decided to reject or defer an intake entry"
+    ],
+    "avoidWhen": [
+      "You only want suggestions -> preview_workspace_routing",
+      "The intake entry is already routed, rejected or deferred (see gotchas); ask a workspace admin to reopen it in the web app",
+      "Registering work directly in a known project without an intake entry -> create_operational_entry"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id (or get_protocol -> workspaceId)",
+        "notes": "Firestore document ID."
+      },
+      {
+        "param": "intakeEntryId",
+        "required": true,
+        "source": "get_protocol -> intakeEntryId (or user, from the web intake screen)",
+        "notes": "Entry must be in status new or under_review."
+      },
+      {
+        "param": "action",
+        "required": true,
+        "source": "user decision",
+        "notes": "enum approve-primary|split-projects|reject|defer. Any other value is silently treated as defer."
+      },
+      {
+        "param": "selectedProjectId",
+        "required": false,
+        "source": "preview_workspace_routing -> candidates[].projectId",
+        "notes": "For approve-primary. Always pass it explicitly."
+      },
+      {
+        "param": "selectedProjectIds",
+        "required": false,
+        "source": "preview_workspace_routing -> candidates[].projectId",
+        "notes": "For split-projects: at least 2 distinct IDs; the first becomes the primary."
+      },
+      {
+        "param": "reviewNotes",
+        "required": false,
+        "source": "user",
+        "notes": "Stored on the intake entry."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an admin member",
+      "Intake entry status is new or under_review",
+      "The user/owner confirmed the decision, especially when preview outcome was ambiguous, multi-project or no-match",
+      "Selected projects belong to this workspace (the server does not check)",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "{id (routingDecisionId), workspaceId, intakeEntryId, outcome, reasonCode, confidence, rationale, candidates[], status approved|rejected|deferred, action, suggestedPrimaryProjectId, suggestedSecondaryProjectIds[], createdOperationalEntryIds[], reviewedBy, reviewedAt}",
+    "pairsWith": [
+      "get_protocol",
+      "preview_workspace_routing",
+      "get_operational_entry",
+      "update_operational_entry"
+    ],
+    "errors": [
+      {
+        "when": "You do not have permission to review workspace routing",
+        "fix": "Caller is not owner/admin; hand the decision to a workspace admin."
+      },
+      {
+        "when": "Workspace intake entry not found",
+        "fix": "Get intakeEntryId from get_protocol(protocolCode) or ask the user."
+      },
+      {
+        "when": "Approve-primary routing requires a selected project",
+        "fix": "Pass selectedProjectId from preview_workspace_routing candidates."
+      },
+      {
+        "when": "Split-projects routing requires at least two selected projects",
+        "fix": "Pass at least 2 distinct selectedProjectIds."
+      },
+      {
+        "when": "Invalid workspace intake status transition from <status> to <status>",
+        "fix": "The entry was rejected or deferred. Operational entries and a decision may ALREADY have been created: list them with list_operational_entries in the selected projects and report to the user; do not retry."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Use a projectId from preview_workspace_routing candidates. In split-projects, entries for earlier projects may already exist."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm operational-intake routing-review --workspace <workspaceId> --intake <entryId> --action <approve-primary|split-projects|reject|defer> [--project <projectId>] [--projects <id; id>] [--review-notes <text>] [--json]",
+    "gotchas": [
+      {
+        "text": "Not idempotent and not transactional.",
+        "verifiedFrom": "server.ts:15694-15800"
+      },
+      {
+        "text": "Calling it again on a 'routed' entry creates duplicate operational entries and a second decision; routed is final.",
+        "verifiedFrom": "server.ts:15735-15756"
+      },
+      {
+        "text": "approve-primary without selectedProjectId takes the top preview candidate even when the outcome is no-match.",
+        "verifiedFrom": "server.ts:15735-15738"
+      },
+      {
+        "text": "A typo in action (e.g. 'approve') silently defers the entry.",
+        "verifiedFrom": "server.ts:15781-15786"
+      },
+      {
+        "text": "Status flow: new -> under_review (automatic) -> routed | rejected | deferred.",
+        "verifiedFrom": "server.ts:15711-15756"
+      },
+      {
+        "text": "Created entries are type 'request' copies of the intake title/description, linked by sourceWorkspaceIntakeEntryId and sourceRoutingDecisionId.",
+        "verifiedFrom": "server.ts:15745-15751"
+      },
+      {
+        "text": "split-projects ignores selectedProjectId.",
+        "verifiedFrom": "server.ts:15757-15763"
+      },
+      {
+        "text": "selectedProjectId and selectedProjectIds are not checked against the preview candidates or the workspace: pass only a projectId from preview.candidates[] of the same workspace.",
+        "verifiedFrom": "server.ts:15723-15745"
+      }
+    ],
+    "verifiedFrom": "reviewWorkspaceRoutingCommand (previewWorkspaceRoutingCommand, createOperationalEntryCommand, updateWorkspaceIntakeEntryCommand, validateWorkspaceIntakeTransition)"
+  },
+  {
+    "name": "update_workspace_capability",
+    "purpose": "Changes fields of an existing roadmap capability (name, description, status active/deferred, owner, tags) without archiving it.",
+    "useWhen": [
+      "The user asked to rename, re-describe, re-own, re-tag or defer/reactivate a capability",
+      "Un-archiving a capability (set status 'active' or 'deferred')"
+    ],
+    "avoidWhen": [
+      "Archiving -> archive_workspace_capability",
+      "The capability does not exist yet -> create_workspace_capability",
+      "Owner-agent credential with preview/commit flow -> preview_owner_roadmap_change / commit_owner_roadmap_change (update_capability operation)"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID."
+      },
+      {
+        "param": "capabilityId",
+        "required": true,
+        "source": "list_workspace_capabilities -> id (or create_workspace_capability -> id)",
+        "notes": "Use includeArchived=true to find archived ones."
+      },
+      {
+        "param": "name",
+        "required": false,
+        "source": "user",
+        "notes": "If sent, must not be empty."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Empty string clears it."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "enum active|deferred. 'archived' is rejected."
+      },
+      {
+        "param": "ownerUserId",
+        "required": false,
+        "source": "list_workspace_members -> userId",
+        "notes": "Empty string clears it; not checked against membership."
+      },
+      {
+        "param": "tags",
+        "required": false,
+        "source": "user",
+        "notes": "Array of strings; REPLACES the whole tag list; [] clears it."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an admin member",
+      "The capability exists in this workspace",
+      "The user asked for or approved the change",
+      "API key access: not exposed to OAuth connectors"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "The full capability after the update: {id, workspaceId, name, description, status, ownerUserId, tags[], archivedAt, archivedBy, archiveReason, createdAt, createdBy, updatedAt, updatedBy}",
+    "pairsWith": [
+      "list_workspace_capabilities"
+    ],
+    "errors": [
+      {
+        "when": "Workspace capability not found",
+        "fix": "Get the ID from list_workspace_capabilities with includeArchived=true."
+      },
+      {
+        "when": "Workspace capability update has no changes.",
+        "fix": "Send at least one of name, description, status, ownerUserId, tags."
+      },
+      {
+        "when": "Workspace capability name cannot be empty.",
+        "fix": "Send a non-empty name or omit the field."
+      },
+      {
+        "when": "Use the archive command to archive a workspace capability. / Invalid workspace capability status",
+        "fix": "Use archive_workspace_capability to archive; status accepts active or deferred."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap",
+        "fix": "Caller is not owner/admin; ask a workspace admin."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap capability-update --workspace <workspaceId> --capability <capabilityId> [--name <text>] [--description <text>] [--status <active|deferred>] [--owner <userId>] [--tags <tag; tag>] [--json]",
+    "gotchas": [
+      {
+        "text": "Send only the fields you want to change: every field present is written.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:883-893"
+      },
+      {
+        "text": "No version check: last write wins.",
+        "verifiedFrom": "server.ts:13286-13330"
+      },
+      {
+        "text": "Works on archived capabilities: status 'active' or 'deferred' un-archives (archivedAt and archiveReason stay filled).",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:883-886"
+      },
+      {
+        "text": "CLI bug: 'lpm roadmap capability-update' always sends tags (an empty list when --tags is omitted), which wipes existing tags; always pass --tags with the full list.",
+        "verifiedFrom": "src/cli/lpm.ts:658-662"
+      },
+      {
+        "text": "Not gated by roadmap governance enforce mode.",
+        "verifiedFrom": "server.ts:13286-13330"
+      }
+    ],
+    "verifiedFrom": "updateWorkspaceCapabilityCommand (buildWorkspaceCapabilityPatch, assertAllowedCapabilityStatus); CLI handleRoadmapCapabilityUpdate + getOptionalListFlag"
+  },
+  {
+    "name": "validate_workspace_context_completeness",
+    "purpose": "Checks whether the workspace executive context is complete enough for assisted operation and returns a status, score, blockers, warnings, field issues and next actions.",
+    "useWhen": [
+      "Checking only the context side (mandate, roles, policies) before letting agents act more autonomously",
+      "After an approved apply_workspace_context_update, to confirm blockers were removed"
+    ],
+    "avoidWhen": [
+      "You want one verdict combining completeness and project alignment -> generate_workspace_readiness_report",
+      "Only project ownership drift -> validate_workspace_project_alignment",
+      "The individual gap list -> list_workspace_context_gaps"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "On an OAuth connector bound to a single workspace it may be omitted."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "On OAuth connectors the grant has scope workspace:read"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace, executiveContext, validation{validationType:'context-completeness', status complete|partial|blocked, score 0-100, blockers[gap], warnings[gap], issues[{field, severity, message}], nextActions[] (max 5)}, generatedAt}. validation is null when the context cannot be built.",
+    "pairsWith": [
+      "list_workspace_context_gaps",
+      "draft_workspace_operating_model",
+      "apply_workspace_context_update"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "JSON-RPC -32003",
+        "fix": "Call get_mcp_connection_info to see which scopes/tools this connection has."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Every missing executive role is a blocker, so status stays 'blocked' until all 5 roles are assigned (workspace-owner is derived automatically from the owner membership; the other 4 need explicit assignment via apply_workspace_context_update).",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1136-1144"
+      },
+      {
+        "text": "A missing mission or zero assignments also blocks.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:506-514"
+      },
+      {
+        "text": "nextActions are the gaps' Portuguese suggestedAction strings.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1203"
+      },
+      {
+        "text": "Nothing is stored; same server cost as get_workspace_read_model.",
+        "verifiedFrom": "server.ts:10008-10014"
+      }
+    ],
+    "verifiedFrom": "validateWorkspaceContextCompletenessCommand (buildWorkspaceContextCompletenessValidation, validateWorkspaceExecutiveContext)"
+  },
+  {
+    "name": "validate_workspace_project_alignment",
+    "purpose": "Checks ownership alignment between the executive context and the projects: unowned domains/capabilities (warnings) and project routing profiles pointing to another workspace (blockers).",
+    "useWhen": [
+      "Before routing intake or allocating roadmap work, to confirm every domain/capability has an owning project",
+      "After changing project routing profiles with update_project"
+    ],
+    "avoidWhen": [
+      "One combined verdict -> generate_workspace_readiness_report",
+      "The concrete unowned items -> list_unowned_domains_or_capabilities",
+      "Role or mandate completeness -> validate_workspace_context_completeness"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "On an OAuth connector bound to a single workspace it may be omitted."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "On OAuth connectors the grant has scope workspace:read"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspace, executiveContext, validation{validationType:'project-alignment', status complete|partial|blocked, score 0-100, blockers[inconsistent-project-alignment gaps], warnings[unowned-domain / unowned-capability gaps], issues[] (always empty), nextActions[]}, generatedAt}. validation is null when the context cannot be built.",
+    "pairsWith": [
+      "list_unowned_domains_or_capabilities",
+      "update_project",
+      "generate_workspace_readiness_report"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Re-check the ID with list_workspaces; the caller must be the owner or an active member."
+      },
+      {
+        "when": "JSON-RPC -32003",
+        "fix": "Call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Status is 'partial' even with zero alignment problems when the context's completenessStatus is 'partial'.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:1135-1146"
+      },
+      {
+        "text": "Blockers in practice come from a project whose routingProfile.workspaceId differs from this workspace (fix: re-save routingProfile with update_project).",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:776-808"
+      },
+      {
+        "text": "Only non-archived projects are checked.",
+        "verifiedFrom": "src/lib/workspaceExecutiveContext.ts:681"
+      },
+      {
+        "text": "Nothing is stored; same server cost as get_workspace_read_model.",
+        "verifiedFrom": "server.ts:10037-10045"
+      }
+    ],
+    "verifiedFrom": "validateWorkspaceProjectAlignmentCommand (buildWorkspaceProjectAlignmentValidation, buildWorkspaceExecutiveContextGaps)"
+  }
+]

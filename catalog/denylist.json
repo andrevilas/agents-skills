@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "source": "design §3.1, §3.4 and §5.6 V13",
+  "rule": "V13 fails when any pattern matches a scanned file outside an exempt path and outside an `example:` block. Patterns are ECMAScript regular expressions (Node >= 20) compiled with the `u` flag plus `flags`.",
+  "scan": [
+    "catalog/cards/**",
+    "dist/**",
+    "shared/**",
+    "skills/**"
+  ],
+  "exemptPaths": [
+    "catalog/denylist.json",
+    "dist/antigravity/lpm-pilot-feedback/**",
+    "dist/antigravity/lpm-release-product/**",
+    "dist/claude-code/lpm-pilot-feedback/**",
+    "dist/claude-code/lpm-release-product/**",
+    "dist/codex/lpm-pilot-feedback/**",
+    "dist/codex/lpm-release-product/**",
+    "dist/generic/lpm-pilot-feedback.md",
+    "dist/generic/lpm-pilot-feedback.refs.md",
+    "dist/generic/lpm-pilot-feedback.tools.md",
+    "dist/generic/lpm-release-product.md",
+    "dist/generic/lpm-release-product.refs.md",
+    "dist/generic/lpm-release-product.tools.md",
+    "shared/internal/**",
+    "skills/lpm-pilot-feedback/**",
+    "skills/lpm-release-product/**"
+  ],
+  "exemptBlocks": {
+    "line": "a line whose text, after leading spaces and an optional list marker (`-`, `*`, `1.`), starts with `example:`",
+    "fence": "a fenced code block whose first content line starts with `example:`"
+  },
+  "entries": [
+    {
+      "id": "brl-amount",
+      "category": "money",
+      "pattern": "R\\$\\s?[0-9]",
+      "flags": "",
+      "reason": "Deployment-specific BRL amounts. Budgets are read from tools at run time."
+    },
+    {
+      "id": "change-request-id",
+      "category": "deployment-id",
+      "pattern": "\\brcr_[0-9a-f]{16,}\\b",
+      "flags": "",
+      "reason": "Real roadmap change-request ids. Use `<changeRequestId>`."
+    },
+    {
+      "id": "cloud-run-revision",
+      "category": "deployment-id",
+      "pattern": "(?<![0-9A-Za-z])[0-9]{5}-[a-z]{3}(?![a-z])",
+      "flags": "",
+      "reason": "Real Cloud Run revision suffixes (e.g. a numbered revision). Use `<revision>`."
+    },
+    {
+      "id": "customer-workspace-names",
+      "category": "pilot-name",
+      "pattern": "\\bCofeci\\b|\\bVoice Clone\\b|\\bPersonal Enterprise\\b|\\bSquad Checkout\\b|\\bEngenharia Tecnologia\\b|\\blpm-demo-checkout\\b",
+      "flags": "",
+      "reason": "Names of real customer, demo or owner workspaces, accounts and repositories."
+    },
+    {
+      "id": "firestore-id",
+      "category": "deployment-id",
+      "pattern": "(?<![A-Za-z0-9_-])(?=[A-Za-z0-9]*[A-Z])(?=[A-Za-z0-9]*[a-z])(?=[A-Za-z0-9]*[0-9])(?:[A-Za-z0-9]{28}|[A-Za-z0-9]{20})(?![A-Za-z0-9_-])",
+      "flags": "",
+      "reason": "Firestore document ids (20 chars) and Firebase Auth uids (28 chars) of a real deployment. Take ids from tool results; write placeholders such as `<issueId>`."
+    },
+    {
+      "id": "oauth-client-id",
+      "category": "deployment-id",
+      "pattern": "\\blpm_client_[0-9a-f]{6,}",
+      "flags": "",
+      "reason": "Real OAuth client registrations."
+    },
+    {
+      "id": "pilot-abs",
+      "category": "pilot-name",
+      "pattern": "\\bABS\\b",
+      "flags": "",
+      "reason": "Pilot customer name; say \"the pilot\"."
+    },
+    {
+      "id": "pilot-person",
+      "category": "pilot-name",
+      "pattern": "\\bRafael\\b",
+      "flags": "",
+      "reason": "Pilot tester's name; say \"the pilot\" or \"the tester\"."
+    },
+    {
+      "id": "usd-amount",
+      "category": "money",
+      "pattern": "US\\$\\s?[0-9]",
+      "flags": "",
+      "reason": "Deployment-specific US$ amounts (pool sizes, per-job costs). Budgets are read from tools at run time."
+    },
+    {
+      "id": "whatsapp-gateway-name",
+      "category": "deployment-name",
+      "pattern": "\\bGuaraxis\\b",
+      "flags": "",
+      "reason": "The owner's WhatsApp gateway deployment; skills say \"the WhatsApp channel\"."
+    },
+    {
+      "id": "whatsapp-group-ref",
+      "category": "deployment-id",
+      "pattern": "\\bgrp_[A-Za-z0-9_-]{16,}|\\b[0-9]{10,}(?:-[0-9]+)?@g\\.us\\b",
+      "flags": "",
+      "reason": "Real WhatsApp group references. The bare `@g.us` suffix rule stays allowed."
+    },
+    {
+      "id": "xpory",
+      "category": "pilot-name",
+      "pattern": "xpory|\\bxpy\\b",
+      "flags": "i",
+      "reason": "The pilot customer's name (XporY, PILOTO-XPY) belongs only to internal/ and the internal pack."
+    }
+  ]
+}

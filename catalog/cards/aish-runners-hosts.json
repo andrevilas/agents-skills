@@ -1,0 +1,1597 @@
+[
+  {
+    "name": "acquire_aish_coordinator_lease",
+    "purpose": "Makes the caller the single coordinator of an AISH execution session for 10 minutes and returns the leaseNonce and fencingToken that plan, approve, dispatch, pause, resume and retry calls require.",
+    "useWhen": [
+      "Before put_aish_execution_plan, approve_aish_execution_plan, dispatch_aish_execution_plan, pause_aish_execution_session, resume_aish_execution_session or retry_aish_execution_plan",
+      "Your lease is about to expire (renew: same coordinatorId, new idempotencyKey)",
+      "You got 'fencing token is stale', 'lease is not active' or lost your leaseNonce"
+    ],
+    "avoidWhen": [
+      "Another coordinator (often a person in the web cockpit) holds an unexpired lease: do not try to take over; ask the user",
+      "You only need to read the session: use get_aish_execution_session"
+    ],
+    "inputs": [
+      {
+        "param": "sessionId",
+        "required": true,
+        "source": "create_aish_execution_session -> session.id, or list_aish_execution_sessions -> items[].session.id",
+        "notes": "Session id."
+      },
+      {
+        "param": "coordinatorId",
+        "required": true,
+        "source": "agent-generated stable id",
+        "notes": "Max 200 chars, unique to this agent run, e.g. 'agent-codex-<random>'. Keep it for the whole session; never reuse another coordinator's id."
+      },
+      {
+        "param": "idempotencyKey",
+        "required": true,
+        "source": "agent-generated unique string",
+        "notes": "8 to 240 chars. Same key while the lease is active returns the same lease unchanged; a new key renews it."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the session's workspace",
+      "No other coordinatorId holds an unexpired lease on this session"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "idempotencyKey supported",
+    "returns": "sessionId, coordinatorId, leaseNonce (keep private; needed for every fenced call; never shown again), fencingToken (integer), status 'active', leasedAt, expiresAt (leasedAt + 10 min).",
+    "pairsWith": [
+      "create_aish_execution_session",
+      "put_aish_execution_plan",
+      "approve_aish_execution_plan",
+      "dispatch_aish_execution_plan",
+      "pause_aish_execution_session",
+      "resume_aish_execution_session"
+    ],
+    "errors": [
+      {
+        "when": "AISH execution session already has an active coordinator.",
+        "fix": "Read get_aish_execution_session -> coordinatorLease. Tell the user who coordinates and when the lease expires; retry only after expiresAt and with the user's consent."
+      },
+      {
+        "when": "Coordinator id and idempotency key are required.",
+        "fix": "Send coordinatorId and a key of 8+ chars."
+      },
+      {
+        "when": "AISH execution session not found. / You do not have permission to access this AISH execution session.",
+        "fix": "Check sessionId; caller must be a workspace manager."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish cockpit coordinator --session <sessionId> --coordinator <coordinatorId> --idempotency-key <key> --json",
+    "gotchas": [
+      {
+        "text": "Calling again with the same key does NOT extend the lease.",
+        "verifiedFrom": "server.ts:22292-22294"
+      },
+      {
+        "text": "Renewing (same coordinatorId + new key) issues a NEW leaseNonce and fencingToken + 1: always use the latest pair, the old one becomes stale.",
+        "verifiedFrom": "server.ts:22296-22298"
+      },
+      {
+        "text": "If you lose the nonce, re-acquire with the same coordinatorId and a new key.",
+        "verifiedFrom": "server.ts:22281-22298"
+      },
+      {
+        "text": "When a lease expires and someone else acquires it, your token is dead.",
+        "verifiedFrom": "src/lib/aishExecutionCockpit.ts:257-261"
+      },
+      {
+        "text": "Do not write the leaseNonce into comments or event payloads.",
+        "verifiedFrom": "server.ts:21811"
+      }
+    ],
+    "verifiedFrom": "acquireAishCoordinatorLeaseCommand, assertAishCoordinatorFence, AISH_JOB_LEASE_MS (10 min)"
+  },
+  {
+    "name": "append_aish_execution_session_command",
+    "purpose": "Appends an ordered, idempotent event to an AISH execution session and optionally moves its status (for example draft -> ready -> awaiting-approval, back to draft, or canceled).",
+    "useWhen": [
+      "Moving a session with a plan from draft to ready, then from ready to awaiting-approval so a manager can approve the plan hash",
+      "Recording a structured note such as a clarification answer on the session timeline",
+      "Canceling a session for good, after the user asked for it",
+      "Returning a session to draft to change its plan"
+    ],
+    "avoidWhen": [
+      "Approving the plan: use approve_aish_execution_plan (status approved is rejected here)",
+      "Starting or continuing execution: use dispatch_aish_execution_plan or resume_aish_execution_session (status executing is rejected here)",
+      "Pausing: use pause_aish_execution_session",
+      "Asking a human to decide on a conflict or checkpoint: use request_aish_execution_checkpoint",
+      "Publishing a plan: use put_aish_execution_plan"
+    ],
+    "inputs": [
+      {
+        "param": "sessionId",
+        "required": true,
+        "source": "create_aish_execution_session -> session.id",
+        "notes": "Session id."
+      },
+      {
+        "param": "commandId",
+        "required": true,
+        "source": "agent-generated unique string",
+        "notes": "8 to 240 chars, unique per command in this session. Reuse only to retry the identical command."
+      },
+      {
+        "param": "type",
+        "required": true,
+        "source": "agent-chosen label",
+        "notes": "Event type, max 120 chars, e.g. 'session-ready', 'clarification-answered', 'session-canceled'."
+      },
+      {
+        "param": "projectId",
+        "required": false,
+        "source": "get_aish_execution_session -> session.scope.projectIds[]",
+        "notes": "Must be in the session scope."
+      },
+      {
+        "param": "payload",
+        "required": false,
+        "source": "agent",
+        "notes": "JSON object of operational metadata only. Keys containing token, secret, password, credential, prompt, stdout, stderr, shell, environment, cookie, authorization or repository content are replaced by '[redacted]'. Strings cut at 1000 chars, max 50 keys/items, depth 5."
+      },
+      {
+        "param": "nextStatus",
+        "required": false,
+        "source": "constant",
+        "notes": "Allowed here: draft, clarification-required, ready, awaiting-approval, paused, failed, canceled. approved/executing/completed are rejected. Omit to only record an event."
+      },
+      {
+        "param": "coordinatorId",
+        "required": false,
+        "source": "acquire_aish_coordinator_lease -> coordinatorId",
+        "notes": "Send coordinatorId, leaseNonce and fencingToken all together or none."
+      },
+      {
+        "param": "leaseNonce",
+        "required": false,
+        "source": "acquire_aish_coordinator_lease -> leaseNonce",
+        "notes": "Must be the latest nonce."
+      },
+      {
+        "param": "fencingToken",
+        "required": false,
+        "source": "acquire_aish_coordinator_lease -> fencingToken",
+        "notes": "Integer >= 1, must equal the current lease token."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the session's workspace",
+      "The status change is a valid transition: draft -> clarification-required|ready|canceled; clarification-required -> draft|ready|canceled; ready -> awaiting-approval|draft|canceled; awaiting-approval -> draft|canceled; approved -> paused|draft|canceled; executing -> paused|failed|canceled; paused -> failed|canceled; failed -> paused|canceled; completed and canceled are final",
+      "If fence fields are sent, the coordinator lease is active and matches them",
+      "For canceled or failed: the user explicitly asked for it"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "keyed by commandId",
+    "returns": "session (new status, lastEventSequence, version), event {id, sequence, type, payload, createdAt}, reused (true = the same commandId was already applied).",
+    "pairsWith": [
+      "put_aish_execution_plan",
+      "get_aish_execution_readiness",
+      "approve_aish_execution_plan",
+      "get_aish_execution_session"
+    ],
+    "errors": [
+      {
+        "when": "AISH session command id and type are required.",
+        "fix": "Send type and a commandId of 8+ chars."
+      },
+      {
+        "when": "AISH session command project is outside session scope.",
+        "fix": "Use a projectId from session.scope.projectIds or omit it."
+      },
+      {
+        "when": "AISH coordinated command requires coordinatorId, leaseNonce and fencingToken.",
+        "fix": "Send all three fence fields (fencingToken >= 1) or none of them."
+      },
+      {
+        "when": "AISH coordinator lease not found. / AISH coordinator lease is not active. / AISH coordinator lease identity mismatch. / AISH coordinator fencing token is stale.",
+        "fix": "Call acquire_aish_coordinator_lease again (same coordinatorId, new idempotencyKey) and retry with the new leaseNonce and fencingToken."
+      },
+      {
+        "when": "AISH execution state requires its dedicated authorized command.",
+        "fix": "Use approve_aish_execution_plan for approved, dispatch_aish_execution_plan or resume_aish_execution_session for executing; completed is set automatically."
+      },
+      {
+        "when": "Invalid AISH execution session transition: <from> -> <to>.",
+        "fix": "Read the session status and follow the allowed transitions (e.g. draft must go to ready before awaiting-approval)."
+      },
+      {
+        "when": "AISH session command idempotency key conflicts with another payload. / ...with another command type.",
+        "fix": "Generate a new commandId for a different command."
+      },
+      {
+        "when": "Execution limit cannot be replaced by an operator pause.",
+        "fix": "The session is already paused by a budget/timeout limit. Leave it; the owner decides."
+      },
+      {
+        "when": "Use a durable checkpoint request for this pause.",
+        "fix": "Use request_aish_execution_checkpoint instead of payload.reason checkpoint/conflict."
+      },
+      {
+        "when": "AISH workflow is not fully completed.",
+        "fix": "Do not force completion; wait for all plan nodes."
+      },
+      {
+        "when": "You do not have permission to access this AISH execution session.",
+        "fix": "Caller is not a workspace manager. Stop and tell the user."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish cockpit command --session <sessionId> --command-id <id> --type <type> [--project <id>] [--payload-json <json>] [--next-status <status>] --json",
+    "gotchas": [
+      {
+        "text": "Moving to awaiting-approval, paused, completed or failed sends in-app notifications to the session creator and the project owners (outward-facing).",
+        "verifiedFrom": "server.ts:21698-21708"
+      },
+      {
+        "text": "canceled is final and cannot be undone.",
+        "verifiedFrom": "src/lib/aishExecutionCockpit.ts:150-151"
+      },
+      {
+        "text": "Unlike pause/resume, the coordinator fence is optional here (required only when one of coordinatorId, leaseNonce or fencingToken is sent).",
+        "verifiedFrom": "server.ts:21675-21677"
+      },
+      {
+        "text": "A ready -> awaiting-approval move does not approve anything: approval stays a manager decision via approve_aish_execution_plan.",
+        "verifiedFrom": "src/lib/aishExecutionCockpit.ts:143-145"
+      }
+    ],
+    "verifiedFrom": "appendAishExecutionSessionCommand, assertAishExecutionSessionTransition, assertAishCoordinatorFence, sanitizeAishExecutionEventPayload"
+  },
+  {
+    "name": "apply_aish_legacy_runner_migration",
+    "purpose": "Moves a legacy project-scoped runner host into a runner account (account scope limited to its original workspace and project) and records the original state so the move can be rolled back.",
+    "useWhen": [
+      "preview_aish_legacy_runner_migration returned allowed = true and the user confirmed the migration"
+    ],
+    "avoidWhen": [
+      "You have not previewed: use preview_aish_legacy_runner_migration first",
+      "The host already has an account: use apply_aish_runner_management_action for lifecycle changes",
+      "You want to undo a migration: use rollback_aish_legacy_runner_migration"
+    ],
+    "inputs": [
+      {
+        "param": "accountId",
+        "required": true,
+        "source": "same value used in preview_aish_legacy_runner_migration",
+        "notes": "Target runner account id."
+      },
+      {
+        "param": "hostId",
+        "required": true,
+        "source": "same value used in preview_aish_legacy_runner_migration",
+        "notes": "Legacy host id."
+      },
+      {
+        "param": "expectedUpdatedAt",
+        "required": true,
+        "source": "preview_aish_legacy_runner_migration -> expectedUpdatedAt",
+        "notes": "Must equal the host's current updatedAt."
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8 to 1000 chars; stored on the migration record."
+      },
+      {
+        "param": "idempotencyKey",
+        "required": true,
+        "source": "agent-generated unique string",
+        "notes": "8 to 240 chars. Write it down: migrationId is derived from it."
+      },
+      {
+        "param": "confirmed",
+        "required": true,
+        "source": "constant",
+        "notes": "Must be true, only after the user confirmed."
+      }
+    ],
+    "preconditions": [
+      "preview_aish_legacy_runner_migration returned allowed = true",
+      "All preview preconditions hold (account admin, account bound to the host workspace, host has no accountId)",
+      "No active capacity lease on the host",
+      "The user explicitly confirmed the migration"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "idempotencyKey supported",
+    "returns": "migrationId (SAVE IT: it is the only input that rollback_aish_legacy_runner_migration accepts and no read tool returns it), host {id, accountId, status, accessPolicy, updatedAt}, reused.",
+    "pairsWith": [
+      "get_aish_runner_management_overview",
+      "preview_aish_legacy_runner_migration",
+      "rollback_aish_legacy_runner_migration"
+    ],
+    "errors": [
+      {
+        "when": "Legacy migration requires confirmation, reason, and idempotency key.",
+        "fix": "Send confirmed: true (after the user confirmed), a reason of 8+ chars and a key of 8+ chars."
+      },
+      {
+        "when": "AISH legacy migration blocked: active-capacity-leases.",
+        "fix": "Wait until the runner finishes its job, then preview again."
+      },
+      {
+        "when": "AISH host is already associated with a runner account.",
+        "fix": "If you are retrying after a lost response, the first call succeeded: confirm in get_aish_runner_management_overview (legacy = false) and do not retry."
+      },
+      {
+        "when": "AISH host is not an unmigrated legacy host.",
+        "fix": "Host was migrated or removed meanwhile. Re-read the overview."
+      },
+      {
+        "when": "AISH host changed; refresh before continuing.",
+        "fix": "Re-run preview_aish_legacy_runner_migration and use its new expectedUpdatedAt."
+      },
+      {
+        "when": "Legacy migration idempotency key conflicts with another host.",
+        "fix": "Generate a new idempotency key."
+      },
+      {
+        "when": "Any preview error (not bound, lineage missing, permission)",
+        "fix": "Apply the fix listed for preview_aish_legacy_runner_migration."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Creates an active account grant 'migration-<migrationId>' and re-scopes the host's existing credentials to the account (they keep working).",
+        "verifiedFrom": "server.ts:21458-21463"
+      },
+      {
+        "text": "If the result was lost, migrationId = SHA-256 hex of '<accountId>:<hostId>:<idempotencyKey>'.",
+        "verifiedFrom": "server.ts:21416"
+      },
+      {
+        "text": "A retry after success fails with 'already associated' (the preview runs first) instead of returning reused = true.",
+        "verifiedFrom": "server.ts:21375"
+      },
+      {
+        "text": "Only available to API keys with full/custom profile.",
+        "verifiedFrom": "src/lib/mcpToolCatalog.ts:437"
+      }
+    ],
+    "verifiedFrom": "applyAishLegacyRunnerMigrationCommand, previewAishLegacyRunnerMigrationCommand"
+  },
+  {
+    "name": "apply_aish_runner_management_action",
+    "purpose": "Changes an account runner's lifecycle status (drain, suspend, reactivate or remove) after a preview, with explicit confirmation, a reason and optimistic concurrency.",
+    "useWhen": [
+      "The user asked to stop a runner from taking new work (drain)",
+      "The user asked to take a runner out of service (suspend)",
+      "The user asked to bring a drained or suspended runner back (reactivate)",
+      "The user asked to decommission a runner (remove)"
+    ],
+    "avoidWhen": [
+      "You have not run preview_aish_runner_management_action with allowed = true: run it first",
+      "The host is legacy: use preview_aish_legacy_runner_migration / apply_aish_legacy_runner_migration",
+      "You need to rotate a host credential: use CLI `lpm aish fleet rotate-credential` (owner decision)",
+      "You want to rename a runner: use CLI `lpm aish hosts rename`"
+    ],
+    "inputs": [
+      {
+        "param": "accountId",
+        "required": true,
+        "source": "same value used in preview_aish_runner_management_action",
+        "notes": "Runner account id."
+      },
+      {
+        "param": "hostId",
+        "required": true,
+        "source": "same value used in preview_aish_runner_management_action",
+        "notes": "Account host id."
+      },
+      {
+        "param": "action",
+        "required": true,
+        "source": "user",
+        "notes": "Enum: drain | suspend | reactivate | remove. Must be the action you previewed."
+      },
+      {
+        "param": "expectedUpdatedAt",
+        "required": true,
+        "source": "preview_aish_runner_management_action -> expectedUpdatedAt",
+        "notes": "Must equal the host's current updatedAt exactly."
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "Why the change is made; 8 to 1000 chars. Stored in the audit trail."
+      },
+      {
+        "param": "idempotencyKey",
+        "required": true,
+        "source": "agent-generated unique string",
+        "notes": "8 to 240 chars, e.g. 'runner-drain-<hostId>-<date>'. Reuse the same key only to retry the same request."
+      },
+      {
+        "param": "confirmed",
+        "required": true,
+        "source": "constant",
+        "notes": "Must be true. Set it only after the user explicitly confirmed this action on this runner."
+      }
+    ],
+    "preconditions": [
+      "preview_aish_runner_management_action returned allowed = true",
+      "Caller is the account owner or an account admin; the account is active",
+      "The user explicitly confirmed the action (and, for remove, the runner account owner agreed)",
+      "For suspend or remove: the host has no active capacity lease"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "idempotencyKey supported",
+    "returns": "host {id, status (new lifecycle status), updatedAt, displayName, accessPolicy, ...}, action, reused (true = an earlier call with the same key and payload already applied it).",
+    "pairsWith": [
+      "get_aish_runner_management_overview",
+      "preview_aish_runner_management_action"
+    ],
+    "errors": [
+      {
+        "when": "AISH runner management action requires explicit confirmation.",
+        "fix": "Ask the user to confirm, then send confirmed: true."
+      },
+      {
+        "when": "AISH runner management reason must contain at least 8 characters.",
+        "fix": "Write a real reason of 8+ characters."
+      },
+      {
+        "when": "AISH runner management idempotency key must contain at least 8 characters.",
+        "fix": "Generate a key of 8+ characters."
+      },
+      {
+        "when": "AISH runner action blocked: active-capacity-leases.",
+        "fix": "Drain first (drain is never blocked), wait until preview shows activeLeaseCount = 0, then preview and apply suspend/remove again."
+      },
+      {
+        "when": "AISH host changed; refresh before continuing.",
+        "fix": "If you are retrying after a timeout, first read get_aish_runner_management_overview: if administrativeStatus already equals the target status, the earlier call succeeded, stop. Otherwise re-run the preview and use its new expectedUpdatedAt."
+      },
+      {
+        "when": "AISH runner management idempotency key conflicts with another payload.",
+        "fix": "That key was used for a different action/reason. Generate a new key."
+      },
+      {
+        "when": "AISH host not found in this account. / permission or account errors",
+        "fix": "Same fixes as preview_aish_runner_management_action."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "remove is a logical removal: host status becomes revoked, all its agents and slots are suspended, and ALL its credentials and grants are revoked (history is kept).",
+        "verifiedFrom": "server.ts:21123-21130"
+      },
+      {
+        "text": "reactivate sets status online and clears the removal fields but does NOT restore revoked credentials or grants: a removed runner needs a new credential and grant before it can work again.",
+        "verifiedFrom": "server.ts:21124"
+      },
+      {
+        "text": "The apply re-runs the preview first, so a retry after a success usually fails with 'AISH host changed' instead of returning reused = true.",
+        "verifiedFrom": "server.ts:21091-21113"
+      },
+      {
+        "text": "drain/suspend are enforced by the fenced host worker protocol; local runners that call lease_aish_runner_job with this hostId are not stopped by the host status.",
+        "verifiedFrom": "server.ts:23542-23604"
+      },
+      {
+        "text": "Only available to API keys with full/custom profile.",
+        "verifiedFrom": "src/lib/mcpToolCatalog.ts:436"
+      }
+    ],
+    "verifiedFrom": "applyAishRunnerManagementActionCommand, previewAishRunnerManagementActionCommand, leaseAishHostRunnerJobCommand (status check), upsertAishRunnerSessionCommand"
+  },
+  {
+    "name": "create_aish_execution_session",
+    "purpose": "Creates (or idempotently reuses) a draft AISH execution session, the cockpit record that holds an objective, its project scope, the plan and an ordered event log for governed AI execution.",
+    "useWhen": [
+      "The user asked to run work through AISH runners (the Execution Cockpit) for one project or for several projects of one workspace",
+      "No existing session already covers this objective (check list_aish_execution_sessions first)"
+    ],
+    "avoidWhen": [
+      "A session for this objective already exists: use list_aish_execution_sessions and get_aish_execution_session",
+      "You need one standalone job, not a planned multi-step session: use create_aish_job",
+      "The work is done outside AISH (Claude Code, Codex, an editor): track it with the 'LPM-Activity: <issueId>' commit trailer instead"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id, or get_project -> workspaceId",
+        "notes": "All projects must belong to this workspace."
+      },
+      {
+        "param": "scopeType",
+        "required": true,
+        "source": "constant",
+        "notes": "Enum: project | workspace. Any other value is treated as project."
+      },
+      {
+        "param": "projectIds",
+        "required": true,
+        "source": "list_workspace_projects -> id (or list_projects -> id)",
+        "notes": "Array of ids. scopeType project: exactly 1. scopeType workspace: 1 or more. Duplicates removed, max 100. Order matters for idempotent reuse."
+      },
+      {
+        "param": "objective",
+        "required": true,
+        "source": "user",
+        "notes": "What the session must deliver; max 4000 chars. Do not put secrets in it."
+      },
+      {
+        "param": "idempotencyKey",
+        "required": true,
+        "source": "agent-generated unique string",
+        "notes": "8 to 240 chars. Reuse the same key (with identical objective/scope/projectIds) only to retry."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the workspace (workspace manager)",
+      "Every projectId exists and belongs to workspaceId",
+      "The user explicitly asked for AISH execution"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "idempotencyKey supported",
+    "returns": "session {id (= sessionId for every other cockpit tool), status 'draft', scope {type, workspaceId, projectIds}, objective, version, lastEventSequence (1), currentPlanHash (null), approvedPlanHash (null), createdAt}, reused.",
+    "pairsWith": [
+      "list_aish_execution_sessions",
+      "acquire_aish_coordinator_lease",
+      "put_aish_execution_plan",
+      "get_aish_execution_readiness",
+      "append_aish_execution_session_command",
+      "approve_aish_execution_plan",
+      "dispatch_aish_execution_plan"
+    ],
+    "errors": [
+      {
+        "when": "Workspace, objective, project scope, and idempotency key are required.",
+        "fix": "Send workspaceId, a non-empty objective, at least one projectId and a key of 8+ chars."
+      },
+      {
+        "when": "Project session requires exactly one project.",
+        "fix": "Send one projectId, or use scopeType 'workspace' for several projects."
+      },
+      {
+        "when": "You do not have permission to create this AISH execution session.",
+        "fix": "Caller is not a workspace manager. Stop and tell the user."
+      },
+      {
+        "when": "Project <id> is outside the session workspace.",
+        "fix": "Remove that project or use its own workspaceId."
+      },
+      {
+        "when": "AISH execution session idempotency key conflicts with another request.",
+        "fix": "The key was used with a different objective/scope/project list. Generate a new key."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish cockpit create --workspace <workspaceId> --scope <project|workspace> --projects \"<id; id>\" --objective <text> --idempotency-key <key> --json",
+    "gotchas": [
+      {
+        "text": "sessionId is derived from workspaceId + calling user + idempotencyKey, so the same key from another user creates a different session.",
+        "verifiedFrom": "server.ts:21626"
+      },
+      {
+        "text": "Sessions cannot be deleted; end one with append_aish_execution_session_command nextStatus 'canceled'.",
+        "verifiedFrom": "src/lib/aishExecutionCockpit.ts:140-151"
+      },
+      {
+        "text": "Creating a session spends nothing; execution still needs a plan, manager approval of the plan hash, owner funding and runners.",
+        "verifiedFrom": "server.ts:21612-21634"
+      },
+      {
+        "text": "Workflow jobs stop being leasable plan.authorization.timeoutMinutes after the session's createdAt, so create the session close to when work will run.",
+        "verifiedFrom": "src/server/aishDispatchWaves.ts:238-242"
+      },
+      {
+        "text": "Only available to API keys with full/custom profile.",
+        "verifiedFrom": "src/lib/mcpToolCatalog.ts:439"
+      }
+    ],
+    "verifiedFrom": "createAishExecutionSessionCommand, buildAishExecutionSessionResponse, assertAishWorkflowJobLease"
+  },
+  {
+    "name": "get_aish_execution_session",
+    "purpose": "Reads one AISH execution session: status, current plan, workflow progress, releases, open checkpoint, coordinator lease (without its nonce) and the events after a given sequence number.",
+    "useWhen": [
+      "You need the current status, currentPlanHash, pauseReason or activeCheckpointId before another cockpit call",
+      "You are polling for new events (pass afterSequence = previous cursor)",
+      "You need to see who holds the coordinator lease and when it expires"
+    ],
+    "avoidWhen": [
+      "You do not know the sessionId: use list_aish_execution_sessions",
+      "You need readiness facts before approval: use get_aish_execution_readiness",
+      "You need one job's details: use get_aish_job"
+    ],
+    "inputs": [
+      {
+        "param": "sessionId",
+        "required": true,
+        "source": "create_aish_execution_session -> session.id, or list_aish_execution_sessions -> items[].session.id",
+        "notes": "Session id."
+      },
+      {
+        "param": "afterSequence",
+        "required": false,
+        "source": "get_aish_execution_session -> cursor (from the previous call)",
+        "notes": "Integer; default 0 returns all visible events."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the session's workspace"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "session {id, status, objective, scope, currentPlanVersion, currentPlanHash, approvedPlanHash, pauseReason, activeCheckpointId, lastEventSequence}, workflow (node progress), canManage, releases[] (with canApprove), checkpoint, events[] {id, sequence, type, actorId, projectId, payload, createdAt}, cursor (next afterSequence), coordinatorLease {coordinatorId, fencingToken, status, leasedAt, expiresAt} (no leaseNonce), plan, nodeRuns[].",
+    "pairsWith": [
+      "list_aish_execution_sessions",
+      "acquire_aish_coordinator_lease",
+      "pause_aish_execution_session",
+      "resume_aish_execution_session",
+      "dispatch_aish_execution_plan"
+    ],
+    "errors": [
+      {
+        "when": "AISH execution session not found.",
+        "fix": "Wrong sessionId. Use list_aish_execution_sessions."
+      },
+      {
+        "when": "You do not have permission to access this AISH execution session.",
+        "fix": "Caller cannot read the workspace. Stop and tell the user."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish cockpit get --session <sessionId> [--after-sequence <n>] --json",
+    "gotchas": [
+      {
+        "text": "leaseNonce is never returned here; keep the one from acquire_aish_coordinator_lease.",
+        "verifiedFrom": "server.ts:21811"
+      },
+      {
+        "text": "Compare coordinatorLease.fencingToken with yours to know whether you are still the coordinator.",
+        "verifiedFrom": "src/lib/aishExecutionCockpit.ts:257-261"
+      },
+      {
+        "text": "Events, plan nodes and runs of projects you cannot read are hidden, and checkpoint is null if any project is hidden.",
+        "verifiedFrom": "server.ts:21774-21807"
+      }
+    ],
+    "verifiedFrom": "getAishExecutionSessionProjectionCommand, filterAishSessionEventsForProjection"
+  },
+  {
+    "name": "get_aish_runner_management_overview",
+    "purpose": "Lists the runners (hosts) of one AISH runner account with health, busy/idle state, usage time, permissions, capacity and last task, paginated and without secrets.",
+    "useWhen": [
+      "You need to know which runners of an account are online, stale, offline, busy or idle",
+      "You need a runner's hostId and its current updatedAt before preview_aish_runner_management_action or preview_aish_legacy_runner_migration",
+      "You need to find legacy project-scoped hosts to migrate (runners[].legacy = true)",
+      "The user asks how many hours runners worked in total or what a runner ran last"
+    ],
+    "avoidWhen": [
+      "You need execution time for a period grouped by workspace, project, runner or job: use get_aish_usage_report",
+      "You need the state of one job: use get_aish_job",
+      "You need the sessions/plans being executed: use list_aish_execution_sessions"
+    ],
+    "inputs": [
+      {
+        "param": "accountId",
+        "required": true,
+        "source": "user (no MCP tool lists runner accounts; the user can run CLI `lpm aish accounts list` or copy it from the AISH page in the web app)",
+        "notes": "Runner account id, max 160 chars."
+      },
+      {
+        "param": "includeRemoved",
+        "required": false,
+        "source": "constant",
+        "notes": "Default false: hides runners with administrativeStatus revoked or a removedAt date. Set true to audit removed runners."
+      },
+      {
+        "param": "includeLegacy",
+        "required": false,
+        "source": "constant",
+        "notes": "Default true (only an explicit false hides them): includes legacy project-scoped hosts found in workspaces bound to the account."
+      },
+      {
+        "param": "search",
+        "required": false,
+        "source": "user",
+        "notes": "Case-insensitive substring over displayName, hostname, id and capabilities. Max 160 chars."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "One value matched against administrativeStatus (pending|online|draining|offline|suspended|revoked), health (online|stale|offline|unknown) or workState (busy|idle). 'all' or empty = no filter."
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "get_aish_runner_management_overview -> pagination.nextCursor",
+        "notes": "Omit on the first page."
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "Page size, default 50, min 1, max 100."
+      }
+    ],
+    "preconditions": [
+      "The runner account exists",
+      "Caller is the account owner or an account admin (full view, canManage=true), OR can read at least one workspace actively bound to the account (read-only view, canManage=false, remoteAccess hidden)",
+      "Connection uses an LPM API key; this tool is not offered to OAuth connectors (ChatGPT/Claude)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "account, canManage (true = you may call preview/apply tools), generatedAt, totals {runners, online, busy, attention, accumulatedHours, legacy, unattributedJobCount}, runners[] {id (= hostId for other tools), legacy, displayName, hostname, administrativeStatus, health, workState, workerReadiness, lastHeartbeatAt, lastTask {id, title, status, projectId, completedAt}, usage, capacity {agents, slots, activeSlots, activeLeases}, capabilities, permissions, grants[], recentAudit[], updatedAt (use as expectedUpdatedAt), removedAt}, pagination {limit, hasMore, nextCursor}.",
+    "pairsWith": [
+      "preview_aish_runner_management_action",
+      "apply_aish_runner_management_action",
+      "preview_aish_legacy_runner_migration",
+      "apply_aish_legacy_runner_migration",
+      "get_aish_usage_report"
+    ],
+    "errors": [
+      {
+        "when": "AISH runner account not found.",
+        "fix": "The accountId is wrong. Ask the user for the correct runner account id."
+      },
+      {
+        "when": "You do not have permission to read this AISH runner account.",
+        "fix": "Caller is neither account owner/admin nor a reader of a bound workspace. Stop and tell the user; the account owner must grant access."
+      },
+      {
+        "when": "Invalid AISH runner management cursor.",
+        "fix": "Call again without cursor to restart from the first page."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish hosts usage --account <accountId> [--include-removed] --json",
+    "gotchas": [
+      {
+        "text": "totals count every runner that passes the filters, not only the current page; loop with pagination.nextCursor while hasMore is true.",
+        "verifiedFrom": "server.ts:20806-20833"
+      },
+      {
+        "text": "Health: online = heartbeat < 90 s, stale = 90 s to 5 min, offline = > 5 min or suspended/revoked, unknown = never sent a heartbeat.",
+        "verifiedFrom": "src/lib/aishRunnerManagement.ts:232-246"
+      },
+      {
+        "text": "Legacy hosts are searched only in the first 50 active bound workspaces.",
+        "verifiedFrom": "server.ts:20715"
+      },
+      {
+        "text": "The query is heavy (reads all leases and jobs of the account): do not poll it in a tight loop.",
+        "verifiedFrom": "server.ts:20701-20709"
+      }
+    ],
+    "verifiedFrom": "getAishRunnerManagementOverviewCommand, requireAishRunnerAccountReadAccess, deriveAishRunnerHealth"
+  },
+  {
+    "name": "lease_aish_runner_job",
+    "purpose": "Claims the oldest executable queued AISH job of a project for a local runner for 10 minutes and opens its one financial consumption attempt; returns the job or null.",
+    "useWhen": [
+      "You are a local runner process that will immediately execute the returned job and then call submit_aish_job_evidence before the lease expires"
+    ],
+    "avoidWhen": [
+      "You only want to see queued jobs: use list_aish_jobs or get_aish_job (leasing locks the job and its funding)",
+      "The machine is a registered remote host: use CLI `lpm aish host start` (fenced host protocol)",
+      "The job is a release/deploy job (recipe deploy-gated): use claim_aish_release",
+      "You cannot execute the job right now"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "Only jobs of this project are considered."
+      },
+      {
+        "param": "runnerId",
+        "required": true,
+        "source": "same runnerId used in upsert_aish_runner_session",
+        "notes": "Max 160 chars."
+      },
+      {
+        "param": "budgetVersion",
+        "required": true,
+        "source": "constant",
+        "notes": "Exactly 'aish-budget/1'. Declare it only if your executor enforces the job's cost cap."
+      },
+      {
+        "param": "consumptionLedgerVersion",
+        "required": true,
+        "source": "constant",
+        "notes": "Exactly 'aish-consumption/1'."
+      },
+      {
+        "param": "sessionId",
+        "required": false,
+        "source": "same sessionId used in upsert_aish_runner_session",
+        "notes": "Runner presence session (not a cockpit session)."
+      },
+      {
+        "param": "hostId",
+        "required": false,
+        "source": "get_aish_runner_management_overview -> runners[].id (legacy = false)",
+        "notes": "Same rules as upsert_aish_runner_session."
+      },
+      {
+        "param": "executionManifestVersion",
+        "required": false,
+        "source": "constant",
+        "notes": "'aish-execution/1'. Without it, jobs that have a repository path are skipped."
+      },
+      {
+        "param": "agentContextVersion",
+        "required": false,
+        "source": "constant",
+        "notes": "'aish-agent-context/1'. Without it, jobs with an agentBinding are skipped."
+      },
+      {
+        "param": "engineeringPolicyVersion",
+        "required": false,
+        "source": "constant",
+        "notes": "'aish-engineering-policy/1'. Without it, builder jobs are skipped."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the project",
+      "A job is queued (or leased with an expired lease) and its execution gate is open (approve_aish_job_execution, or dispatch_aish_execution_plan for cockpit jobs)",
+      "The job has a funded financial reservation (fund_aish_job, an owner-only decision) whose project budget is not paused and that has no earlier attempt",
+      "For cockpit workflow jobs: the session status is executing, the plan is approved and its timeoutMinutes window (counted from session creation) has not passed",
+      "The user started or approved running this runner"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "null when nothing is leasable; otherwise the job {id (= jobId), title, prompt, projectId, issueId, status 'leased', executionRecipeId, repository, agentBinding, lease {leaseId (= attemptId for submit_aish_job_evidence and record_aish_consumption), runnerId, sessionId, hostId, leasedAt, expiresAt}}.",
+    "pairsWith": [
+      "upsert_aish_runner_session",
+      "submit_aish_job_evidence",
+      "record_aish_consumption"
+    ],
+    "errors": [
+      {
+        "when": "Runner must declare aish-budget/1 cost-cap enforcement before leasing.",
+        "fix": "Send budgetVersion 'aish-budget/1' (only if your executor really enforces the cap)."
+      },
+      {
+        "when": "Upgrade the local runner: aish-consumption/1 attempt support is required before leasing.",
+        "fix": "Send consumptionLedgerVersion 'aish-consumption/1'."
+      },
+      {
+        "when": "Runner id is required.",
+        "fix": "Send runnerId."
+      },
+      {
+        "when": "Registered AISH host ... errors / project or account permission errors",
+        "fix": "Same fixes as upsert_aish_runner_session."
+      },
+      {
+        "when": "Unreconciled financial attempt prevents another execution; use a new job after reconciliation.",
+        "fix": "Do not retry this job. Tell the user; the job needs reconciliation and a new job."
+      },
+      {
+        "when": "Result is null",
+        "fix": "Nothing is leasable. Check list_aish_jobs/get_aish_job (status queued? execution gate open?), get_aish_budget (funded? paused?), and that you sent all version constants. Wait at least 10 s before polling again."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish runner start --project <projectId> --executor-command <command> --budget-contract aish-budget/1 [--host <hostId>] [--once] --json",
+    "gotchas": [
+      {
+        "text": "Each funded job allows exactly ONE attempt: once leased, if you never submit evidence the job cannot be leased again after the 10-minute lease expires (it needs reconciliation and a new job).",
+        "verifiedFrom": "server.ts:23587"
+      },
+      {
+        "text": "There is no lease renewal in this tool; submit evidence within 10 min. Jobs that need a version constant you did not send are skipped silently (null).",
+        "verifiedFrom": "server.ts:23594-23604"
+      },
+      {
+        "text": "Leasing does not check the host's draining/suspended status.",
+        "verifiedFrom": "server.ts:23542-23604"
+      },
+      {
+        "text": "Prefer the CLI, which leases, runs the executor and submits evidence in one loop.",
+        "verifiedFrom": "src/cli/lpm.ts:3769"
+      }
+    ],
+    "verifiedFrom": "leaseAishRunnerJobCommand, upsertAishRunnerSessionCommand, canLeaseAishManifestJob, isAishLeaseAvailable, readAishFundedJob, prepareAishFinancialClaim, assertAishWorkflowJobLease"
+  },
+  {
+    "name": "list_aish_execution_sessions",
+    "purpose": "Lists the AISH execution sessions of a workspace that the caller may see, newest activity first, with status, recommended next action, node counts and a web deep link.",
+    "useWhen": [
+      "Before creating a session, to check whether one already exists for the objective",
+      "The user asks what AISH work is in progress, waiting for approval, paused or failed",
+      "You need a sessionId"
+    ],
+    "avoidWhen": [
+      "You already have the sessionId and need events, plan or coordinator lease: use get_aish_execution_session",
+      "You need standalone jobs of a project: use list_aish_jobs"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Workspace to list."
+      },
+      {
+        "param": "projectIds",
+        "required": false,
+        "source": "list_workspace_projects -> id",
+        "notes": "Keeps sessions whose scope includes ANY of these projects."
+      },
+      {
+        "param": "statuses",
+        "required": false,
+        "source": "constant",
+        "notes": "Array of: draft, clarification-required, ready, awaiting-approval, approved, executing, paused, completed, failed, canceled. Unknown values are silently ignored."
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "list_aish_execution_sessions -> nextCursor",
+        "notes": "Omit on the first page."
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "Default 20, min 1, max 50."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the workspace",
+      "Sessions that include any project the caller cannot read are hidden"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "items[] {session {id, status, objective, scope, currentPlanVersion, currentPlanHash, approvedPlanHash, pauseReason, activeCheckpointId, updatedAt}, lastEventAt, lastEventType, recommendedAction (continue-plan | answer-clarification | request-approval | review-and-approve | select-runner-and-start | view-progress | resume-or-cancel | review-and-retry | view-evidence | view-history), nodeCounts {total, pending, running, completed, failed}, metrics {recordedDurationMs, evidenceCount}, targeting {mode, hostIds}, deepLink}, canCreate, nextCursor, totalEstimate.",
+    "pairsWith": [
+      "get_aish_execution_session",
+      "create_aish_execution_session"
+    ],
+    "errors": [
+      {
+        "when": "You do not have permission to list AISH execution sessions in this workspace.",
+        "fix": "Wrong workspaceId or caller cannot read it. Check list_workspaces."
+      },
+      {
+        "when": "Invalid AISH continuity cursor.",
+        "fix": "Call again without cursor."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command list_aish_execution_sessions --file <payload.json> --transport mcp --json",
+    "gotchas": [
+      {
+        "text": "deepLink is a web path ('/aish?tab=cockpit&session=<id>'); prefix it with https://lpm.rocks when giving it to a person.",
+        "verifiedFrom": "server.ts:21917"
+      },
+      {
+        "text": "canCreate tells whether create_aish_execution_session will be allowed.",
+        "verifiedFrom": "server.ts:21922"
+      },
+      {
+        "text": "There is no dedicated `lpm aish cockpit list` subcommand.",
+        "verifiedFrom": "src/cli/lpm.ts:484-494"
+      }
+    ],
+    "verifiedFrom": "listAishExecutionSessionsCommand, recommendAishContinuityAction"
+  },
+  {
+    "name": "pause_aish_execution_session",
+    "purpose": "Pauses an AISH execution session under coordinator fencing so no new workflow jobs start; reason checkpoint or conflict opens a durable checkpoint instead.",
+    "useWhen": [
+      "The user asks to pause running AISH work",
+      "Something looks wrong during execution and the user agrees to stop new jobs"
+    ],
+    "avoidWhen": [
+      "Stopping for good: use append_aish_execution_session_command with nextStatus 'canceled'",
+      "A human must decide on a conflict or checkpoint with evidence: use request_aish_execution_checkpoint",
+      "Continuing after a pause: use resume_aish_execution_session"
+    ],
+    "inputs": [
+      {
+        "param": "sessionId",
+        "required": true,
+        "source": "list_aish_execution_sessions -> items[].session.id",
+        "notes": "Session id."
+      },
+      {
+        "param": "coordinatorId",
+        "required": true,
+        "source": "acquire_aish_coordinator_lease -> coordinatorId",
+        "notes": "Must match the active lease."
+      },
+      {
+        "param": "leaseNonce",
+        "required": true,
+        "source": "acquire_aish_coordinator_lease -> leaseNonce",
+        "notes": "Latest nonce."
+      },
+      {
+        "param": "fencingToken",
+        "required": true,
+        "source": "acquire_aish_coordinator_lease -> fencingToken",
+        "notes": "Integer >= 1, current token."
+      },
+      {
+        "param": "commandId",
+        "required": true,
+        "source": "agent-generated unique string",
+        "notes": "8 to 240 chars, unique per pause. Reuse only to retry the same pause."
+      },
+      {
+        "param": "reason",
+        "required": false,
+        "source": "constant",
+        "notes": "Enum: operator | checkpoint | conflict | budget | timeout. Omit it (defaults to operator). checkpoint/conflict redirect to request_aish_execution_checkpoint. NEVER send budget or timeout yourself."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the session's workspace",
+      "You hold the current coordinator lease (acquire_aish_coordinator_lease)",
+      "Session status is approved, executing, failed or already paused",
+      "The user asked for or agreed to the pause"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "keyed by commandId",
+    "returns": "session {status 'paused', pauseReason, lastEventSequence}, event {id, sequence, type 'session-paused'}, reused. With reason checkpoint/conflict: the request_aish_execution_checkpoint result instead.",
+    "pairsWith": [
+      "get_aish_execution_session",
+      "acquire_aish_coordinator_lease",
+      "resume_aish_execution_session"
+    ],
+    "errors": [
+      {
+        "when": "Invalid AISH pause reason.",
+        "fix": "Omit reason or use one of the enum values."
+      },
+      {
+        "when": "AISH pause command requires coordinatorId, leaseNonce and fencingToken.",
+        "fix": "Call acquire_aish_coordinator_lease and send all three values."
+      },
+      {
+        "when": "AISH coordinator lease not found / is not active / identity mismatch / fencing token is stale.",
+        "fix": "Re-acquire the lease (same coordinatorId, new idempotencyKey) and retry with the new nonce and token."
+      },
+      {
+        "when": "Invalid AISH execution session transition: <status> -> paused.",
+        "fix": "Only approved, executing or failed sessions can be paused. A draft/ready session needs no pause."
+      },
+      {
+        "when": "Execution limit cannot be replaced by an operator pause.",
+        "fix": "It is already paused by a budget/timeout limit. Nothing to do; tell the user."
+      },
+      {
+        "when": "AISH session command id and type are required.",
+        "fix": "Use a commandId of 8+ chars."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish cockpit pause --session <sessionId> --coordinator <id> --lease-nonce <nonce> --fencing-token <n> --command-id <id> --json",
+    "gotchas": [
+      {
+        "text": "A pause with reason budget or timeout can never be resumed (a new reviewed session is required), so never send those values.",
+        "verifiedFrom": "server.ts:21727"
+      },
+      {
+        "text": "Pausing does not kill a job already running on a runner; it only stops new workflow jobs from being leased.",
+        "verifiedFrom": "src/server/aishDispatchWaves.ts:236-242"
+      },
+      {
+        "text": "The pause sends in-app notifications to the session creator and project owners.",
+        "verifiedFrom": "server.ts:21698-21708"
+      }
+    ],
+    "verifiedFrom": "pauseAishExecutionSessionCommand, appendAishExecutionSessionCommand, assertAishWorkflowJobLease"
+  },
+  {
+    "name": "preview_aish_legacy_runner_migration",
+    "purpose": "Dry-runs moving a legacy project-scoped runner host into a runner account, showing the source scope, the resulting account scope and any blockers, without changing anything.",
+    "useWhen": [
+      "get_aish_runner_management_overview shows a runner with legacy = true that the user wants managed by the account",
+      "Always before apply_aish_legacy_runner_migration"
+    ],
+    "avoidWhen": [
+      "The host already belongs to an account (legacy = false): use preview_aish_runner_management_action for lifecycle changes",
+      "You only want to list hosts: use get_aish_runner_management_overview"
+    ],
+    "inputs": [
+      {
+        "param": "accountId",
+        "required": true,
+        "source": "user, or get_aish_runner_management_overview -> account.id",
+        "notes": "Target runner account id."
+      },
+      {
+        "param": "hostId",
+        "required": true,
+        "source": "get_aish_runner_management_overview -> runners[].id where legacy = true",
+        "notes": "Legacy host id (host without accountId)."
+      },
+      {
+        "param": "expectedUpdatedAt",
+        "required": false,
+        "source": "get_aish_runner_management_overview -> runners[].updatedAt",
+        "notes": "ISO timestamp; if given it must match the host's current updatedAt."
+      }
+    ],
+    "preconditions": [
+      "Caller is the owner or an admin of the target account, and the account is active",
+      "Host exists, has no accountId, and has both workspaceId and projectId",
+      "The account is bound (binding not revoked) to the host's workspace (CLI `lpm aish accounts bind-workspace --account <id> --workspace <id>`)",
+      "Caller can read the host's project"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "allowed, blockingReasons (['active-capacity-leases'] when busy), expectedUpdatedAt (pass to apply), source {workspaceId, projectId, scope}, target {accountId, scope: 'account', allowedWorkspaceIds, allowedProjectIds}, impact {activeLeaseCount, credentialCount, historyPreserved, rollbackSupported}.",
+    "pairsWith": [
+      "get_aish_runner_management_overview",
+      "apply_aish_legacy_runner_migration"
+    ],
+    "errors": [
+      {
+        "when": "AISH legacy host not found.",
+        "fix": "Wrong hostId. Re-read get_aish_runner_management_overview."
+      },
+      {
+        "when": "AISH host is already associated with a runner account.",
+        "fix": "The host is already migrated. Use preview_aish_runner_management_action for lifecycle changes."
+      },
+      {
+        "when": "AISH host changed; refresh before continuing.",
+        "fix": "Re-read runners[].updatedAt and call again."
+      },
+      {
+        "when": "AISH legacy host is missing deterministic project/workspace lineage.",
+        "fix": "This host cannot be migrated automatically. Stop and report it to the user."
+      },
+      {
+        "when": "AISH runner account is not bound to the legacy host workspace.",
+        "fix": "The account owner must bind the workspace first (CLI `lpm aish accounts bind-workspace`). Ask the user; do not do it on your own."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Caller cannot read the host's project. Stop and tell the user."
+      },
+      {
+        "when": "AISH runner account not found / is not active / You do not have permission to manage this AISH runner account.",
+        "fix": "Check accountId; only the account owner or admins can migrate."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "The migration keeps the same reach: the new account policy allows only the host's original workspace and project and sets requiresTargeting = true.",
+        "verifiedFrom": "server.ts:21395"
+      },
+      {
+        "text": "Active leases block it; wait until the runner is idle.",
+        "verifiedFrom": "server.ts:21387-21393"
+      }
+    ],
+    "verifiedFrom": "previewAishLegacyRunnerMigrationCommand, isAishRunnerAccountBoundToWorkspace, requireAishRunnerAccountAdmin"
+  },
+  {
+    "name": "preview_aish_runner_management_action",
+    "purpose": "Dry-runs a lifecycle action (drain, suspend, reactivate, remove) on an account runner and reports whether it is allowed and what it would affect, without changing anything.",
+    "useWhen": [
+      "Always before apply_aish_runner_management_action",
+      "You need to know whether active leases block suspend or remove",
+      "You need the runner's current expectedUpdatedAt"
+    ],
+    "avoidWhen": [
+      "The host is legacy (runners[].legacy = true, no account): use preview_aish_legacy_runner_migration first",
+      "You only want to see runner status: use get_aish_runner_management_overview",
+      "You want to rename a runner: use CLI `lpm aish hosts rename --account <id> --host <id> --display-name <name> --dry-run`"
+    ],
+    "inputs": [
+      {
+        "param": "accountId",
+        "required": true,
+        "source": "user, or get_aish_runner_management_overview -> account.id",
+        "notes": "Runner account id."
+      },
+      {
+        "param": "hostId",
+        "required": true,
+        "source": "get_aish_runner_management_overview -> runners[].id (only runners with legacy = false)",
+        "notes": "Host must belong to this account."
+      },
+      {
+        "param": "action",
+        "required": true,
+        "source": "user",
+        "notes": "Enum: drain (stop new work, current job may finish) | suspend (block all work) | reactivate (back to online) | remove (logical removal, revokes credentials and grants)."
+      },
+      {
+        "param": "expectedUpdatedAt",
+        "required": false,
+        "source": "get_aish_runner_management_overview -> runners[].updatedAt",
+        "notes": "ISO timestamp. If given and the host changed since, the call fails."
+      }
+    ],
+    "preconditions": [
+      "Runner account exists and its status is active",
+      "Caller is the account owner or an account admin (overview canManage = true)",
+      "Host belongs to the account (not a legacy host)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "allowed (boolean), blockingReasons (e.g. ['active-capacity-leases']), currentStatus, targetStatus (drain -> draining, suspend -> suspended, reactivate -> online, remove -> revoked), expectedUpdatedAt (pass it to apply), impact {activeLeaseCount, agentCount, slotCount, activeCredentialCount, activeGrantCount, logicalRemoval, historyPreserved}.",
+    "pairsWith": [
+      "get_aish_runner_management_overview",
+      "apply_aish_runner_management_action"
+    ],
+    "errors": [
+      {
+        "when": "Unsupported AISH runner management action.",
+        "fix": "Use exactly one of: drain, suspend, reactivate, remove."
+      },
+      {
+        "when": "AISH runner account not found. / AISH runner account is not active.",
+        "fix": "Check the accountId with the user; an inactive account cannot be managed."
+      },
+      {
+        "when": "You do not have permission to manage this AISH runner account.",
+        "fix": "Only the account owner or admins can manage runners. Stop and tell the user."
+      },
+      {
+        "when": "AISH host not found in this account.",
+        "fix": "Wrong hostId, or the host is legacy. Re-read get_aish_runner_management_overview; for legacy hosts migrate first."
+      },
+      {
+        "when": "AISH host changed; refresh before continuing.",
+        "fix": "Re-read get_aish_runner_management_overview and use the new runners[].updatedAt."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Only suspend and remove are blocked by active leases; drain is never blocked.",
+        "verifiedFrom": "server.ts:21049-21059"
+      },
+      {
+        "text": "To take a busy runner down: drain, wait until impact.activeLeaseCount = 0 (a lease lasts at most 10 min unless renewed by the host), then suspend or remove.",
+        "verifiedFrom": "server.ts:21049-21061"
+      },
+      {
+        "text": "The preview does not check the current status (e.g. reactivating an already online runner shows allowed = true).",
+        "verifiedFrom": "server.ts:21050-21058"
+      }
+    ],
+    "verifiedFrom": "previewAishRunnerManagementActionCommand, requireAishRunnerAccountAdmin, aishRunnerActionTargetStatus"
+  },
+  {
+    "name": "resume_aish_execution_session",
+    "purpose": "Moves a paused (or approved or failed) AISH execution session back to executing under coordinator fencing.",
+    "useWhen": [
+      "The user asks to continue a session paused by an operator",
+      "A manager resolved the session's checkpoint with action resume"
+    ],
+    "avoidWhen": [
+      "pauseReason is budget or timeout: resume is refused; the owner must review a new session (budgets are owner decisions)",
+      "An open checkpoint is not resolved: a manager must use resolve_aish_execution_checkpoint (agents cannot decide)",
+      "You need new jobs to start: after resuming call dispatch_aish_execution_plan",
+      "Failed nodes must run again: use retry_aish_execution_plan"
+    ],
+    "inputs": [
+      {
+        "param": "sessionId",
+        "required": true,
+        "source": "list_aish_execution_sessions -> items[].session.id",
+        "notes": "Session id."
+      },
+      {
+        "param": "coordinatorId",
+        "required": true,
+        "source": "acquire_aish_coordinator_lease -> coordinatorId",
+        "notes": "Must match the active lease."
+      },
+      {
+        "param": "leaseNonce",
+        "required": true,
+        "source": "acquire_aish_coordinator_lease -> leaseNonce",
+        "notes": "Latest nonce."
+      },
+      {
+        "param": "fencingToken",
+        "required": true,
+        "source": "acquire_aish_coordinator_lease -> fencingToken",
+        "notes": "Integer >= 1, current token."
+      },
+      {
+        "param": "commandId",
+        "required": true,
+        "source": "agent-generated unique string",
+        "notes": "8 to 240 chars, unique per resume. Reuse only to retry the same resume."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the session's workspace and holds the current coordinator lease",
+      "Session status is paused, approved or failed",
+      "approvedPlanHash equals currentPlanHash (the current plan is approved)",
+      "Any activeCheckpointId is resolved with action resume",
+      "pauseReason is not budget or timeout",
+      "The user asked for or agreed to the resume"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "keyed by commandId",
+    "returns": "session {status 'executing', pauseReason null, activeCheckpointId null, lastEventSequence}, event {id, sequence, type 'session-resumed'}, reused.",
+    "pairsWith": [
+      "get_aish_execution_session",
+      "acquire_aish_coordinator_lease",
+      "dispatch_aish_execution_plan"
+    ],
+    "errors": [
+      {
+        "when": "AISH resume command requires coordinatorId, leaseNonce and fencingToken.",
+        "fix": "Call acquire_aish_coordinator_lease and send all three values."
+      },
+      {
+        "when": "AISH coordinator lease not found / is not active / identity mismatch / fencing token is stale.",
+        "fix": "Re-acquire the lease (same coordinatorId, new idempotencyKey) and retry with the new nonce and token."
+      },
+      {
+        "when": "AISH execution requires a current approved plan.",
+        "fix": "The plan changed after approval. A manager must approve the current plan hash (approve_aish_execution_plan) first."
+      },
+      {
+        "when": "A recorded checkpoint decision is required before resuming.",
+        "fix": "Ask a manager to resolve the checkpoint with resolve_aish_execution_checkpoint (action resume)."
+      },
+      {
+        "when": "The execution limit requires a newly reviewed session; resuming cannot extend its authorization.",
+        "fix": "Stop. Tell the user the budget/timeout limit was reached; the owner decides on a new session."
+      },
+      {
+        "when": "Invalid AISH execution session transition: <status> -> executing.",
+        "fix": "Only paused, approved or failed sessions can be resumed."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish cockpit resume --session <sessionId> --coordinator <id> --lease-nonce <nonce> --fencing-token <n> --command-id <id> --json",
+    "gotchas": [
+      {
+        "text": "Resume only changes the status; it does not create jobs.",
+        "verifiedFrom": "server.ts:21720-21733"
+      },
+      {
+        "text": "Call dispatch_aish_execution_plan with session.currentPlanHash to start dependency-ready nodes.",
+        "verifiedFrom": "src/server/aishDispatchWaves.ts:93-97"
+      },
+      {
+        "text": "Workflow jobs stop being leasable once plan.authorization.timeoutMinutes have passed since the session was created, even while executing.",
+        "verifiedFrom": "src/server/aishDispatchWaves.ts:238-242"
+      }
+    ],
+    "verifiedFrom": "resumeAishExecutionSessionCommand, appendAishExecutionSessionCommand, assertAishWorkflowJobLease"
+  },
+  {
+    "name": "rollback_aish_legacy_runner_migration",
+    "purpose": "Undoes an applied legacy runner migration: restores the host's original project scope and credentials scope and revokes the grant the migration created.",
+    "useWhen": [
+      "The user asks to undo a legacy runner migration (for example the runner stopped receiving work after migrating)"
+    ],
+    "avoidWhen": [
+      "You want to stop or remove the runner instead: use preview_aish_runner_management_action / apply_aish_runner_management_action",
+      "The migration was never applied or is already rolled back (overview shows legacy = true): nothing to do"
+    ],
+    "inputs": [
+      {
+        "param": "accountId",
+        "required": true,
+        "source": "same accountId used in apply_aish_legacy_runner_migration",
+        "notes": "Runner account id."
+      },
+      {
+        "param": "migrationId",
+        "required": true,
+        "source": "apply_aish_legacy_runner_migration -> migrationId",
+        "notes": "64-char hex. If lost: SHA-256 hex of '<accountId>:<hostId>:<idempotencyKey>' used on apply."
+      },
+      {
+        "param": "expectedUpdatedAt",
+        "required": true,
+        "source": "get_aish_runner_management_overview -> runners[].updatedAt of that host (read it right before the call)",
+        "notes": "Must equal the host's current updatedAt."
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8 to 1000 chars."
+      },
+      {
+        "param": "confirmed",
+        "required": true,
+        "source": "constant",
+        "notes": "Must be true, only after the user confirmed."
+      }
+    ],
+    "preconditions": [
+      "Caller is the owner or an admin of the account, and the account is active",
+      "The migration record exists for this account with status applied",
+      "The host still belongs to the account and still carries this migrationId",
+      "No active capacity lease on the host",
+      "The user explicitly confirmed the rollback"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "migrationId, status 'rolled-back', host {id, accountId (null again), workspaceId, projectId, accessPolicy, updatedAt}.",
+    "pairsWith": [
+      "get_aish_runner_management_overview"
+    ],
+    "errors": [
+      {
+        "when": "Legacy migration rollback requires confirmation and reason.",
+        "fix": "Send confirmed: true (after the user confirmed) and a reason of 8+ chars."
+      },
+      {
+        "when": "Applied AISH legacy migration not found.",
+        "fix": "Wrong migrationId/accountId, or it was already rolled back. Check the overview: legacy = true means the rollback is already done. Do not retry."
+      },
+      {
+        "when": "Applied AISH legacy migration changed; rollback refused.",
+        "fix": "Someone changed the migration meanwhile. Re-read the overview and ask the user."
+      },
+      {
+        "when": "AISH migrated host lineage changed; rollback refused.",
+        "fix": "The host was moved or migrated again. Automatic rollback is impossible; stop and report to the user."
+      },
+      {
+        "when": "AISH migrated host changed; refresh before rollback.",
+        "fix": "Re-read runners[].updatedAt. If the host was changed on purpose after the migration (rename, lifecycle action), confirm with the user before retrying with the new value."
+      },
+      {
+        "when": "AISH legacy migration rollback blocked: active-capacity-leases.",
+        "fix": "Wait until the runner is idle (or drain it first), then retry."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "No idempotency key: a second call after success fails with 'Applied AISH legacy migration not found.'.",
+        "verifiedFrom": "server.ts:21485"
+      },
+      {
+        "text": "The migration record and audit history are kept (status rolled-back); the host becomes a legacy project host again.",
+        "verifiedFrom": "server.ts:21502-21504"
+      },
+      {
+        "text": "Only available to API keys with full/custom profile.",
+        "verifiedFrom": "src/lib/mcpToolCatalog.ts:438"
+      }
+    ],
+    "verifiedFrom": "rollbackAishLegacyRunnerMigrationCommand"
+  },
+  {
+    "name": "upsert_aish_runner_session",
+    "purpose": "Records a local AISH runner's presence for a project (start, heartbeat or end) so it appears online and its runtime is attributed.",
+    "useWhen": [
+      "You are acting as a local AISH runner process: send event 'start' when you begin, 'heartbeat' about every 30 s, 'end' when you stop"
+    ],
+    "avoidWhen": [
+      "You want to take work: lease_aish_runner_job already sends a heartbeat",
+      "The machine is a registered remote host: run CLI `lpm aish host start` (fenced host-credential protocol), not this tool",
+      "You want to see runner health: use get_aish_runner_management_overview"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "Project the runner works for."
+      },
+      {
+        "param": "runnerId",
+        "required": true,
+        "source": "agent-generated stable id",
+        "notes": "Max 160 chars, unique per runner, e.g. '<hostname>:<pid>'. Same value later in lease_aish_runner_job."
+      },
+      {
+        "param": "sessionId",
+        "required": false,
+        "source": "agent-generated UUID, one per runner run",
+        "notes": "Defaults to runnerId. Must keep the same runnerId, projectId and hostId for its whole life."
+      },
+      {
+        "param": "hostId",
+        "required": false,
+        "source": "get_aish_runner_management_overview -> runners[].id (legacy = false)",
+        "notes": "Only for a host registered in a runner account; legacy hosts are rejected."
+      },
+      {
+        "param": "event",
+        "required": false,
+        "source": "constant",
+        "notes": "Enum: start | heartbeat | end. Any other value counts as start."
+      },
+      {
+        "param": "capabilities",
+        "required": false,
+        "source": "constant",
+        "notes": "Array of strings, max 20, e.g. ['local-command']."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the project",
+      "If hostId is sent: the host belongs to a runner account, the caller is that account's owner/admin, the account is active, and the host's scope allows this project (project-scoped host = same project; account host = account bound to the project's workspace)"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "id (runnerId), sessionId, hostId, event.",
+    "pairsWith": [
+      "lease_aish_runner_job",
+      "submit_aish_job_evidence"
+    ],
+    "errors": [
+      {
+        "when": "Runner id is required.",
+        "fix": "Send a non-empty runnerId."
+      },
+      {
+        "when": "Registered AISH host not found for local runner session.",
+        "fix": "hostId is wrong or a legacy host. Omit hostId, or migrate the host first."
+      },
+      {
+        "when": "Registered AISH host cannot execute this project.",
+        "fix": "The host is scoped to another project. Use the right project or omit hostId."
+      },
+      {
+        "when": "Registered AISH host account is not bound to this workspace.",
+        "fix": "The account owner must bind the workspace; ask the user."
+      },
+      {
+        "when": "AISH runner session id conflicts with another identity binding.",
+        "fix": "Generate a new sessionId (UUID) for this runner run."
+      },
+      {
+        "when": "You do not have permission to manage this project / ...this AISH runner account.",
+        "fix": "Caller lacks manage rights. Stop and tell the user."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish runner start --project <projectId> --executor-command <command> --budget-contract aish-budget/1 [--runner-id <id>] [--host <hostId>] (sends start/heartbeat/end automatically); single call: lpm aish command upsert_aish_runner_session --file <payload.json> --transport mcp --json",
+    "gotchas": [
+      {
+        "text": "The runner record is keyed by runnerId alone: reusing a runnerId in another project overwrites its project binding, so keep runnerIds unique.",
+        "verifiedFrom": "server.ts:23500-23501"
+      },
+      {
+        "text": "Always send event 'end' when stopping, otherwise the runner shows as stale then offline.",
+        "verifiedFrom": "server.ts:23532-23535"
+      },
+      {
+        "text": "This tool does not check the host's lifecycle status (draining/suspended).",
+        "verifiedFrom": "server.ts:23487-23500"
+      }
+    ],
+    "verifiedFrom": "upsertAishRunnerSessionCommand, handleAishRunnerStart (CLI)"
+  }
+]

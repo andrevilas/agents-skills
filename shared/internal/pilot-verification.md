@@ -1,0 +1,60 @@
+# Pilot report verification (maintainers)
+Load when: you verify, classify or record a pilot or tester report about LPM
+Applies to: lpm-pilot-feedback    Source: owner's standing rules for the pilot monitor; lpm `src/server/oauthGrantService.ts`, `src/server/oauthToolPolicy.ts`, `server.ts` (`[mcp] oauth tool denied`), `CLAUDE.md`
+Owner skill: lpm-pilot-feedback
+
+## Summary
+- Verify read-only: main-checkout code, Cloud Run request logs, Firestore reads, LPM MCP reads. Edit nothing, deploy nothing.
+- No AI calls or code searches on the reporter's workspace: never `answer_*`, `search_*_code`, `analyze_*`, `explain_roadmap_item_technical_impact` there.
+- `get_mcp_connection_info` describes only YOUR connection. Verify the reporter's OAuth in request logs and in the reporter's active `oauth_grants` doc.
+- Register only confirmed LPM defects, once, in the pilot milestone; comment on a duplicate instead of creating one.
+- Record every processed message in the processed-message state file. Never reply to the pilot.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| pilot | Rafael Barbosa (XporY), tests LPM through a ChatGPT connector (successive installs "LPM 0N") | reports arrive in the WhatsApp group "LPM", sometimes posted by an assistant account on his behalf |
+| reporter's assistant | sometimes answers an older message | cite the exact time of the message you verified |
+| pilot milestone | `PILOTO-XPY` (`TFiJJ74iavyZ0Qsw5FWi`) in project `kegAelNDDEA78rzIOWoR`; titles `PILOTO-XPY — <symptom>` | default target unless the owner names another milestone |
+| managed workspace | "Plataforma XporY" (`jgUXPDxxCGDZ4u5wHmbQ`): white label, SSO, agents, offers | its demands go there through `lpm-plan-work`, never as lpm repo work |
+| pilot AI budget | 1M tokens/day in the managed workspace | one AI call by the monitor can break the pilot's own tests |
+| `/authorize`, `/api/oauth/consent` on lpm.rocks | a real (re)authorization happened | none since the install → the connector never re-ran OAuth |
+| only `/token` requests (UA `openai-connectors-oauth`) | ChatGPT refreshed the old grant | disconnect/connect: a connection issue, not a defect |
+| `[mcp] oauth tool denied` log line | `{method, tool, reason, workspaceAccess, field?, problem?}` per refusal | `reason` says which rule fired |
+| `oauth_grants` doc | `userId`, `clientId`, `scopes`, `workspaceAccess` (`single`/`all`), `workspaceId`, `issuedAt`, `expiresAt` (30 days), `revokedAt` (null = active) | the active grant shows the scopes the pilot really has |
+| reporter's userId | the pilot's LPM user id | from the owner or the managed workspace's `list_workspace_members`; never guessed |
+| request-log query | `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="little-project-manager" AND httpRequest.requestUrl:"/authorize"' --project=gen-lang-client-0962999154 --freshness=2d --format='value(timestamp,httpRequest.requestUrl,httpRequest.userAgent)'` | run it again with `/api/oauth/consent`; replace the URL filter with the free-text term `"oauth tool denied"` for refusals |
+| Firestore reads | Admin SDK with gcloud application-default credentials, from a script outside the repository | read only; never write, never print tokens |
+| pilot notice | only after the fix is promoted and smoke-tested, in the pilot pattern | sent by the owner's main session; the monitor must never reply to the pilot |
+
+| Class (state-file value) | Do |
+|---|---|
+| product defect (`product-defect`) | confirmed in code or logs → dedupe, then register |
+| managed-workspace demand (`managed-workspace-demand`) | register in the managed workspace through `lpm-plan-work` |
+| connection / authorization (`connection-authorization`) | procedure for the reporter in the owner report; no activity |
+| data (`data`), expected behaviour (`expected-behaviour`) | explanation for the owner |
+| passed test (`passed-test`) | record it |
+| unverified (`unverified`) | record it; re-check on the next run |
+| owner decision (`owner-decision`) | decision request to the owner |
+
+### State file
+Path set by the owner; default `${XDG_STATE_HOME:-~/.local/state}/lpm/pilot-feedback-state.json`, on the machine that runs the monitor (not a session scratchpad).
+```text
+{"processed": [{"messageRef": "<source message id>", "receivedAt": "<ISO>", "class": "<class value>",
+  "activityId": "<issueId or null>", "commentId": "<commentId or null>", "processedAt": "<ISO>"}]}
+```
+
+## Rules
+1. Read the state file first; a missing file → create `{"processed": []}`. A messageRef already present → skip it.
+2. Append one record after each item (write a temp file, then rename), so a re-run is idempotent.
+3. Dedupe: `list_issues`(pilot projectId, milestoneId) → same symptom open → `create_comment` with idempotencyKey `pilot-<messageRef>`.
+4. Register with repro steps, the report time and the evidence; evidence never includes tokens or personal data beyond the report.
+5. Confirmed Advisor failure → golden-set fixture through `lpm-release-product` (`advisor-golden-set.md`).
+6. Never reply in the group, edit code or deploy. Report to the owner in the pilot pattern.
+
+## Examples
+```text
+example: "o conector não mostra create_comment" -> logs: no /authorize since the install
+-> class connection-authorization -> owner report: remove the connector, reinstall, tick
+   "Gestão de atividades dos projetos" -> state file record with activityId null
+```

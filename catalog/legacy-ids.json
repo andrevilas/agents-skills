@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "source": "design §6.1-§6.3 and §5.8 (--adopt-legacy)",
+  "routerRow": 37,
+  "routeText": "Old skill name `{id}` -> load `{primary}` (one release only).",
+  "transition": "Router rows for old names ship for one release only (§6.2, §6.6 step 7).",
+  "adoptLegacy": {
+    "shapes": [
+      "a directory whose SKILL.md frontmatter `name` equals the legacy id",
+      "a directory holding manifest.json and PLAYBOOK.md"
+    ],
+    "neverTouch": [
+      ".system/",
+      "synced/"
+    ]
+  },
+  "legacy": [
+    {
+      "id": "access-and-credentials-admin",
+      "primary": "lpm-access",
+      "skills": [
+        "lpm-access",
+        "lpm-start",
+        "lpm-ai-cost"
+      ],
+      "replacedInPlace": false,
+      "note": "Boundary with AISH host credentials -> lpm-aish-runners."
+    },
+    {
+      "id": "aish-governed-development-operator",
+      "primary": "lpm-aish-jobs",
+      "skills": [
+        "lpm-aish-jobs",
+        "lpm-aish-delivery",
+        "lpm-aish-runners",
+        "lpm-ai-cost"
+      ],
+      "replacedInPlace": false,
+      "note": "Budgets -> lpm-ai-cost."
+    },
+    {
+      "id": "analytics-bridge-operator",
+      "primary": "lpm-integrations",
+      "skills": [
+        "lpm-integrations"
+      ],
+      "replacedInPlace": false,
+      "note": ""
+    },
+    {
+      "id": "dependency-resolution-operator",
+      "primary": "lpm-unblock-work",
+      "skills": [
+        "lpm-unblock-work"
+      ],
+      "replacedInPlace": false,
+      "note": ""
+    },
+    {
+      "id": "governance-decision-operator",
+      "primary": "lpm-governance-decisions",
+      "skills": [
+        "lpm-governance-decisions"
+      ],
+      "replacedInPlace": false,
+      "note": "AI checklist -> shared reference ai-cost-and-budgets.md."
+    },
+    {
+      "id": "governed-project-integrity-review",
+      "primary": "lpm-review-health",
+      "skills": [
+        "lpm-review-health",
+        "lpm-aish-delivery",
+        "lpm-plan-work",
+        "lpm-requirements-scope"
+      ],
+      "replacedInPlace": false,
+      "note": ""
+    },
+    {
+      "id": "knowledge-and-publication-operator",
+      "primary": "lpm-knowledge",
+      "skills": [
+        "lpm-knowledge",
+        "lpm-code-index"
+      ],
+      "replacedInPlace": false,
+      "note": ""
+    },
+    {
+      "id": "lpm-workspace-admin",
+      "primary": "lpm-workspace-admin",
+      "skills": [
+        "lpm-workspace-admin",
+        "lpm-plan-work",
+        "lpm-ai-cost",
+        "lpm-integrations"
+      ],
+      "replacedInPlace": true,
+      "note": "Same id in v2 (narrowed); install replaces it in place."
+    },
+    {
+      "id": "portfolio-health-review",
+      "primary": "lpm-review-health",
+      "skills": [
+        "lpm-review-health"
+      ],
+      "replacedInPlace": false,
+      "note": ""
+    },
+    {
+      "id": "requirements-lifecycle-manager",
+      "primary": "lpm-requirements-scope",
+      "skills": [
+        "lpm-requirements-scope"
+      ],
+      "replacedInPlace": false,
+      "note": ""
+    },
+    {
+      "id": "scope-baseline-publisher",
+      "primary": "lpm-requirements-scope",
+      "skills": [
+        "lpm-requirements-scope"
+      ],
+      "replacedInPlace": false,
+      "note": ""
+    },
+    {
+      "id": "software-project-orchestrator",
+      "primary": "lpm-deliver-activity",
+      "skills": [
+        "lpm-deliver-activity",
+        "lpm-plan-work",
+        "lpm-workspace-admin",
+        "lpm-unblock-work",
+        "lpm-review-health"
+      ],
+      "replacedInPlace": false,
+      "note": "Kickoff -> lpm-workspace-admin references/flow-kickoff.md."
+    },
+    {
+      "id": "webhook-integration-operator",
+      "primary": "lpm-integrations",
+      "skills": [
+        "lpm-integrations"
+      ],
+      "replacedInPlace": false,
+      "note": ""
+    },
+    {
+      "id": "workspace-executive-context-operator",
+      "primary": "lpm-executive-context",
+      "skills": [
+        "lpm-executive-context"
+      ],
+      "replacedInPlace": false,
+      "note": ""
+    },
+    {
+      "id": "workspace-routing-operator",
+      "primary": "lpm-intake-triage",
+      "skills": [
+        "lpm-intake-triage",
+        "lpm-workspace-admin"
+      ],
+      "replacedInPlace": false,
+      "note": "Routing-profile edits -> lpm-workspace-admin."
+    }
+  ]
+}

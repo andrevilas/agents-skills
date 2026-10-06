@@ -1,0 +1,1 @@
+{ "schemaVersion": 1, "commands": [ { "key": "auth status", "usage": ["lpm auth status"] }, { "key": "issues get", "usage": ["lpm issues get <id>"] } ] }

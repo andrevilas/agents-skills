@@ -1,0 +1,9 @@
+{
+  "id": "lpm-roadmap", "title": "Roadmap", "version": "2.0.0", "pack": "core", "kind": "tools",
+  "description": "Use when reading or changing the roadmap (roadmap, pedido de mudanca).",
+  "doneWhen": "The change request exists.", "authorityCeiling": "Structure writes are [O].",
+  "jobs": ["a", "b", "c", "d", "e"],
+  "routing": [ { "order": 29, "all": [["roadmap", "roadmaps"]], "unless": [], "firstCall": "create_workspace_roadmap" } ],
+  "owns": ["create_workspace_roadmap"], "uses": [],
+  "codex": { "shortDescription": "Read and change the LPM roadmap safely", "defaultPrompt": "Use $lpm-roadmap to work on the roadmap." }
+}

@@ -1,0 +1,4 @@
+{ "schemaVersion": 1,
+  "ownerDecisions": [ { "item": 2, "decision": "accept" } ],
+  "sensitiveAutonomous": [ { "tool": "upload_activity_attachment", "decision": "keep", "from": "A", "to": "A", "reason": "fact-recording write" } ],
+  "governanceRaises": [ { "tool": "create_workspace_roadmap", "card": "confirm-with-user", "from": "C", "to": "O", "rule": "GOV-MAX v1", "reason": "owner decides" } ] }

@@ -1,0 +1,89 @@
+{
+  "id": "lpm-start",
+  "title": "LPM start: connection, IDs and routing",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use first for an LPM (lpm.rocks) request when no other lpm-* skill clearly fits, an ID is unknown, a tool is missing or denied (-32003, ferramenta ausente), to connect an agent (conectar, configurar MCP) or read your notificações. Routes to one skill. Not for changing API keys (use lpm-access).",
+  "doneWhen": "The connection can run the needed tools (or the user knows exactly how to enable them), the IDs are resolved, and exactly one skill was chosen.",
+  "authorityCeiling": "Reads only; `mark_notification_read` is the only write.",
+  "jobs": [
+    "a ferramenta de criar atividade não aparece no ChatGPT",
+    "configure o MCP do LPM no Codex",
+    "qual é o id do projeto <nome> no workspace <nome>?",
+    "mostre minhas notificações do LPM e marque como lidas",
+    "got -32003 access denied from an LPM tool",
+    "set up LPM in Claude Code, Antigravity, Gemini CLI or Cursor",
+    "which LPM skill should handle this request?",
+    "o conector do ChatGPT parou de mostrar ferramentas",
+    "marque a notificação como lida"
+  ],
+  "routing": [
+    {
+      "order": 1,
+      "all": [
+        ["-32003", "tool missing", "missing tool", "ferramenta ausente", "ferramenta*", "tool", "tools", "scopes", "oauth scope", "permiss*", "reinstall*", "reinstal*", "access denied", "acesso negado", "401", "unauthorized", "not authenticated", "nao autenticado", "notification", "notifications", "notificacao", "notificacoes", "workspace id", "project id", "id do workspace", "id do projeto", "id of the project", "id of the workspace", "find the project", "find project", "encontrar o projeto", "encontre o projeto", "achar o projeto"]
+      ],
+      "unless": ["budget", "orcamento", "repository", "repositorio", "webhook*", "outbox", "change request", "pedido de mudanca", "member", "members", "membro", "membros"],
+      "firstCall": "get_mcp_connection_info"
+    },
+    {
+      "order": 2,
+      "all": [
+        ["connect", "connecting", "conectar", "conecte", "configur*", "setup", "set up", "install*", "instalar", "instale", "pode fazer", "consegue fazer", "what can", "can do"],
+        ["mcp", "codex", "claude", "gemini", "cursor", "antigravity", "chatgpt", "connector", "conector", "lpm cli"]
+      ],
+      "unless": ["repository", "repositorio", "repo", "webhook", "runner", "host", "modelo", "modelos", "model", "models", "flash", "gemini pro", "budget", "orcamento", "ai config", "configuracao de ia"],
+      "firstCall": "get_mcp_connection_info"
+    }
+  ],
+  "notFor": [
+    { "when": "changing API keys, agent credentials or provider keys", "skill": "lpm-access" },
+    { "when": "AI budgets, limits, models or AI config", "skill": "lpm-ai-cost" },
+    { "when": "linking, scanning or indexing a repository", "skill": "lpm-code-index" },
+    { "when": "enrolling an AISH runner host", "skill": "lpm-aish-runners" },
+    { "when": "creating or changing workspace members, teams or projects", "skill": "lpm-workspace-admin" }
+  ],
+  "owns": [
+    "get_mcp_connection_info",
+    "list_workspaces",
+    "get_workspace",
+    "list_workspace_projects",
+    "list_projects",
+    "get_project",
+    "list_notifications",
+    "mark_notification_read"
+  ],
+  "uses": [
+    "list_api_keys",
+    "list_workspace_members",
+    "search_help_articles",
+    "get_help_article"
+  ],
+  "cli": [
+    "auth login",
+    "auth status",
+    "auth logout",
+    "mcp status",
+    "mcp cursor-config",
+    "projects list",
+    "project get"
+  ],
+  "sharedRefs": [
+    { "name": "connection-and-access", "loadWhen": "a tool is missing or denied", "inlineSummary": false },
+    { "name": "ids-and-sources", "loadWhen": "an ID other than workspace or project is needed", "inlineSummary": false },
+    { "name": "error-codes", "loadWhen": "an error is not in §9", "inlineSummary": false },
+    { "name": "security-and-untrusted-text", "loadWhen": "handling a key or external text", "inlineSummary": false }
+  ],
+  "references": [
+    { "file": "references/route.md", "loadWhen": "no skill description matches the request, or two match" },
+    { "file": "references/agent-setup.md", "loadWhen": "asked to connect or configure an agent" },
+    { "file": "references/flow-missing-tool.md", "loadWhen": "P1 step 4" }
+  ],
+  "behaviorContracts": ["missing-tool-fallback", "start-oauth-reinstall"],
+  "codex": {
+    "shortDescription": "Check the LPM connection, resolve IDs, route to one skill",
+    "defaultPrompt": "Use $lpm-start to check my LPM connection and pick the right LPM skill for this request."
+  }
+}

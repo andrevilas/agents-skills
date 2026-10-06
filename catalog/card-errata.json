@@ -1,0 +1,345 @@
+[
+  {
+    "tool": "accept_roadmap_knowledge_artifact",
+    "field": "gotchas",
+    "badPattern": "check list_project_knowledge_items before retrying",
+    "correction": "Before a retry, look for the article with search_help_articles(projectId, query=<slug>) or list_help_articles(projectId): list_project_knowledge_items returns only kind=asset and cannot see a help article.",
+    "verifiedFrom": "server.ts:11232-11235"
+  },
+  {
+    "tool": "accept_roadmap_knowledge_artifact",
+    "field": "pairsWith",
+    "badPattern": "^list_project_knowledge_items$",
+    "correction": "Pair with list_help_articles and search_help_articles (the accepted artifact becomes a kind=article knowledge item).",
+    "verifiedFrom": "server.ts:8596-8614"
+  },
+  {
+    "tool": "activate_repository_code_index",
+    "field": "errors",
+    "badPattern": "activation is done; otherwise retry once with the new generation",
+    "correction": "Before a retry compare pointer.expectedRepositoryCommitSha with the candidate commitSha: a newer live commit means reconcile, never activate the older candidate.",
+    "verifiedFrom": "src/lib/codeIntelligence.ts:355-395"
+  },
+  {
+    "tool": "adjust_aish_consumption",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by adjustmentId: the schema declares no idempotencyKey; replays are deduplicated by adjustmentId.",
+    "verifiedFrom": "src/server/aishConsumptionStore.ts:90-99"
+  },
+  {
+    "tool": "append_aish_execution_session_command",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "server.ts:21656-21672"
+  },
+  {
+    "tool": "apply_workspace_context_update",
+    "field": "idempotency",
+    "badPattern": "^naturally idempotent$",
+    "correction": "Not idempotent: each call writes the whole context from a cached read and appends an audit event.",
+    "verifiedFrom": "server.ts:9926-9998"
+  },
+  {
+    "tool": "approve_aish_execution_plan",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "server.ts:22445-22453"
+  },
+  {
+    "tool": "collect_aish_execution_pack",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishObservabilityStore.ts:89-92"
+  },
+  {
+    "tool": "configure_aish_budget",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishBudgetStore.ts:53-63"
+  },
+  {
+    "tool": "configure_aish_financial_pool",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishFinancialPoolStore.ts:66-71"
+  },
+  {
+    "tool": "create_aish_intake_context",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishIntakeStore.ts:120-123"
+  },
+  {
+    "tool": "create_aish_job",
+    "field": "inputs",
+    "badPattern": "list_project_repository_links -> repositoryUrl",
+    "correction": "list_project_repository_links returns canonicalRepositoryUrl (no repositoryUrl field).",
+    "verifiedFrom": "server.ts:6245-6286"
+  },
+  {
+    "tool": "create_copilot_conversation",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/copilotStore.ts:23-27"
+  },
+  {
+    "tool": "create_issue",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "not idempotent: idempotencyKey is not in the declared schema (OAuth connectors reject it as an unknown field); only API-key callers can pass it undeclared.",
+    "verifiedFrom": "src/server/oauthToolPolicy.ts:62"
+  },
+  {
+    "tool": "dispatch_aish_execution_plan",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishDispatchWaves.ts:26"
+  },
+  {
+    "tool": "explain_roadmap_item_technical_impact",
+    "field": "gotchas",
+    "badPattern": "^Evidence older than 24 h is reported as stale",
+    "correction": "Hits without createdAt count as stale too, so the stale gap can list every hit; judge freshness with get_repository_index_status.",
+    "verifiedFrom": "server.ts:7532-7545"
+  },
+  {
+    "tool": "export_aish_execution_pack",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishObservabilityStore.ts:106-112"
+  },
+  {
+    "tool": "get_governance_thread_resolution_context",
+    "field": "gotchas",
+    "badPattern": "availableActions lists the canonical tools",
+    "correction": "availableActions lists the alias names reply_to_governance_thread and resolve_governance_thread_with_decision; the canonical names are reply_governance_thread and resolve_governance_thread_with_outcome.",
+    "verifiedFrom": "server.ts:10362-10367"
+  },
+  {
+    "tool": "get_issue",
+    "field": "returns",
+    "badPattern": "creatorId, createdAt, updatedAt \\(plus factoryGovernance",
+    "correction": "get_issue returns the whole stored issue, including workspaceId, roadmapLineageRefs and blockerContext {status active|resolved, ...}.",
+    "verifiedFrom": "server.ts:38618-38629"
+  },
+  {
+    "tool": "get_project_analytics",
+    "field": "returns",
+    "badPattern": "integrity\\{status, signals\\[\\]\\}",
+    "correction": "integrity also carries invalidIssueStatuses, staleActiveCycles, orphanAishJobs, orphanAutopilotIssues, terminalIssueJobMismatches, requirementsUpdatedAfterCurrentBaseline and details{orphanAishJobs[], terminalIssueJobMismatches[]}.",
+    "verifiedFrom": "src/lib/deliveryHealthAnalytics.ts:45-64"
+  },
+  {
+    "tool": "get_project_repository_context",
+    "field": "useWhen",
+    "badPattern": "^Start of any repository-related question about a project$",
+    "correction": "It returns only project links and project scans; code search uses workspace links mapped to the project.",
+    "verifiedFrom": "server.ts:6622-6647"
+  },
+  {
+    "tool": "get_protocol_lineage",
+    "field": "purpose",
+    "badPattern": "trail of a protocol: routing decisions",
+    "correction": "routingDecisionIds is initialized empty and never appended, so the lineage does not record routing decisions.",
+    "verifiedFrom": "server.ts:16076"
+  },
+  {
+    "tool": "import_aish_accounting",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by import.importId: the schema declares no idempotencyKey; replays are deduplicated by import.importId.",
+    "verifiedFrom": "src/server/aishAccountingStore.ts:119-123"
+  },
+  {
+    "tool": "list_blocked_project_issues",
+    "field": "gotchas",
+    "badPattern": "ONLY an active blocker context.*is NOT listed",
+    "correction": "An issue with an active blocker context IS listed: getBlockedIssueIds adds every issue whose blocker context is active, with or without a blocking link (test 'builds blocked context from an active structured blocker without dependency links', src/lib/projectResolution.test.ts:448-483, asserts entityCount === 1).",
+    "verifiedFrom": "src/lib/projectResolution.ts:474-476"
+  },
+  {
+    "tool": "list_blocked_project_issues",
+    "field": "purpose",
+    "badPattern": "blocked by a legacy 'blocked' status or by an open blocking issue link",
+    "correction": "Lists open issues of a project that are blocked (a legacy 'blocked' status, an open blocking issue link, or an active blocker context), with who blocks them and any active blocker text.",
+    "verifiedFrom": "src/lib/projectResolution.ts:592-597"
+  },
+  {
+    "tool": "list_roadmap_knowledge_artifacts",
+    "field": "avoidWhen",
+    "badPattern": "accepted project knowledge articles -> list_project_knowledge_items",
+    "correction": "Reading accepted project knowledge articles -> list_help_articles or get_help_article (list_project_knowledge_items returns only assets)",
+    "verifiedFrom": "server.ts:11232-11235"
+  },
+  {
+    "tool": "pause_aish_execution_session",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "server.ts:22223-22250"
+  },
+  {
+    "tool": "prepare_change_set_draft_from_governance_thread",
+    "field": "returns",
+    "badPattern": "draft\\.sourceBaselineId to create_change_set",
+    "correction": "Pass draft.title and draft.summary; omit sourceBaselineId in live mode (create_change_set).",
+    "verifiedFrom": "server.ts:10440-10443"
+  },
+  {
+    "tool": "prepare_issue_draft_from_governance_thread",
+    "field": "gotchas",
+    "badPattern": "create_issue has no requirementId/baselineId parameters",
+    "correction": "createIssueCommand reads the undeclared requirementId/baselineId on API-key calls (resolveRequirementBinding); OAuth rejects them.",
+    "verifiedFrom": "server.ts:28076-28081"
+  },
+  {
+    "tool": "propose_copilot_action",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/copilotStore.ts:52-60"
+  },
+  {
+    "tool": "put_aish_execution_plan",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "server.ts:22330-22340"
+  },
+  {
+    "tool": "record_aish_consumption",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by consumptionId: the schema declares no idempotencyKey; replays are deduplicated by consumptionId.",
+    "verifiedFrom": "src/server/aishConsumptionStore.ts:54-61"
+  },
+  {
+    "tool": "record_aish_financial_pool_cost",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by costId: the schema declares no idempotencyKey; replays are deduplicated by costId.",
+    "verifiedFrom": "src/server/aishFinancialPoolStore.ts:108-113"
+  },
+  {
+    "tool": "record_aish_intake_transcript",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishIntakeStore.ts:92-109"
+  },
+  {
+    "tool": "refresh_repository_code_index",
+    "field": "preconditions",
+    "badPattern": "\\(default 500\\) and 5,000 chunks$",
+    "correction": "One per-build document cap (default 5,000 chunks), a platform setting checked against each build; the 'daily' in the message is not a per-day sum.",
+    "verifiedFrom": "server.ts:6883"
+  },
+  {
+    "tool": "reply_governance_thread",
+    "field": "avoidWhen",
+    "badPattern": "reply_to_governance_thread \\(identical behaviour, canonical name\\)",
+    "correction": "reply_governance_thread is the canonical name.",
+    "verifiedFrom": "server.ts:39543-39551"
+  },
+  {
+    "tool": "reply_governance_thread",
+    "field": "errors",
+    "badPattern": "INVALID_ARGUMENT",
+    "correction": "OAuth argument errors are JSON-RPC -32602 'Invalid OAuth tool arguments.' with data.field, data.problem (and data.limit): write '-32602 data.field=<x> data.problem=<p>'. The INVALID_ARGUMENT form is only a display name in shared/references/error-codes.md.",
+    "verifiedFrom": "src/server/oauthToolPolicy.ts:312-325"
+  },
+  {
+    "tool": "reply_to_governance_thread",
+    "field": "purpose",
+    "badPattern": "canonical decision-inbox name",
+    "correction": "catalog/aliases.json: reply_governance_thread is canonical; reply_to_governance_thread is the alias (same handler).",
+    "verifiedFrom": "server.ts:39543-39551"
+  },
+  {
+    "tool": "request_aish_execution_checkpoint",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishExecutionCheckpoints.ts:22-33"
+  },
+  {
+    "tool": "requeue_aish_automation",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishAutomationStore.ts:58-61"
+  },
+  {
+    "tool": "resolve_governance_thread_with_outcome",
+    "field": "avoidWhen",
+    "badPattern": "Use resolve_governance_thread_with_decision \\(canonical",
+    "correction": "resolve_governance_thread_with_outcome is the canonical name.",
+    "verifiedFrom": "server.ts:39767-39775"
+  },
+  {
+    "tool": "resolve_governance_thread_with_outcome",
+    "field": "purpose",
+    "badPattern": "^Alias of resolve_governance_thread_with_decision",
+    "correction": "catalog/aliases.json: resolve_governance_thread_with_outcome is canonical; resolve_governance_thread_with_decision is the alias (same handler).",
+    "verifiedFrom": "server.ts:39767-39775"
+  },
+  {
+    "tool": "resume_aish_execution_session",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "server.ts:22256-22280"
+  },
+  {
+    "tool": "retry_aish_execution_plan",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishDispatchWaves.ts:26-32"
+  },
+  {
+    "tool": "set_aish_financial_visibility",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishFinancialReportStore.ts:56-58"
+  },
+  {
+    "tool": "set_project_issue_blocker_context",
+    "field": "gotchas",
+    "badPattern": "NOT in list_blocked_project_issues unless a blocking link exists",
+    "correction": "The issue counts as blocked in list_blocked_project_issues too (with or without a blocking link), as in the dependency graph/summary and recommend_next_activity.",
+    "verifiedFrom": "src/lib/projectResolution.ts:474-476"
+  },
+  {
+    "tool": "submit_aish_job_evidence",
+    "field": "returns",
+    "badPattern": "failed, completionEvidenceId",
+    "correction": "Neither the response nor get_aish_job exposes completionEvidenceId; the evidence id is evidence[0].id ('local-<sha256(jobId)>').",
+    "verifiedFrom": "server.ts:24197-24203"
+  },
+  {
+    "tool": "update_project_change_set_status",
+    "field": "preconditions",
+    "badPattern": "never approve a change set you drafted",
+    "correction": "Never approve on your own judgment; record approved/rejected only when the owner's words in this conversation say so.",
+    "verifiedFrom": "server.ts:10695-10705"
+  },
+  {
+    "tool": "upload_aish_intake_attachment",
+    "field": "idempotency",
+    "badPattern": "^idempotencyKey supported$",
+    "correction": "keyed by commandId: the schema declares no idempotencyKey; replays are deduplicated by commandId.",
+    "verifiedFrom": "src/server/aishIntakeStore.ts:67-70"
+  }
+]

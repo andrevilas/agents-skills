@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "scan": [
+    "catalog/cards/**",
+    "dist/**",
+    "shared/**",
+    "skills/**"
+  ],
+  "exemptPaths": [
+    "catalog/denylist.json",
+    "dist/*/lpm-release-product/**",
+    "dist/generic/lpm-release-product.md",
+    "dist/generic/lpm-release-product.refs.md",
+    "dist/generic/lpm-release-product.tools.md",
+    "shared/internal/**",
+    "skills/lpm-release-product/**"
+  ],
+  "entries": [
+    {
+      "id": "pilot-person",
+      "category": "pilot",
+      "pattern": "\\bRafael\\b",
+      "flags": "",
+      "reason": "Pilot names live only in internal/."
+    }
+  ]
+}

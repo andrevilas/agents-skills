@@ -1,0 +1,207 @@
+{
+  "id": "lpm-plan-work",
+  "title": "Plan and organize project work",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when creating or organizing LPM backlog work: create activities (single or batch), edit fields, plan cycles/sprints and milestones (marcos), labels, owners, estimates, due dates, unassigned/unestimated/overdue queues, escalations. Not for doing or closing one activity (use lpm-deliver-activity).",
+  "doneWhen": "The requested backlog structure exists and a re-list matches the plan (counts, owners, dates), with failed batch items named.",
+  "authorityCeiling": "Reads, creates, comments, named cancels [A]; owner, estimate, due-date or milestone-date changes (any tool), labels, notifications, deletes [C]; no owner-only tools.",
+  "jobs": [
+    "cria estas atividades no backlog do projeto <nome>",
+    "planeje o próximo sprint e feche o ciclo atual",
+    "atribua as atividades sem responsável e defina os prazos",
+    "o que está atrasado no projeto <nome>?",
+    "daily sync for project <name>: what is open and what is next",
+    "create these 12 issues in one batch",
+    "close the sprint and move the unfinished work to the next cycle",
+    "estimate the unestimated issues of project <name>",
+    "merge the duplicated labels",
+    "notify the assignee that the milestone date moved"
+  ],
+  "routing": [
+    {
+      "order": 36,
+      "all": [
+        [
+          "atividade*",
+          "activity",
+          "activities",
+          "issue",
+          "issues",
+          "task",
+          "tasks",
+          "tarefa*",
+          "cycle",
+          "cycles",
+          "sprint",
+          "ciclo*",
+          "milestone*",
+          "marco*",
+          "label*",
+          "etiqueta*",
+          "assign*",
+          "atribu*",
+          "estimat*",
+          "estimativa",
+          "due date",
+          "prazo",
+          "overdue",
+          "atrasad*",
+          "notify",
+          "notificar",
+          "backlog"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "get_project_execution_context"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "doing or closing one activity (status done, evidence, commits)",
+      "skill": "lpm-deliver-activity"
+    },
+    {
+      "when": "a blocked activity or a dependency link",
+      "skill": "lpm-unblock-work"
+    },
+    {
+      "when": "a health or risk report",
+      "skill": "lpm-review-health"
+    },
+    {
+      "when": "a new project, members or teams",
+      "skill": "lpm-workspace-admin"
+    },
+    {
+      "when": "requirements, baselines or scope",
+      "skill": "lpm-requirements-scope"
+    },
+    {
+      "when": "an open governance thread or decision",
+      "skill": "lpm-governance-decisions"
+    },
+    {
+      "when": "activities that materialize an approved roadmap item",
+      "skill": "lpm-roadmap-owner-ops"
+    },
+    {
+      "when": "roadmap items or roadmap-level outcomes across projects",
+      "skill": "lpm-roadmap"
+    }
+  ],
+  "owns": [
+    "get_project_execution_context",
+    "create_issue",
+    "batch_issue_operations",
+    "delete_issue",
+    "list_cycles",
+    "get_cycle",
+    "create_cycle",
+    "update_cycle",
+    "delete_cycle",
+    "list_milestones",
+    "get_milestone",
+    "create_milestone",
+    "update_milestone",
+    "delete_milestone",
+    "list_labels",
+    "create_label",
+    "update_label",
+    "delete_label",
+    "list_project_assignable_members",
+    "assign_project_issue_owner",
+    "bulk_assign_project_issue_owners",
+    "list_unassigned_project_issues",
+    "list_unestimated_project_issues",
+    "list_overdue_project_issues",
+    "set_project_issue_estimate",
+    "bulk_set_project_issue_estimates",
+    "set_project_issue_due_date",
+    "update_project_issue_due_date",
+    "bulk_set_project_issue_due_dates",
+    "bulk_update_project_issue_due_dates",
+    "create_notification"
+  ],
+  "uses": [
+    "list_issues",
+    "get_issue",
+    "update_issue",
+    "list_comments",
+    "create_comment",
+    "recommend_next_activity",
+    "get_project_dependency_summary",
+    "list_blocked_project_issues",
+    "prepare_issue_draft_from_governance_thread"
+  ],
+  "cli": [
+    "issues create",
+    "issues assign",
+    "issues priority"
+  ],
+  "sharedRefs": [
+    {
+      "name": "enums",
+      "loadWhen": "an enum value is unclear",
+      "inlineSummary": false
+    },
+    {
+      "name": "idempotency-and-retries",
+      "loadWhen": "retrying a write",
+      "inlineSummary": false
+    },
+    {
+      "name": "naming-conventions",
+      "loadWhen": "naming anything",
+      "inlineSummary": false
+    },
+    {
+      "name": "comment-templates",
+      "loadWhen": "writing a comment",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/planning-rules.md",
+      "loadWhen": "row 1, or a cycle plan or start"
+    },
+    {
+      "file": "references/batch-and-bulk.md",
+      "loadWhen": "2+ items change"
+    },
+    {
+      "file": "references/flow-cycles.md",
+      "loadWhen": "row 2"
+    },
+    {
+      "file": "references/flow-owners-dates.md",
+      "loadWhen": "row 3"
+    },
+    {
+      "file": "references/flow-label-merge.md",
+      "loadWhen": "row 4 label merge"
+    },
+    {
+      "file": "references/flow-escalate.md",
+      "loadWhen": "row 5 or 6"
+    },
+    {
+      "file": "references/flow-remove.md",
+      "loadWhen": "row 7 or 8"
+    },
+    {
+      "file": "references/flow-decision.md",
+      "loadWhen": "row 9"
+    }
+  ],
+  "behaviorContracts": [
+    "missing-tool-fallback"
+  ],
+  "codex": {
+    "shortDescription": "Plan LPM backlog: activities, sprints, owners and dates",
+    "defaultPrompt": "Use $lpm-plan-work to plan and organize the backlog of LPM project <projectId>."
+  }
+}

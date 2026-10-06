@@ -1,0 +1,100 @@
+{
+  "id": "lpm-deliver-activity",
+  "title": "Deliver one activity: code, commit, evidence, closure",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when implementing, fixing or closing one LPM activity (atividade/issue): commit with the LPM-Activity trailer, comment progress, attach evidence (prints, logs, tests). Old name: software-project-orchestrator. Not for planning many activities (use lpm-plan-work) or AISH jobs (use lpm-aish-jobs).",
+  "doneWhen": "The activity's code is committed with the trailer, progress is commented, evidence is attached and listed, and the activity is done, or stays in-progress with one named pending item and its owner.",
+  "authorityCeiling": "Reads, comments, evidence and status moves are [A]; delete/edit of comments and evidence removal are [C]; done only through the closure check.",
+  "jobs": [
+    "implementa a atividade X",
+    "fix bug ISSUE-ID and commit with the LPM-Activity trailer",
+    "pick the next activity and do it",
+    "registre o progresso na atividade com os testes",
+    "anexa o print na atividade",
+    "attach the test report to the activity",
+    "posso fechar esta atividade? conclua com evidência",
+    "close the activity with evidence",
+    "remove the wrong screenshot from the activity",
+    "comenta na atividade que os testes passaram",
+    "apaga o comentário duplicado na atividade"
+  ],
+  "routing": [
+    {
+      "order": 15,
+      "all": [["commit", "commits", "lpm-activity", "trailer"]],
+      "unless": ["compare", "comparar", "import*", "owner", "dono", "roadmap", "materializ*"],
+      "firstCall": "get_issue"
+    },
+    {
+      "order": 16,
+      "all": [["evidence", "evidencia", "evidencias", "print", "prints", "screenshot*", "anexar", "anexa", "anexe", "attach*"]],
+      "unless": ["whatsapp", "protocol", "protocolo", "intake", "code", "codigo", "aish", "artifact", "artefato"],
+      "firstCall": "list_activity_attachments"
+    },
+    {
+      "order": 17,
+      "all": [
+        ["implement*", "fix", "corrig*", "corrija", "finish", "finaliz*", "close", "fechar", "feche", "conclu*", "deliver", "entreg*", "done", "pronta",
+         "next", "proxim*", "progress", "progresso", "registr*", "coment*", "comment*", "start", "starting", "comec*", "inici*", "in progress", "in-progress", "em andamento",
+         "upload*", "test report*", "relatorio de teste*", "relatorio dos teste*", "log", "logs"],
+        ["activity", "atividade", "issue", "task", "tarefa", "bug", "coment*", "comment*"]
+      ],
+      "unless": ["cycle", "ciclo", "sprint", "milestone", "marco", "roadmap", "thread", "change request", "whatsapp", "protocolo", "protocol", "triage", "triagem", "intake", "decision*", "decisao", "decisoes", "estimat*", "estimativa", "assign*", "atribu*", "due date", "prazo", "label*", "etiqueta*"],
+      "firstCall": "get_issue or recommend_next_activity"
+    }
+  ],
+  "notFor": [
+    { "when": "creating or reorganizing many activities, owners, dates or cycles", "skill": "lpm-plan-work" },
+    { "when": "a blocked activity, a blocker context or a dependency", "skill": "lpm-unblock-work" },
+    { "when": "work that must run on AISH runners", "skill": "lpm-aish-jobs" },
+    { "when": "AISH delivery artifacts or a failing factory DoD audit", "skill": "lpm-aish-delivery" },
+    { "when": "evidence from WhatsApp or an intake protocol", "skill": "lpm-intake-triage" },
+    { "when": "a question about what the code does, with no activity to deliver", "skill": "lpm-ask-advisor" },
+    { "when": "comparing two repository commits", "skill": "lpm-code-index" },
+    { "when": "shipping the LPM product itself", "skill": "lpm-release-product" }
+  ],
+  "owns": [
+    "recommend_next_activity",
+    "list_issues",
+    "get_issue",
+    "update_issue",
+    "list_comments",
+    "create_comment",
+    "update_comment",
+    "delete_comment",
+    "list_workspace_activities",
+    "list_activity_attachments",
+    "upload_activity_attachment",
+    "create_activity_attachment",
+    "delete_activity_attachment"
+  ],
+  "uses": [
+    "list_issue_links",
+    "list_workspace_issue_links",
+    "get_skills_context",
+    "audit_aish_issue_delivery",
+    "get_mcp_connection_info"
+  ],
+  "cli": ["issues list", "issues get", "issues update", "issues status"],
+  "sharedRefs": [
+    { "name": "delivery-tracking", "loadWhen": "before a commit message", "inlineSummary": true },
+    { "name": "evidence-and-closure", "loadWhen": "before evidence or closure", "inlineSummary": true },
+    { "name": "repo-hygiene", "loadWhen": "before editing code in a git repo", "inlineSummary": false },
+    { "name": "idempotency-and-retries", "loadWhen": "before a retry", "inlineSummary": false },
+    { "name": "enums", "loadWhen": "a status or link type is unclear", "inlineSummary": false },
+    { "name": "comment-templates", "loadWhen": "before writing a comment", "inlineSummary": false }
+  ],
+  "references": [
+    { "file": "references/flow-evidence.md", "loadWhen": "decision row 5: attach proof (print, log, report)" },
+    { "file": "references/flow-close.md", "loadWhen": "decision row 6: finish or close the activity" },
+    { "file": "references/closure-checklist.md", "loadWhen": "before status done" }
+  ],
+  "behaviorContracts": ["activity-evidence", "delivery-trailer", "missing-tool-fallback", "deliver-repo-hygiene"],
+  "codex": {
+    "shortDescription": "Ship one LPM activity with commit trailer and evidence",
+    "defaultPrompt": "Use $lpm-deliver-activity to deliver LPM activity <issueId>."
+  }
+}

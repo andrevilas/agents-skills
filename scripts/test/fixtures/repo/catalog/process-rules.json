@@ -1,0 +1,1 @@
+{ "rules": [ { "rule": "get_mcp_connection_info first when a tool is missing", "enforcedBy": "core rule 2; contract missing-tool-fallback" } ] }

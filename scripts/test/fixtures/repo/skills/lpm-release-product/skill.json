@@ -1,0 +1,10 @@
+{
+  "id": "lpm-release-product", "title": "Release the LPM product (maintainers)", "version": "2.0.0", "pack": "internal", "kind": "process",
+  "description": "Use only inside the LPM product repository to deploy a candidate and promote it.",
+  "doneWhen": "The candidate is live and smoked.", "authorityCeiling": "Maintainers only.",
+  "jobs": ["a", "b", "c", "d", "e"],
+  "routing": [ { "order": 11, "all": [["deploy*", "implantar"]], "unless": ["aish"], "firstCall": "git worktree list", "internal": true, "stopText": "Deploying the LPM product is an LPM-maintainer procedure. Ask an LPM maintainer." } ],
+  "owns": [], "uses": ["get_issue", "upload_activity_attachment"],
+  "sharedRefs": [ { "name": "lpm-repo-rules", "loadWhen": "before deploying" } ],
+  "codex": { "shortDescription": "Deploy and promote the LPM product safely", "defaultPrompt": "Use $lpm-release-product to ship the fix." }
+}

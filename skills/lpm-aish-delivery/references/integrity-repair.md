@@ -1,0 +1,51 @@
+# AISH job integrity repair
+Load when: when repairing a job
+Applies to: lpm-aish-delivery    Source: cards {{tool:set_aish_completed_job_disposition}}, {{tool:repair_aish_completed_job_lineage}}, {{tool:get_aish_job}}, {{tool:get_project_analytics}}; CLI snapshot (`aish jobs close`, `resolve`, `reconcile`, `disposition`, `lineage-repair`); legacy digests `governed-project-integrity-review` §1.10, §2.3 and `aish-governed-development-operator` §2.3
+
+## Summary
+Every repair is permanent and audited: show the exact call, wait for "yes", run it once, re-read the job.
+Completed job: classify it with a disposition, or repair its lineage when its activity was deleted (dry run first).
+Failed or non-terminal leftovers have no MCP tool: use `lpm aish jobs resolve` or `lpm aish jobs close`.
+A terminal job and its activity that do not converge: `lpm aish jobs reconcile --job <jobId> --json`.
+A disposition makes the job count as incomplete in the DoD audit: never set one on a job whose activity you still close through the audit.
+
+## Facts
+### Which repair
+| Job state (from {{tool:get_aish_job}}) | Activity state | Action |
+|---|---|---|
+| `completed`, activity deleted or missing | — | lineage repair: `reconciled-with-issue` (+ `targetIssueId` of an existing activity of the same project), `administratively-closed`, or `historically-accepted-with-evidence` |
+| `completed`, partial / replaced / untrusted result | exists | disposition `partial`, `superseded` or `invalidated` |
+| `failed` | any | `lpm aish jobs resolve --job <jobId> --outcome <outcome> --reason <text> --json`; outcome `compensated`, `historical` or `ignored` |
+| leftover `queued` (approved or stale) | any | `lpm aish jobs close --job <jobId> --outcome <outcome> --reason <text> --json`; outcome `superseded`, `compensated`, `obsolete` or `canceled` |
+| terminal, `issueReconciliation.status` `pending` or `failed` | exists | `lpm aish jobs reconcile --job <jobId> --json` |
+| `completionDisposition`, `lineageRepair` or a closure already set | — | report it; no call (a different value is refused) |
+
+### Field rules
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| disposition `reason` | 8–2,000 chars; a replay must send the exact same text | one-shot: a different outcome or reason later is refused |
+| disposition preconditions | job `completed`, `issueId` set, ≥ 1 evidence id, no other disposition, failure resolution or closure | the activity status is NOT changed |
+| lineage `idempotencyKey` | 8–500 chars, e.g. `lineage-<jobId>-1`, bound to the job | same key for the dry run, the apply and every retry |
+| lineage `dryRun: true` | validated plan only; returns `actions[]` and any existing `lineageRepair` | always first; apply with identical outcome, reason, targetIssueId and key |
+| lineage `targetIssueId` | required for `reconciled-with-issue`, forbidden otherwise | rewrites `job.issueId`; the original stays in `lineageRepair.originalIssueId` |
+| lineage refused | the activity still exists, job not completed, or no evidence | activity exists → disposition instead, or nothing to repair |
+| "Lineage repair evidence already exists without a matching job repair" | ambiguous partial result | STOP and tell the user; no retry |
+| `issueReconciliation.status` | `pending`, `reconciled`, `attention-required`, `failed` | `attention-required` leaves the activity status unchanged |
+| `attention-required` | job is workflow-managed, has a disposition, or is `canceled` | workflow jobs close through the DoD audit (SKILL.md P1) |
+| reconcile refused | no `issueId`, non-terminal job, completed job with zero evidence, or missing activity | report; missing activity → lineage repair |
+| reconcile retry | re-runs while `attention-required`; the comment is not duplicated | `reused: true` only when already `reconciled` |
+| integrity signals | {{tool:get_project_analytics}} → `metrics.integrity`: counts `orphanAishJobs`, `terminalIssueJobMismatches`; lists `details.orphanAishJobs[]` and `details.terminalIssueJobMismatches[]` (each `{jobId, category, reason}`) | cleared = jobId absent from both lists; a valid repair, closure, resolution or disposition clears it; cache ~10 s |
+| standalone job | completed, no `issueId`, ≥ 1 evidence id | not an orphan; no repair |
+
+## Rules
+1. Never change a job the user did not name; never pick an outcome or write a reason for the user.
+2. Lineage: dry run, show `actions[]`, wait for "apply", then the identical call with `dryRun: false`.
+3. Never use `lpm-codex`; the CLI is `lpm aish …`.
+4. After a repair, re-read with {{tool:get_aish_job}}; check the signal with {{tool:get_project_analytics}} once after ~10 s.
+
+## Examples
+```text
+example: repair_aish_completed_job_lineage(jobId=<jobId>, outcome="reconciled-with-issue", targetIssueId=<issueId>,
+  reason="Original activity deleted; work continues in the replacement activity", idempotencyKey="lineage-<jobId>-1", dryRun=true)
+→ actions[] shown → user: "apply" → same call with dryRun=false → get_aish_job → lineageRepair.originalIssueId set
+```

@@ -1,0 +1,253 @@
+[
+  {
+    "name": "create_comment",
+    "status": "verified",
+    "purpose": "Add a comment to an activity.",
+    "useWhen": [
+      "the user asks to add a comment to an activity"
+    ],
+    "avoidWhen": [],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "content",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "idempotencyKey",
+        "required": false,
+        "source": "user",
+        "notes": ""
+      }
+    ],
+    "preconditions": [],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "idempotencyKey supported",
+    "returns": "The record.",
+    "pairsWith": [
+      "list_comments"
+    ],
+    "errors": [
+      {
+        "when": "content too long",
+        "fix": "shorten it; move logs to an attachment"
+      }
+    ],
+    "oauthScope": "portfolio:manage",
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts:100-110"
+  },
+  {
+    "name": "get_issue",
+    "status": "verified",
+    "purpose": "Read one activity.",
+    "useWhen": [
+      "the user asks to read one activity"
+    ],
+    "avoidWhen": [],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      }
+    ],
+    "preconditions": [],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [
+      {
+        "when": "issue not found",
+        "fix": "check the issueId with the user"
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": "lpm issues get --project <projectId> --issue <issueId>",
+    "gotchas": [],
+    "verifiedFrom": "server.ts:100-110"
+  },
+  {
+    "name": "list_comments",
+    "status": "verified",
+    "purpose": "List the comments of an activity.",
+    "useWhen": [
+      "the user asks to list the comments of an activity"
+    ],
+    "avoidWhen": [],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      }
+    ],
+    "preconditions": [],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts:100-110"
+  },
+  {
+    "name": "set_project_issue_due_date",
+    "status": "verified",
+    "purpose": "Set the due date of an activity.",
+    "useWhen": [
+      "the user asks to set the due date of an activity"
+    ],
+    "avoidWhen": [],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "dueDate",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      }
+    ],
+    "preconditions": [],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts:100-110"
+  },
+  {
+    "name": "update_issue",
+    "status": "verified",
+    "purpose": "Change the status or fields of an activity.",
+    "useWhen": [
+      "the user asks to change the status or fields of an activity"
+    ],
+    "avoidWhen": [],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "user",
+        "notes": ""
+      }
+    ],
+    "preconditions": [],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [],
+    "oauthScope": "portfolio:manage",
+    "cli": "lpm issues update --project <projectId> --issue <issueId> --status done",
+    "gotchas": [
+      {
+        "text": "Never send blocked: it is not a status.",
+        "verifiedFrom": "server.ts:200-204"
+      }
+    ],
+    "verifiedFrom": "server.ts:100-110"
+  },
+  {
+    "name": "update_project_issue_due_date",
+    "status": "verified",
+    "purpose": "Alias of set_project_issue_due_date.",
+    "useWhen": [
+      "the user asks to alias of set_project_issue_due_date"
+    ],
+    "avoidWhen": [],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "dueDate",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      }
+    ],
+    "preconditions": [],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts:100-110"
+  }
+]

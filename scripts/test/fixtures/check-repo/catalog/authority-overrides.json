@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sensitiveAutonomous": [
+    {
+      "tool": "create_api_key",
+      "card": "autonomous",
+      "decision": "raise",
+      "from": "A",
+      "to": "C",
+      "reason": "Creates a credential; show the plan once."
+    }
+  ],
+  "governanceRaises": []
+}

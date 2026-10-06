@@ -1,0 +1,1 @@
+[ { "name": "create_workspace_roadmap", "purpose": "Creates a workspace roadmap.", "effect": "write", "authority": "confirm-with-user", "idempotency": "not idempotent", "oauthScope": "roadmap:manage", "inputs": [], "errors": [] } ]

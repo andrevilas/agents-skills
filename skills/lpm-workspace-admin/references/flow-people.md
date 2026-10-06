@@ -1,0 +1,40 @@
+# Flow: workspace members and teams
+Load when: decision row 10
+
+## Preconditions
+1. LPM API key: full or custom for member add/remove and team delete; portfolio for team create/rename. Connector → core rule 2 ({{tool:list_workspace_members}} is the only people tool on a connector).
+2. Workspace members: {{tool:list_workspaces}} → `access.canManage == true`, or the memberId is you (leave). Teams: callerUserId (SKILL.md §3: {{tool:list_api_keys}} → `userId`; else ask the user) equals {{tool:get_team}} → `ownerId`, or has `owner`/`admin` in {{tool:list_team_members}}; delete: `ownerId` only. The server does not check {{tool:update_team}} or {{tool:delete_team}}: you are the guard. callerUserId unknown → ask; never compare against a guessed id.
+3. Roles and least privilege: {{ref:roles}}. Effects of removals: {{ref:destructive-ops}}. No tool lists all users or finds one by email: ask for the LPM user id.
+
+## Steps
+### A. Workspace members (row 10)
+1. {{tool:list_workspace_members}}(workspaceId) → keep `id`, `userId`, `userEmail`, `role`. Add and the person is listed → report the role and STOP.
+2. Add: follow SKILL.md P2 (userId from the user; {{tool:get_user}}(userId) → keep `email`, `displayName`; role `member` or `viewer`, `owner`/`admin` only when the workspace owner asked). Remove: target is {{tool:get_workspace}}(workspaceId) → `ownerId`, or the last owner/admin → STOP: "Ownership transfer is not supported through MCP."
+3. Show the call with all arguments (write userEmail=(from get_user), never the address) and its effect (add: access to every workspace project at once, no notification sent); on "yes": {{tool:add_workspace_member}}(workspaceId, userId, userEmail=get_user `email`, role) [C] / {{tool:remove_workspace_member}}(workspaceId, memberId) [C]. Role change = remove, then add, under one confirmation naming both calls. Never change your own role (callerUserId): the add fails once your manage right is gone. Add fails after the remove → STOP and report "<person> removed; re-add failed: <error>" to the workspace owner.
+4. Not idempotent: after an error or timeout re-run step 1 before any retry ("User is already a workspace member" = already added). Verify: {{tool:list_workspace_members}}(workspaceId) → the person has the requested `role`, or is absent; a role change → one row for the person, with the new `role`.
+### B. Teams (row 10)
+5. {{tool:list_teams}}() → keep `id`, `name`, `ownerId`. Create: same `name` → reuse; else {{tool:create_team}}(name, description) [A] → keep `teamId` after "ID: "; timeout → step 5 before any retry.
+6. Rename: {{tool:get_team}}(teamId) → callerUserId owns or admins it (Precondition 2) → show the call; on "yes" {{tool:update_team}}(teamId, name and/or description only) [C]. Never send `ownerId`.
+7. Add: {{tool:list_team_members}}(teamId) → not listed; {{tool:get_user}}(userId) → `email`; show the call; on "yes" {{tool:add_team_member}}(teamId, userId, userEmail, role="member") [C]; tell the user it sends a "Team invitation" notice.
+8. Remove: memberId from {{tool:list_team_members}}(teamId), never the team `ownerId`; show the call; on "yes" {{tool:remove_team_member}}(teamId, memberId) [C].
+9. Delete (callerUserId == team `ownerId` only): show {{tool:get_team}}(teamId), {{tool:list_team_members}}(teamId), {{tool:list_projects}}(teamId); ask "Delete team <name>? No undo; member records stay orphaned and <N> projects keep its teamId. (yes/no)"; on "yes" {{tool:delete_team}}(teamId) [C].
+10. Verify: {{tool:list_teams}}() / {{tool:list_team_members}}(teamId) → the new name, member or role is present; removed or deleted ids are absent ({{tool:delete_team}} reports success even for an unknown id).
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| role `owner` or `admin` not asked by the workspace or team owner | "Owner/admin gives full management rights. Did the owner ask for it? Otherwise I use member." |
+| removing the workspace owner, the last owner/admin or the team owner | STOP: "Ownership transfer is not supported through MCP." |
+| you are not the team owner/admin, or callerUserId is unknown | ask the team owner / "What is your LPM user id?" |
+| you are asked to change your own workspace role | STOP: "Ask another workspace owner/admin to change your role." |
+| {{tool:add_workspace_member}} fails after the remove | STOP: report "<person> removed; re-add failed: <error>" to the workspace owner |
+| user id unknown | "What is the LPM user id of <person>?" |
+
+## Verify
+| After | Re-read with | Pass when |
+|---|---|---|
+| workspace member add / remove / role change | {{tool:list_workspace_members}} | `role` as requested, or the person is absent |
+| team create / update / delete; team member | {{tool:list_teams}} / {{tool:list_team_members}} | name and `role` as requested; removed or deleted ids absent |
+
+## Report fields
+Scope (workspace / team), Done (people and roles before → after), Evidence (re-read), Pending (member add: "tell <displayName> directly: LPM sends no notification"), Next (exactly one action, never "none"). Name people by `displayName` + userId; never paste an email or `hourlyRate`. Write in the user's language.

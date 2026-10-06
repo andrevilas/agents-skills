@@ -1,0 +1,9 @@
+[
+  {
+    "tool": "update_issue",
+    "field": "gotchas",
+    "badPattern": "blocked is a valid status",
+    "correction": "There is no blocked status.",
+    "verifiedFrom": "server.ts:200-204"
+  }
+]

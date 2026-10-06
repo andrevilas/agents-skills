@@ -1,0 +1,200 @@
+{
+  "id": "lpm-release-product",
+  "title": "Release the LPM product (maintainers)",
+  "version": "2.0.0",
+  "pack": "internal",
+  "kind": "process",
+  "invocation": "implicit",
+  "description": "Use only inside the LPM product repository (lpm) to ship LPM to production (deploy, subir para produção): checks, candidate, golden set, promote, smoke, rollback, deploy evidence (Cloud Run revision, smoke) on the activity, pilot notice. Not for an AISH pacote de release (use lpm-aish-delivery).",
+  "doneWhen": "The promoted revision serves 100 % of traffic and the smoke passed, or the rollback target serves 100 % again after a failed smoke. Evidence (with the rollback target) is attached to the activity, and pilots were informed only after live verification.",
+  "authorityCeiling": "Process skill (no owned tools); stops on any failed check; promotion and rollback only through the steps below.",
+  "jobs": [
+    "deploy the fix to production (lpm.rocks) with a candidate revision first",
+    "run the golden-set subset on the candidate and compare it with the last report",
+    "promote the candidate revision and run the MCP smoke",
+    "faz o deploy em produção com CANDIDATE_ONLY e golden set",
+    "promover o candidato para 100% do tráfego e rodar o smoke",
+    "rollback da revisão do LPM em produção para o rollback target",
+    "anexa a revisão do Cloud Run, os testes e o smoke como evidência na atividade",
+    "add a golden-set regression for the confirmed pilot failure (fixture or vitest)"
+  ],
+  "routing": [
+    {
+      "order": 11,
+      "all": [
+        [
+          "deploy*",
+          "redeploy",
+          "implantar",
+          "ship",
+          "promote",
+          "promover",
+          "candidate",
+          "candidato",
+          "golden set",
+          "golden-set",
+          "update-traffic",
+          "cloud run",
+          "lpm.rocks"
+        ]
+      ],
+      "unless": [
+        "aish",
+        "package",
+        "pacote",
+        "webhook",
+        "my app",
+        "meu app",
+        "my application",
+        "minha aplicacao",
+        "our app",
+        "nosso app",
+        "my repo",
+        "my repository",
+        "meu repositorio",
+        "nosso repositorio",
+        "this activity",
+        "esta atividade",
+        "essa atividade",
+        "reclam*",
+        "complain*"
+      ],
+      "firstCall": "`git worktree list`",
+      "internal": true,
+      "stopText": "Deploying the LPM product is an LPM-maintainer procedure. Ask an LPM maintainer. To deliver a change in your own repository, use lpm-deliver-activity."
+    },
+    {
+      "order": 12,
+      "all": [
+        [
+          "release",
+          "rollback",
+          "revision",
+          "revisao"
+        ],
+        [
+          "lpm",
+          "product",
+          "produto",
+          "production",
+          "producao",
+          "cloud run"
+        ]
+      ],
+      "unless": [
+        "aish",
+        "package",
+        "pacote",
+        "index",
+        "indice",
+        "migration",
+        "migracao",
+        "runner",
+        "semanal",
+        "weekly",
+        "roadmap"
+      ],
+      "firstCall": "`git worktree list`",
+      "internal": true,
+      "stopText": "Deploying the LPM product is an LPM-maintainer procedure. Ask an LPM maintainer. To deliver a change in your own repository, use lpm-deliver-activity."
+    }
+  ],
+  "notFor": [
+    {
+      "when": "an AISH release package, delivery artifact or DoD",
+      "skill": "lpm-aish-delivery"
+    },
+    {
+      "when": "delivering an activity in any other repository",
+      "skill": "lpm-deliver-activity"
+    },
+    {
+      "when": "verifying a pilot or tester report",
+      "skill": "lpm-pilot-feedback"
+    },
+    {
+      "when": "a workspace AI budget, model or limit",
+      "skill": "lpm-ai-cost"
+    }
+  ],
+  "owns": [],
+  "uses": [
+    "get_issue",
+    "list_issues",
+    "create_comment",
+    "list_comments",
+    "list_workspace_activities",
+    "upload_activity_attachment",
+    "list_activity_attachments",
+    "get_workspace_ai_config"
+  ],
+  "cli": [],
+  "sharedRefs": [
+    {
+      "name": "lpm-repo-rules",
+      "loadWhen": "you change, push or deploy the LPM product repository (`lpm`)",
+      "inlineSummary": false
+    },
+    {
+      "name": "advisor-golden-set",
+      "loadWhen": "before running, comparing or extending the Advisor golden set",
+      "inlineSummary": false
+    },
+    {
+      "name": "delivery-tracking",
+      "loadWhen": "you commit code that delivers an LPM activity",
+      "inlineSummary": false
+    },
+    {
+      "name": "evidence-and-closure",
+      "loadWhen": "before attaching evidence or closing an activity",
+      "inlineSummary": false
+    },
+    {
+      "name": "repo-hygiene",
+      "loadWhen": "you write, commit or push code in any git repository",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/release-inputs.md",
+      "loadWhen": "a §3 input is missing (new session)"
+    },
+    {
+      "file": "references/flow-deploy-preflight.md",
+      "loadWhen": "P2 step 1"
+    },
+    {
+      "file": "references/flow-golden-eval.md",
+      "loadWhen": "P3"
+    },
+    {
+      "file": "references/flow-rollback-evidence.md",
+      "loadWhen": "rows 7 and 8"
+    },
+    {
+      "file": "references/release-report-template.md",
+      "loadWhen": "the release report or the pilot notice"
+    },
+    {
+      "file": "references/ui-e2e-emulator.md",
+      "loadWhen": "signed-in web UI tests (row 10)"
+    },
+    {
+      "file": "references/demo-prep.md",
+      "loadWhen": "a live LPM demo (row 11)"
+    }
+  ],
+  "behaviorContracts": [
+    "delivery-trailer",
+    "delivery-trailer-phrase",
+    "missing-tool-fallback",
+    "release-deploy-gates",
+    "release-repo-rules"
+  ],
+  "codex": {
+    "shortDescription": "Ship the LPM product: candidate, golden set, promote, smoke",
+    "defaultPrompt": "Use $lpm-release-product to deploy the current lpm change to production."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "lpm-deliver-activity", "title": "Deliver one activity", "version": "2.0.0", "pack": "core", "kind": "tools", "invocation": "implicit",
+  "description": "Use when implementing or closing one LPM activity (atividade): commit with the trailer, attach evidence. Not for planning (use lpm-roadmap).",
+  "doneWhen": "The activity is done with listed evidence.", "authorityCeiling": "Evidence is [A]; removal is [C].",
+  "jobs": ["implementa a atividade", "fix bug", "attach the print", "anexa o print", "close it"],
+  "routing": [
+    { "order": 15, "all": [["commit", "commits", "lpm-activity"]], "unless": ["roadmap"], "firstCall": "get_issue" },
+    { "order": 16, "all": [["evidence", "evidencia"], ["activity", "atividade"]], "unless": [], "firstCall": "get_issue or list_activity_attachments" }
+  ],
+  "notFor": [ { "when": "roadmap structure", "skill": "lpm-roadmap" } ],
+  "owns": ["get_issue", "list_workspace_activities", "list_activity_attachments", "upload_activity_attachment", "create_activity_attachment", "delete_activity_attachment", "set_project_issue_due_date", "update_project_issue_due_date"],
+  "uses": ["get_mcp_connection_info"],
+  "cli": ["issues get"],
+  "sharedRefs": [ { "name": "repo-hygiene", "loadWhen": "before editing code in any git repository", "inlineSummary": true } ],
+  "references": [ { "file": "references/closure-checklist.md", "loadWhen": "before update_issue status done" } ],
+  "behaviorContracts": ["delivery-trailer"],
+  "codex": { "shortDescription": "Ship one LPM activity with trailer and evidence", "defaultPrompt": "Use $lpm-deliver-activity to deliver LPM activity <issueId>." }
+}

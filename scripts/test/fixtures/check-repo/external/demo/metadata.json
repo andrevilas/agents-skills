@@ -1,0 +1,10 @@
+{
+  "id": "demo",
+  "source_type": "external-upstream",
+  "status": "active",
+  "upstream_repo": "https://example.com/demo.git",
+  "upstream_ref": "0123456789abcdef0123456789abcdef01234567",
+  "files_sha256": {
+    "codex/demo/SKILL.md": "09c9a41eee303a6fc049a65d38bb7563084099c6740bcfe949f5573e2c670e52"
+  }
+}

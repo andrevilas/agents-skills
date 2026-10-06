@@ -1,0 +1,39 @@
+# Flow: open, reply to or update a governance thread
+Load when: decision rows 4 and 5 of SKILL.md (open a thread, reply to it, or change its status, assignee, title or anchor, or reopen it)
+
+## Preconditions
+1. Connector: {{tool:create_governance_thread}} and {{tool:reply_governance_thread}} work with the opt-in portfolio:manage scope (steps 2–7, "connector:" notes); {{tool:update_governance_thread}} and {{tool:get_governance_thread_resolution_context}} need an API key (steps 1 and 8–11: reply "Decision by <name>: <quote>" and STOP).
+2. Write permission: project owner, product-owner, delivery-lead, workspace or team manager ({{ref:thread-model}}).
+3. You propose, reply and record. Never write a decision nobody stated (GOV-MAX v1).
+
+## Steps
+1. Reply, update: {{tool:get_governance_thread_resolution_context}}(projectId, threadId, messageLimitCount=100) → `thread.status`, `thread.blockedAishJobIds`, `decision.outcome`, `decision.assignedTo` (connector: skip).
+2. Open: the target must be a requirement, baseline, roadmap-item or roadmap-change-request. An activity → SKILL.md row 8. No targetId → get it in {{skill:lpm-requirements-scope}} (requirement, baseline) or {{skill:lpm-roadmap}} (roadmap item, change request), then return; never guess it.
+3. Open, change request target: {{tool:get_workspace_roadmap_change_request}}(workspaceId, changeRequestId=targetId) → `status` applied, withdrawn or rejected → ask "CR <id> is <status>. Open a thread on it anyway? (yes/no)"; "no" → STOP.
+4. Open: {{tool:list_governance_threads}}(projectId, targetType, targetId) has an item with `status` not resolved/closed → do not open another; reply there (step 7).
+5. Open: write the content with the decision request of {{ref:authority-and-owner-decisions#decision-request}} (context, options, recommendation, consequences, decider). AI spend → add the 7 AI fields of {{ref:ai-cost-and-budgets}}.
+6. Open: {{tool:create_governance_thread}}(projectId, targetType, targetId, title, content, anchorKey="<targetType>:<targetId>:<topic>"; blockedAishJobIds only when the user asked to hold those jobs) [A] → threadId after "ID: ". Timeout → step 4 before any retry (no idempotency). Verify: step 4 → `id == threadId`, `status == "open"`.
+7. Reply: {{tool:reply_governance_thread}}(projectId, threadId, content) [A] → messageId. Timeout → read the last messages page before any retry.
+8. Reply, Verify: `thread.messageCount` of step 1 < 100 → step 1 call → last `messages[].id == messageId`. Else {{tool:get_governance_thread_messages}}(projectId, threadId, limitCount=100, cursor=last `messages[].id` of step 1), then cursor=`nextCursor` until `hasMore == false`; same first id twice → STOP. Pass: last item `id == messageId`. Connector: step 4 → `latestMessagePreview`.
+9. Update: `thread.status` resolved/closed, or the user asks to record an outcome → STOP, SKILL.md row 7. Never resolve with a bare status change.
+10. Update: ask "Set thread <threadId> <field>=<value>? (yes/no)". On "yes" → {{tool:update_governance_thread}}(projectId, threadId, only status answered/decision-needed, assignedTo, title, anchorKey) [C]. Status decision-needed → assignedTo=<deciderUserId> (SKILL.md §3), never a name.
+11. Reopen [O] (clears a recorded decision): only on the decider's own words in this conversation. Ask "Reopen <threadId>? It clears '<decision.outcome.summary>'." and, when `thread.blockedAishJobIds` is not empty, add "Jobs <ids> will be held again and need approval again." On "yes" → {{tool:update_governance_thread}}(projectId, threadId, status="open", decisionOutcome=null).
+12. Verify: step 1 call → `thread.status`, `decision.assignedTo` (== deciderUserId when set), `thread.title` as sent.
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| the reply text states a decision nobody made | "Who decides this, and what is the decision?" and STOP |
+| target is an activity | "Governance threads cannot target activities. Comment on <issueId>, or name the requirement, baseline or roadmap item." |
+| "You do not have permission" | no retry: "Ask the project owner to act or to grant product-owner/delivery-lead." |
+| reopen fails: "Blocked AISH job must be queued to apply a governance block" | no retry: "The held jobs already ran; reopen it in the LPM web UI or ask the owner." STOP |
+
+## Verify
+| After | Re-read with | Pass when |
+|---|---|---|
+| {{tool:create_governance_thread}} | {{tool:list_governance_threads}}(projectId, targetType, targetId) | `id == threadId`, `status == "open"` |
+| {{tool:reply_governance_thread}} | step 8 | last message `id == messageId` |
+| {{tool:update_governance_thread}} | {{tool:get_governance_thread_resolution_context}} | fields as sent; `decision.assignedTo == deciderUserId` |
+
+## Report fields
+Scope (project, threadId, target), Done (thread id, reply id or field change), Evidence (re-read values), Pending (decider must answer, held jobs to re-approve), Next.

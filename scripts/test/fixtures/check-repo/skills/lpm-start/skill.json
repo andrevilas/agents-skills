@@ -1,0 +1,57 @@
+{
+  "id": "lpm-start",
+  "title": "LPM start: connection, IDs and routing",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use first when connecting an agent to LPM (conectar, conexão): endpoint, API key or OAuth connector, IDs and routing to the right skill. Not for delivering an activity (use lpm-deliver-activity).",
+  "doneWhen": "The connection works, the workspace is known and exactly one skill is loaded.",
+  "authorityCeiling": "Every call is a read.",
+  "jobs": [
+    "connect my agent to LPM",
+    "check my LPM connection",
+    "set up the LPM connection",
+    "como conectar o LPM no Codex",
+    "configurar o LPM: qual skill devo usar"
+  ],
+  "routing": [
+    {
+      "order": 1,
+      "all": [
+        [
+          "connect",
+          "conectar",
+          "connection",
+          "conexao",
+          "setup",
+          "configurar"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "get_mcp_connection_info"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "delivering one activity",
+      "skill": "lpm-deliver-activity"
+    }
+  ],
+  "owns": [
+    "get_mcp_connection_info",
+    "list_workspaces",
+    "search_help_articles"
+  ],
+  "uses": [],
+  "cli": [
+    "mcp status"
+  ],
+  "sharedRefs": [],
+  "references": [],
+  "behaviorContracts": [],
+  "codex": {
+    "shortDescription": "Connect an agent to LPM and pick the skill",
+    "defaultPrompt": "Use $lpm-start to connect this agent to LPM."
+  }
+}

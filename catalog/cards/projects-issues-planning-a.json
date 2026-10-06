@@ -1,0 +1,2235 @@
+[
+  {
+    "name": "archive_project",
+    "purpose": "Sets archived=true on a project so it disappears from active project lists; all data is kept and the change can be undone.",
+    "useWhen": [
+      "User asks to archive, close or hide a finished or paused project"
+    ],
+    "avoidWhen": [
+      "Permanent removal: delete_project (owner-only)",
+      "Restoring: unarchive_project"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the project",
+      "User confirmed the project name",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Project <projectId> archived successfully.'",
+    "pairsWith": [
+      "get_project",
+      "unarchive_project",
+      "list_projects"
+    ],
+    "errors": [
+      {
+        "when": "Project not found",
+        "fix": "Wrong projectId; check list_projects with includeArchived=true."
+      },
+      {
+        "when": "You do not have permission to update this project",
+        "fix": "Caller is not a project manager; tell the user."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Only visibility changes: archived projects are hidden from list_projects unless includeArchived=true, but project access checks ignore archived, so reads and writes on their issues still work.",
+        "verifiedFrom": "server.ts:24902-24920"
+      },
+      {
+        "text": "Reversible with unarchive_project.",
+        "verifiedFrom": "server.ts:37746-37751"
+      }
+    ],
+    "verifiedFrom": "updateProjectCommand (called with archived=true)"
+  },
+  {
+    "name": "create_cycle",
+    "purpose": "Creates a cycle (sprint) with a name, a start and an end date in a project; status starts as 'upcoming' unless given.",
+    "useWhen": [
+      "User asks to open a new sprint or execution window with given dates"
+    ],
+    "avoidWhen": [
+      "A cycle for that window already exists: check list_cycles, then update_cycle",
+      "You need a value checkpoint or delivery commitment: use create_milestone"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "Not validated server-side; always send a non-empty name."
+      },
+      {
+        "param": "startDate",
+        "required": true,
+        "source": "user",
+        "notes": "ISO date YYYY-MM-DD. Not validated; always send it (cycles without startDate vanish from read models)."
+      },
+      {
+        "param": "endDate",
+        "required": true,
+        "source": "user",
+        "notes": "ISO date YYYY-MM-DD, after startDate (not checked by the server)."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "upcoming | active | completed. Default upcoming. Not validated with an API key: copy exactly."
+      },
+      {
+        "param": "assigneeId",
+        "required": false,
+        "source": "list_project_assignable_members -> uid",
+        "notes": "Not checked for eligibility; use only an eligible uid."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project (read access is enough)",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "Plain text: 'Cycle created with ID: <cycleId>'.",
+    "pairsWith": [
+      "list_cycles",
+      "list_project_assignable_members",
+      "update_issue",
+      "get_cycle"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Check projectId with list_projects; ask the user for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Not idempotent: a retry creates a second cycle; check list_cycles before retrying.",
+        "verifiedFrom": "server.ts:29366"
+      },
+      {
+        "text": "The server stores the arguments as sent (no validation of dates, status or name), so the agent must validate them.",
+        "verifiedFrom": "server.ts:29361-29383"
+      },
+      {
+        "text": "Assign issues afterwards with update_issue cycleId.",
+        "verifiedFrom": "server.ts:29374-29383"
+      }
+    ],
+    "verifiedFrom": "createCycleCommand"
+  },
+  {
+    "name": "create_issue",
+    "purpose": "Creates one issue (activity) in a project; status starts as 'todo' and priority as 'none' unless given.",
+    "useWhen": [
+      "User asks to register a piece of executable work in a project",
+      "Work agreed with the user needs to be tracked before you start it (so commits can carry 'LPM-Activity: <id>')"
+    ],
+    "avoidWhen": [
+      "Creating several issues: use batch_issue_operations (up to 25, with idempotencyKey)",
+      "The work comes from an approved operational entry: use convert_operational_entry_to_issue",
+      "The work materializes an approved roadmap item: use preview_roadmap_materialization then commit_roadmap_materialization",
+      "The request changes approved scope or a requirement: use a governance thread or change set, not an issue",
+      "A similar issue may already exist: check list_issues first"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "title",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty, objective. Max 500 chars under OAuth."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "What will be done and acceptance criteria. Max 20,000 chars under OAuth."
+      },
+      {
+        "param": "priority",
+        "required": false,
+        "source": "constant",
+        "notes": "none | low | medium | high | urgent. Default none."
+      },
+      {
+        "param": "assigneeId",
+        "required": false,
+        "source": "list_project_assignable_members -> uid",
+        "notes": "Must be eligible in the project directory, otherwise the call fails."
+      },
+      {
+        "param": "cycleId",
+        "required": false,
+        "source": "list_cycles -> id",
+        "notes": "Not validated: a wrong id is stored as is."
+      },
+      {
+        "param": "milestoneId",
+        "required": false,
+        "source": "list_milestones -> id",
+        "notes": "Not validated: a wrong id is stored as is."
+      },
+      {
+        "param": "estimate",
+        "required": false,
+        "source": "user",
+        "notes": "Non-negative number (points/hours as the team uses)."
+      },
+      {
+        "param": "actualHours",
+        "required": false,
+        "source": "user",
+        "notes": "Non-negative real labor hours; creates execution and ledger (cost) records. Only send real hours."
+      },
+      {
+        "param": "labelIds",
+        "required": false,
+        "source": "list_labels -> id",
+        "notes": "Array of label IDs; max 100 under OAuth."
+      },
+      {
+        "param": "dueDate",
+        "required": false,
+        "source": "user",
+        "notes": "ISO 8601 date string, e.g. 2026-10-31."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project (read access is enough)",
+      "Under OAuth: scope portfolio:manage (opt-in box on the consent page)",
+      "The work is execution of agreed scope, not a scope decision"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "Plain text, not JSON: 'Issue created with ID: <issueId>'. Take the ID after 'ID: '; it is the value for 'LPM-Activity: <issueId>'.",
+    "pairsWith": [
+      "list_projects",
+      "list_project_assignable_members",
+      "list_cycles",
+      "list_milestones",
+      "get_issue",
+      "update_issue"
+    ],
+    "errors": [
+      {
+        "when": "Assignee is not eligible for this project",
+        "fix": "Pick a uid from list_project_assignable_members, or omit assigneeId."
+      },
+      {
+        "when": "Issue estimate must be a non-negative number / Issue actual hours must be a non-negative number",
+        "fix": "Send a number >= 0."
+      },
+      {
+        "when": "Issue idempotency key is already bound to a different payload.",
+        "fix": "That key was used with another title; use a new key or the original title."
+      },
+      {
+        "when": "-32003 OAuth scope portfolio:manage is required",
+        "fix": "Tell the user to reinstall the connector and tick portfolio:manage (disconnect/connect does not refresh scopes)."
+      },
+      {
+        "when": "OAuth invalid_arguments field=idempotencyKey problem=unknown_field",
+        "fix": "OAuth does not accept idempotencyKey here; for safe retries use batch_issue_operations with idempotencyKey."
+      },
+      {
+        "when": "OPERATION_FAILED (OAuth)",
+        "fix": "A domain validation failed (usually assignee not eligible); re-check assigneeId and IDs, then retry once."
+      }
+    ],
+    "oauthScope": "portfolio:manage",
+    "cli": "lpm issues create --project <projectId> --title <title> [--description <text>] [--priority <priority>] [--assignee <userId>] [--cycle <cycleId>] [--milestone <milestoneId>] [--estimate <points>] [--due-date <iso>] [--json]",
+    "gotchas": [
+      {
+        "text": "idempotencyKey is an undeclared argument (API key only: the OAuth policy rejects unknown fields): with it the issue ID is derived from projectId+key and a replay with the same title returns the same ID (the text still says 'created').",
+        "verifiedFrom": "server.ts:28061-28072"
+      },
+      {
+        "text": "Without a key a retry creates a duplicate, so check list_issues before retrying.",
+        "verifiedFrom": "server.ts:28061-28063"
+      },
+      {
+        "text": "Fires the 'issue_created' webhook to the workspace's subscribers.",
+        "verifiedFrom": "server.ts:28188-28190"
+      },
+      {
+        "text": "An issue is execution, never approval of scope.",
+        "verifiedFrom": "help:boas-praticas-para-agentes"
+      }
+    ],
+    "verifiedFrom": "createIssueCommand, normalizeAssignableProjectUserId, resolveIssueActualHoursUpdate; oauthToolPolicy.ts rule create_issue"
+  },
+  {
+    "name": "create_milestone",
+    "purpose": "Creates a milestone (checkpoint of value or delivery commitment) with a name and target date in a project; status starts as 'open'.",
+    "useWhen": [
+      "User asks to register a delivery checkpoint or commitment date that groups several issues or cycles"
+    ],
+    "avoidWhen": [
+      "You need a time-boxed execution window: use create_cycle",
+      "A milestone for that checkpoint already exists: check list_milestones, then update_milestone",
+      "It is a roadmap-level outcome across projects: use the workspace roadmap tools"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "Not validated server-side; always send a non-empty name."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "targetDate",
+        "required": true,
+        "source": "user",
+        "notes": "ISO date YYYY-MM-DD. Not validated; always send it (milestones without targetDate vanish from read models)."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "open | closed. Default open. Not validated with an API key: copy exactly."
+      },
+      {
+        "param": "assigneeId",
+        "required": false,
+        "source": "list_project_assignable_members -> uid",
+        "notes": "Not checked for eligibility; use only an eligible uid."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project (read access is enough)",
+      "The target date was given or approved by the user (a milestone is a commitment)",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "Plain text: 'Milestone created with ID: <milestoneId>'.",
+    "pairsWith": [
+      "list_milestones",
+      "list_project_assignable_members",
+      "update_issue",
+      "get_milestone"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Check projectId with list_projects; ask the user for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Not idempotent: a retry creates a duplicate; check list_milestones before retrying.",
+        "verifiedFrom": "server.ts:29626"
+      },
+      {
+        "text": "Arguments are stored as sent with no validation.",
+        "verifiedFrom": "server.ts:29621-29640"
+      },
+      {
+        "text": "Attach issues afterwards with update_issue milestoneId.",
+        "verifiedFrom": "src/server/mcpIssuePage.ts:5-23"
+      }
+    ],
+    "verifiedFrom": "createMilestoneCommand"
+  },
+  {
+    "name": "create_project",
+    "purpose": "Creates a new project owned by the caller, with a name and a short key, optionally inside a workspace and a team.",
+    "useWhen": [
+      "User explicitly asks to create a new project and gives or approves its name, key and workspace"
+    ],
+    "avoidWhen": [
+      "The project may already exist: check list_projects first (the server does not check name or key uniqueness)",
+      "You want to bring back an archived project: use unarchive_project",
+      "You want new work inside an existing project: use create_issue"
+    ],
+    "inputs": [
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "Trimmed; must not be empty."
+      },
+      {
+        "param": "key",
+        "required": true,
+        "source": "user",
+        "notes": "Short, stable project key (e.g. PROJ). Trimmed and upper-cased by the server. Not checked for uniqueness."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Trimmed free text."
+      },
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "Strongly recommended: the workspace is the main collaboration boundary, and a project without a workspace is unreachable through OAuth connectors."
+      },
+      {
+        "param": "teamId",
+        "required": false,
+        "source": "list_teams -> id",
+        "notes": "Optional operational slice; leave empty when the workspace already covers collaboration."
+      }
+    ],
+    "preconditions": [
+      "API key authentication (tool is not offered to OAuth connectors)",
+      "Caller can read the target workspace and team when given",
+      "User confirmed name, key and workspace"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "Plain text, not JSON: 'Project created with ID: <projectId>'. Take the ID after 'ID: '.",
+    "pairsWith": [
+      "list_workspaces",
+      "list_projects",
+      "get_project",
+      "update_project",
+      "create_requirement_baseline",
+      "create_issue"
+    ],
+    "errors": [
+      {
+        "when": "Project name is required / Project key is required",
+        "fix": "Send a non-empty name and key."
+      },
+      {
+        "when": "You do not have access to the target workspace / target team",
+        "fix": "Use a workspaceId from list_workspaces or a teamId from list_teams that the caller belongs to."
+      },
+      {
+        "when": "-32003 This API key is not allowed to call MCP tool: create_project, or OAuth insufficient_scope",
+        "fix": "The connection cannot create projects. Call get_mcp_connection_info and tell the user."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Not idempotent: a retry after a timeout creates a duplicate project, so check list_projects by key before retrying.",
+        "verifiedFrom": "server.ts:27746-27756"
+      },
+      {
+        "text": "The caller becomes ownerId; the project starts with archived=false and no baseline (unbaselined).",
+        "verifiedFrom": "server.ts:27746-27756"
+      },
+      {
+        "text": "Recommended order after creation (help article 'como-comecar-um-projeto'): governance roles, then baseline and requirements, then issues.",
+        "verifiedFrom": "help:como-comecar-um-projeto"
+      }
+    ],
+    "verifiedFrom": "createProjectCommand"
+  },
+  {
+    "name": "create_project_file",
+    "purpose": "Registers metadata for a file that was already uploaded elsewhere, so it appears in the project's file list.",
+    "useWhen": [
+      "A file was already uploaded by another flow and must be listed in the project, and you have its url, type and size"
+    ],
+    "avoidWhen": [
+      "Evidence for one activity: use upload_activity_attachment (uploads and registers in one step)",
+      "You still need to upload the bytes: this tool does not upload anything"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": "Display name of the file."
+      },
+      {
+        "param": "url",
+        "required": true,
+        "source": "user or the upload flow that stored the file",
+        "notes": "Not validated by the server; must be a real, reachable URL."
+      },
+      {
+        "param": "storagePath",
+        "required": false,
+        "source": "the upload flow",
+        "notes": "Storage object path, when known."
+      },
+      {
+        "param": "type",
+        "required": true,
+        "source": "user",
+        "notes": "MIME type, e.g. application/pdf."
+      },
+      {
+        "param": "size",
+        "required": true,
+        "source": "user",
+        "notes": "Size in bytes (number)."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the project",
+      "The file is already stored at url",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "Plain text: 'Project file created with ID: <fileId>'.",
+    "pairsWith": [
+      "list_project_files",
+      "delete_project_file"
+    ],
+    "errors": [
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Caller needs manage rights; tell the user."
+      },
+      {
+        "when": "Project <id> not found",
+        "fix": "Check projectId with list_projects."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Not idempotent: a retry registers a second record; check list_project_files before retrying.",
+        "verifiedFrom": "server.ts:29889-29899"
+      },
+      {
+        "text": "All arguments are stored as sent, so send only the declared fields.",
+        "verifiedFrom": "server.ts:29890-29896"
+      },
+      {
+        "text": "Records a 'file_uploaded' activity.",
+        "verifiedFrom": "server.ts:29900-29903"
+      }
+    ],
+    "verifiedFrom": "createProjectFileCommand"
+  },
+  {
+    "name": "delete_cycle",
+    "purpose": "Deletes a cycle and clears cycleId on every issue that was in it.",
+    "useWhen": [
+      "User explicitly asks to remove a cycle created by mistake"
+    ],
+    "avoidWhen": [
+      "The sprint ended: use update_cycle status=completed (keeps history)",
+      "Moving one issue out of a cycle: use update_issue"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "cycleId",
+        "required": true,
+        "source": "list_cycles -> id",
+        "notes": "Confirm name with get_cycle first."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project (read access is enough)",
+      "User confirmed this exact cycle",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Cycle <cycleId> deleted successfully.'",
+    "pairsWith": [
+      "get_cycle",
+      "list_issues",
+      "list_cycles"
+    ],
+    "errors": [
+      {
+        "when": "Cycle not found",
+        "fix": "Already deleted or wrong ID; re-list with list_cycles."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "No undo.",
+        "verifiedFrom": "server.ts:29565-29575"
+      },
+      {
+        "text": "Issues are kept but lose their cycle assignment; record which issues were in it (list_issues cycleId) before deleting if they must be moved to another cycle.",
+        "verifiedFrom": "server.ts:29583-29588"
+      },
+      {
+        "text": "Runs as a single batch, so a cycle with roughly 500 or more issues can fail to delete.",
+        "verifiedFrom": "server.ts:29575-29588"
+      }
+    ],
+    "verifiedFrom": "deleteCycleCommand"
+  },
+  {
+    "name": "delete_issue",
+    "purpose": "Permanently deletes one issue together with its comments, its issue links and cross-project links, and detaches it from requirements.",
+    "useWhen": [
+      "User explicitly asks to delete an issue created by mistake (duplicate or test), after you showed its title"
+    ],
+    "avoidWhen": [
+      "Work is no longer needed: use update_issue status=canceled (keeps history and traceability)",
+      "Work is finished: use update_issue status=done",
+      "Removing a project: archive_project"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "Always send it."
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id",
+        "notes": "Confirm title with get_issue first. Also accepted as 'id'."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project (read access is enough: the server does not require manage)",
+      "User explicitly confirmed this exact issue",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Issue <issueId> deleted successfully.'",
+    "pairsWith": [
+      "get_issue",
+      "update_issue",
+      "list_issues"
+    ],
+    "errors": [
+      {
+        "when": "Issue not found",
+        "fix": "Already deleted or wrong ID; re-list with list_issues. Do not retry."
+      },
+      {
+        "when": "Project ID is required",
+        "fix": "Send projectId."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Hard delete with no undo: comments and links are destroyed and requirement links detached; only an audit event remains.",
+        "verifiedFrom": "server.ts:28568-28600"
+      },
+      {
+        "text": "It is not blocked for factory-governed (AISH) issues and needs only read access, so the agent must enforce the confirmation itself.",
+        "verifiedFrom": "server.ts:28561"
+      },
+      {
+        "text": "Commits that carry this ID in 'LPM-Activity' will no longer link anywhere.",
+        "verifiedFrom": "src/lib/commitActivityLinker.ts:1-6"
+      }
+    ],
+    "verifiedFrom": "deleteIssueCommand"
+  },
+  {
+    "name": "delete_milestone",
+    "purpose": "Deletes a milestone and clears milestoneId on every issue that pointed to it.",
+    "useWhen": [
+      "User explicitly asks to remove a milestone created by mistake"
+    ],
+    "avoidWhen": [
+      "The milestone was reached: use update_milestone status=closed (keeps history)",
+      "Moving one issue out of a milestone: use update_issue"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "milestoneId",
+        "required": true,
+        "source": "list_milestones -> id",
+        "notes": "Confirm name with get_milestone first."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project (read access is enough)",
+      "User confirmed this exact milestone",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Milestone <milestoneId> deleted successfully.'",
+    "pairsWith": [
+      "get_milestone",
+      "list_issues",
+      "list_milestones"
+    ],
+    "errors": [
+      {
+        "when": "Milestone not found",
+        "fix": "Already deleted or wrong ID; re-list with list_milestones."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "No undo.",
+        "verifiedFrom": "server.ts:29825-29842"
+      },
+      {
+        "text": "Issues are kept but lose their milestone; record them (list_issues milestoneId) before deleting if they must be re-attached elsewhere.",
+        "verifiedFrom": "server.ts:29837-29842"
+      }
+    ],
+    "verifiedFrom": "deleteMilestoneCommand"
+  },
+  {
+    "name": "delete_project",
+    "purpose": "Permanently deletes a project and everything stored under it (issues, comments, cycles, milestones, requirements, baselines, file records, ledger), plus its activity-feed entries and cross-project issue links.",
+    "useWhen": [
+      "The owner explicitly orders permanent deletion of this exact project (e.g. a test or duplicate project), after you showed its name and key from get_project"
+    ],
+    "avoidWhen": [
+      "The project is finished, paused or no longer wanted in lists: use archive_project (reversible)",
+      "Removing one work item: use update_issue status=canceled or delete_issue"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "Confirm name and key with get_project before calling."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the project",
+      "Explicit owner instruction naming this project",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Project <projectId> deleted successfully.'",
+    "pairsWith": [
+      "get_project",
+      "archive_project",
+      "list_projects"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found",
+        "fix": "Already deleted or wrong ID. Check list_projects with includeArchived=true; do not retry blindly."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Stop and tell the user; only a project manager can delete."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Irreversible: Firestore recursive delete with no soft delete, no undo and no server-side confirmation step.",
+        "verifiedFrom": "server.ts:27915-27940"
+      },
+      {
+        "text": "Financial records (ledger transactions) and baselines are destroyed too.",
+        "verifiedFrom": "server.ts:27940"
+      },
+      {
+        "text": "Uploaded storage objects are not removed by this command.",
+        "verifiedFrom": "server.ts:27915-27948"
+      },
+      {
+        "text": "Default to archive_project unless the owner insists.",
+        "verifiedFrom": "help:como-usar-mcp-e-cli-com-seguranca"
+      }
+    ],
+    "verifiedFrom": "deleteProjectCommand"
+  },
+  {
+    "name": "delete_project_file",
+    "purpose": "Deletes one file record from the project's file list.",
+    "useWhen": [
+      "User asks to remove a wrong or duplicate file entry from the project"
+    ],
+    "avoidWhen": [
+      "Removing activity evidence: use delete_activity_attachment",
+      "You need the file gone from storage: this tool only removes the record"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "fileId",
+        "required": true,
+        "source": "list_project_files -> items[].id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the project",
+      "User confirmed which file (show name from list_project_files)",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Project file <fileId> deleted successfully.'",
+    "pairsWith": [
+      "list_project_files",
+      "create_project_file"
+    ],
+    "errors": [
+      {
+        "when": "File not found",
+        "fix": "Already deleted or wrong fileId; re-list with list_project_files."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Tell the user; manage rights are needed."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Removes only the metadata record; the stored object at url/storagePath is not deleted.",
+        "verifiedFrom": "server.ts:29946-29956"
+      },
+      {
+        "text": "Records a 'file_deleted' activity.",
+        "verifiedFrom": "server.ts:29957-29960"
+      },
+      {
+        "text": "No undo (re-register with create_project_file).",
+        "verifiedFrom": "server.ts:29955-29956"
+      }
+    ],
+    "verifiedFrom": "deleteProjectFileCommand"
+  },
+  {
+    "name": "get_cycle",
+    "purpose": "Returns one cycle with its dates, status and assignee.",
+    "useWhen": [
+      "Verify a cycleId or read its dates and status before planning or updating"
+    ],
+    "avoidWhen": [
+      "You need all cycles: list_cycles",
+      "You need the cycle's issues: list_issues with cycleId"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "cycleId",
+        "required": true,
+        "source": "list_cycles -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller should have read access to the project",
+      "Under OAuth the project must belong to a workspace in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON cycle: id, name, startDate, endDate, status, assigneeId, requirementId, baselineId, projectId, workspaceId, createdAt.",
+    "pairsWith": [
+      "list_cycles",
+      "list_issues",
+      "update_cycle"
+    ],
+    "errors": [
+      {
+        "when": "-32602 Cycle not found",
+        "fix": "Wrong cycleId for this project; re-list with list_cycles."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts tools/call inline handler for get_cycle"
+  },
+  {
+    "name": "get_issue",
+    "purpose": "Returns one issue with all its fields, including materialized actual hours.",
+    "useWhen": [
+      "Read the current state of an issue before changing it",
+      "Confirm an update or a creation took effect",
+      "User gives an activity ID and asks about it"
+    ],
+    "avoidWhen": [
+      "You need many issues: use list_issues",
+      "You need the comments of the issue: use list_comments",
+      "You need its evidence files: use list_activity_attachments"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "Always send it. Without it the server scans every project to find the issue (slow) and fails if the ID is ambiguous."
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id or create_issue result",
+        "notes": "Also accepted as 'id'."
+      }
+    ],
+    "preconditions": [
+      "Caller should have read access to the project",
+      "Under OAuth the project must belong to a workspace in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON issue (the stored document): id, workspaceId, title, description, status, priority, assigneeId, cycleId, milestoneId, estimate, labelIds, dueDate, startedAt, completedAt, requirementId, baselineId, workOrigin, roadmapLineageRefs[], actualHours, creatorId, createdAt, updatedAt; blockerContext {status active|resolved, content, capturedAt, capturedBy, source, commentId, resolvedAt, resolvedBy, resolution, resolutionCommentId} once a blocker was recorded (plus factoryGovernance/factoryAuditId on AISH issues).",
+    "pairsWith": [
+      "list_issues",
+      "update_issue",
+      "list_comments",
+      "list_activity_attachments"
+    ],
+    "errors": [
+      {
+        "when": "-32602 Issue not found",
+        "fix": "Wrong issueId or it was deleted; re-list with list_issues for this projectId."
+      },
+      {
+        "when": "-32602 Issue ID is required",
+        "fix": "Send issueId."
+      },
+      {
+        "when": "Project ID is required because the issue ID is ambiguous",
+        "fix": "Send projectId."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": "lpm issues get --project <projectId> --issue <issueId> [--json]",
+    "gotchas": [
+      {
+        "text": "Cheap and safe; use it to verify every write.",
+        "verifiedFrom": "server.ts:38618-38629"
+      },
+      {
+        "text": "The id is the value for the commit trailer 'LPM-Activity: <id>'.",
+        "verifiedFrom": "src/lib/commitActivityLinker.ts:4-6"
+      },
+      {
+        "text": "blockerContext is absent until set_project_issue_blocker_context runs; status 'resolved' only after resolve_project_issue_blocker_context, so an issue with status 'active' blockerContext is blocked even when no issue link blocks it.",
+        "verifiedFrom": "src/lib/issueBlockerContext.ts:1-12"
+      }
+    ],
+    "verifiedFrom": "server.ts tools/call inline handler for get_issue; resolveIssueToolIssueId (src/lib/issueToolArgs.ts); resolveProjectIdForIssueScopedCommand; materializeIssueActualsForIssue"
+  },
+  {
+    "name": "get_milestone",
+    "purpose": "Returns one milestone with its target date, status and assignee.",
+    "useWhen": [
+      "Verify a milestoneId or read its target date and status before planning or updating"
+    ],
+    "avoidWhen": [
+      "You need all milestones: list_milestones",
+      "You need the milestone's issues: list_issues with milestoneId"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "milestoneId",
+        "required": true,
+        "source": "list_milestones -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller should have read access to the project",
+      "Under OAuth the project must belong to a workspace in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON milestone: id, name, description, targetDate, status, assigneeId, requirementId, baselineId, projectId, workspaceId, createdAt.",
+    "pairsWith": [
+      "list_milestones",
+      "list_issues",
+      "update_milestone"
+    ],
+    "errors": [
+      {
+        "when": "-32602 Milestone not found",
+        "fix": "Wrong milestoneId for this project; re-list with list_milestones."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts tools/call inline handler for get_milestone"
+  },
+  {
+    "name": "get_project",
+    "purpose": "Returns one project's settings with its resolved governance roles and whether the caller can manage it.",
+    "useWhen": [
+      "Verify a projectId and show its name/key before acting",
+      "Find who holds project-owner, product-owner and delivery-lead roles (who to escalate to)",
+      "Check access.canManage before tools that need manage rights (update_project, archive_project, create_project_file, delete_project_file)"
+    ],
+    "avoidWhen": [
+      "You need open issues, decisions and scope gate: use get_project_execution_context",
+      "You need the executive summary only: use get_project_owner_surface",
+      "You do not know the projectId yet: use list_projects"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project",
+      "Under OAuth the project must belong to a workspace in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON project: id, name, key, description, ownerId, workspaceId, teamId, archived, createdAt, governanceAssignments [{role, userId, source}] (resolved), routingProfile, plus access {canManage: boolean}.",
+    "pairsWith": [
+      "list_projects",
+      "get_project_execution_context",
+      "update_project"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found",
+        "fix": "Wrong ID; get it from list_projects."
+      },
+      {
+        "when": "You do not have access to this project",
+        "fix": "Caller cannot read it; ask the user for access, do not retry."
+      },
+      {
+        "when": "-32003 (OAuth) not authorized",
+        "fix": "Project is outside the granted workspace or has no workspace; call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": "lpm project get <projectId> [--json]",
+    "gotchas": [
+      {
+        "text": "Cheap call: one project document read plus a permission check (access.canManage).",
+        "verifiedFrom": "server.ts:5579-5585"
+      },
+      {
+        "text": "Holding a governance role is authority to decide; being an issue assignee is not.",
+        "verifiedFrom": "help:papeis-governanca-e-responsabilidades"
+      }
+    ],
+    "verifiedFrom": "getProjectCommand"
+  },
+  {
+    "name": "get_project_execution_context",
+    "purpose": "Returns the agent-oriented working context of a project: owner view, top open issues, active cycles, open milestones, decision inbox, scope/baseline publication gate and change sets.",
+    "useWhen": [
+      "First call when you start working on a project: what is open, what is blocked on decisions, what to do next",
+      "User asks 'what should we work on now' for a project",
+      "Before proposing scope changes, to see the current baseline, working scope delta and publication gate"
+    ],
+    "avoidWhen": [
+      "You only need issues with filters or more than 50 open issues: use list_issues",
+      "You only need the executive summary: use get_project_owner_surface",
+      "You need decisions only: use get_project_decision_inbox"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project AND holds a project governance role (project-owner, product-owner or delivery-lead; the ownerId counts): the tool reads the project decision inbox, which reads the owner surface",
+      "Under OAuth the project must belong to a workspace in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{project, generatedAt, ownerView, planning:{openIssues (max 50, not done/canceled, urgent first), activeCycles (status=active), openMilestones (status!=closed), nextRecommendedActivity}, governance (decision inbox, up to 20), scope:{currentBaseline, workingScope, delta, publicationGate}, changeSets:{totalCount, activeCount, items (first 20)}}.",
+    "pairsWith": [
+      "list_projects",
+      "get_issue",
+      "list_issues",
+      "update_issue",
+      "get_project_decision_inbox"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Check projectId with list_projects; ask the user for access."
+      },
+      {
+        "when": "-32003 (OAuth) not authorized",
+        "fix": "Project outside the grant or without a workspace; call get_mcp_connection_info."
+      },
+      {
+        "when": "You do not have access to this owner surface",
+        "fix": "The caller has no project governance role; use get_project_read_model or list_issues instead, or ask the owner to assign a role."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Built on get_project_read_model, so it is heavy and has the same API-key side effect (orphan requirements re-pointed to the current baseline).",
+        "verifiedFrom": "server.ts:10448-10449"
+      },
+      {
+        "text": "openIssues is capped at 50; use list_issues for the rest.",
+        "verifiedFrom": "server.ts:10460-10472"
+      },
+      {
+        "text": "Decisions listed in governance belong to the owner: present them, do not decide them.",
+        "verifiedFrom": "help:papeis-governanca-e-responsabilidades"
+      },
+      {
+        "text": "With an API key and grounding enabled, the owner-surface step may run a document search that spends the daily grounding quota: do not call it in a loop.",
+        "verifiedFrom": "server.ts:9071-9084"
+      }
+    ],
+    "verifiedFrom": "getProjectExecutionContextCommand, getProjectReadModelCommand"
+  },
+  {
+    "name": "get_project_read_model",
+    "purpose": "Returns the full aggregated project dataset behind the owner and overview screens: project, owner view, all issues, cycles, milestones, issue links, baselines, requirements, knowledge assets, labels, labor executions and ledger transactions.",
+    "useWhen": [
+      "You need the complete raw project dataset in one call (e.g. a full report or audit)",
+      "You need issue executions or ledger transactions of the project"
+    ],
+    "avoidWhen": [
+      "You are starting work on a project: use get_project_execution_context (agent-oriented, smaller)",
+      "You only need the executive summary: use get_project_owner_surface",
+      "You only need issues: use list_issues with filters and limitCount"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project",
+      "Under OAuth the project must belong to a workspace in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{project, ownerView (executive summary incl. scope.currentBaseline/workingScope/delta and dependencies.nextRecommendedActivity), issues[], cycles[] (by startDate desc), milestones[] (by targetDate asc), issueLinks[], labels[], baselines[] (with requirementCount), requirements[], requirementGroups[], knowledgeItems[] (assets only), issueExecutions[], ledgerTransactions[]}.",
+    "pairsWith": [
+      "list_projects",
+      "get_project_owner_surface",
+      "get_project_execution_context"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Check projectId with list_projects; ask the user for access."
+      },
+      {
+        "when": "-32003 (OAuth) not authorized",
+        "fix": "Project outside the grant or without a workspace; call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Very large payload with no pagination; labels[] is the global label list, not per project.",
+        "verifiedFrom": "server.ts:8726-8740"
+      },
+      {
+        "text": "Contains labor and financial data (ledgerTransactions, issueExecutions): do not paste it to third parties.",
+        "verifiedFrom": "server.ts:8721-8722"
+      },
+      {
+        "text": "Cached about 4 s server-side.",
+        "verifiedFrom": "server.ts:1255-1256"
+      },
+      {
+        "text": "Hidden side effect with an API key (not under OAuth): requirements whose baseline is missing are silently re-pointed to the current baseline.",
+        "verifiedFrom": "server.ts:8756-8758"
+      },
+      {
+        "text": "Cycles without startDate and milestones without targetDate are missing from the lists.",
+        "verifiedFrom": "server.ts:8728-8729"
+      }
+    ],
+    "verifiedFrom": "getProjectReadModelCommand, repairOrphanRequirementsForProject"
+  },
+  {
+    "name": "list_cycles",
+    "purpose": "Lists all cycles (sprints) of a project.",
+    "useWhen": [
+      "You need a cycleId (for create_issue, update_issue, list_issues filter, update_cycle)",
+      "User asks which sprints exist or which one is active"
+    ],
+    "avoidWhen": [
+      "You only need the active cycles together with open work: get_project_execution_context -> planning.activeCycles",
+      "You know the cycleId: use get_cycle"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller should have read access to the project",
+      "Under OAuth the project must belong to a workspace in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON array of cycles: id, name, startDate, endDate, status (upcoming|active|completed), assigneeId, requirementId, baselineId, projectId, workspaceId, createdAt.",
+    "pairsWith": [
+      "list_projects",
+      "get_cycle",
+      "list_issues",
+      "create_cycle",
+      "update_issue"
+    ],
+    "errors": [
+      {
+        "when": "Empty array",
+        "fix": "The project has no cycles (or the projectId is wrong); verify with get_project."
+      },
+      {
+        "when": "-32003 (OAuth) not authorized",
+        "fix": "Project outside the grant or without a workspace; call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Unsorted and unpaginated; sort by startDate yourself.",
+        "verifiedFrom": "server.ts:38637-38640"
+      },
+      {
+        "text": "Pick the active one by status=active; nothing prevents more than one active cycle.",
+        "verifiedFrom": "server.ts:38637-38640"
+      },
+      {
+        "text": "To get a cycle's issues call list_issues with cycleId.",
+        "verifiedFrom": "src/server/mcpIssuePage.ts:5-23"
+      }
+    ],
+    "verifiedFrom": "server.ts tools/call inline handler for list_cycles"
+  },
+  {
+    "name": "list_issue_links",
+    "purpose": "Lists all links between issues inside one project (blocks, duplicates, related-to).",
+    "useWhen": [
+      "You need to know which issues block or duplicate others in a project",
+      "You need a link id before delete_issue_link"
+    ],
+    "avoidWhen": [
+      "Links between issues of different projects: use list_workspace_issue_links",
+      "You want blocked issues with reasons: use list_blocked_project_issues",
+      "You want dependency analysis or critical path: use get_project_dependency_summary or get_project_dependency_graph"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller should have read access to the project",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON array of links: id, sourceIssueId, targetIssueId, type, createdAt. type 'blocks' means sourceIssueId blocks targetIssueId; 'duplicates' and 'related-to' are also used.",
+    "pairsWith": [
+      "list_issues",
+      "get_issue",
+      "create_issue_link",
+      "delete_issue_link"
+    ],
+    "errors": [
+      {
+        "when": "Empty array",
+        "fix": "No intra-project links (or wrong projectId); check list_workspace_issue_links for cross-project ones."
+      },
+      {
+        "when": "-32003 not allowed / OAuth insufficient_scope",
+        "fix": "Tool is API-key only; with OAuth use get_project_read_model -> issueLinks."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Unsorted, unpaginated.",
+        "verifiedFrom": "server.ts:38691-38694"
+      },
+      {
+        "text": "New links of type 'is-blocked-by' are stored reversed as 'blocks', but legacy rows may still carry 'is-blocked-by' (meaning target blocks source).",
+        "verifiedFrom": "src/lib/issueLinkDirection.ts:14-23"
+      },
+      {
+        "text": "Links carry only ids (sourceIssueId, targetIssueId): resolve titles with list_issues or get_issue.",
+        "verifiedFrom": "server.ts:38691-38694"
+      }
+    ],
+    "verifiedFrom": "server.ts tools/call inline handler for list_issue_links; createIssueLinkCommand + normalizeIssueLinkWriteInput (src/lib/issueLinkDirection.ts) for link semantics"
+  },
+  {
+    "name": "list_issues",
+    "purpose": "Lists the issues (activities) of one project, optionally filtered by status, priority, assignee, cycle or milestone, with optional cursor pagination.",
+    "useWhen": [
+      "You need issue IDs (e.g. for update_issue, comments, or the commit trailer 'LPM-Activity: <id>')",
+      "User asks for the backlog, the work in progress, or the issues of a cycle, milestone or person"
+    ],
+    "avoidWhen": [
+      "You need one known issue: use get_issue",
+      "You need overdue, unassigned, unestimated or blocked issues: use list_overdue_project_issues, list_unassigned_project_issues, list_unestimated_project_issues or list_blocked_project_issues",
+      "You need the prioritized open work with context: use get_project_execution_context"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "backlog | todo | in-progress | done | canceled (exact match)."
+      },
+      {
+        "param": "priority",
+        "required": false,
+        "source": "constant",
+        "notes": "none | low | medium | high | urgent."
+      },
+      {
+        "param": "assigneeId",
+        "required": false,
+        "source": "list_project_assignable_members -> uid",
+        "notes": ""
+      },
+      {
+        "param": "cycleId",
+        "required": false,
+        "source": "list_cycles -> id",
+        "notes": ""
+      },
+      {
+        "param": "milestoneId",
+        "required": false,
+        "source": "list_milestones -> id",
+        "notes": ""
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "list_issues -> nextCursor",
+        "notes": "Only valid with the SAME projectId and filters that produced it."
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "Integer 1-100. Passing it switches the response to the paginated shape."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project",
+      "Under OAuth the project must belong to a workspace in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Without cursor/limitCount: a JSON array of ALL matching issues. With cursor or limitCount: {items, nextCursor, hasMore}. Each issue: id, title, description, status, priority, assigneeId, cycleId, milestoneId, estimate, dueDate, labelIds, requirementId, baselineId, startedAt, completedAt, actualHours, createdAt, updatedAt.",
+    "pairsWith": [
+      "list_projects",
+      "get_issue",
+      "update_issue",
+      "create_comment"
+    ],
+    "errors": [
+      {
+        "when": "Invalid OAuth tool arguments / 'OAuth grant does not permit this operation or resource.' on a paginated call",
+        "fix": "Bad cursor or limitCount: restart without cursor, keep the same filters, use an integer limitCount 1-100."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Check projectId with list_projects; ask the user for access."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": "lpm issues list --project <projectId> [--status <status>] [--priority <priority>] [--assignee <userId>] [--cycle <cycleId>] [--milestone <milestoneId>] [--json]",
+    "gotchas": [
+      {
+        "text": "Always pass limitCount (e.g. 50) on big projects: without it the whole project is returned in one response.",
+        "verifiedFrom": "src/server/mcpIssuePage.ts:9-31"
+      },
+      {
+        "text": "Loop while hasMore is true, passing nextCursor.",
+        "verifiedFrom": "server.ts:38604"
+      },
+      {
+        "text": "Filters are exact matches and combine with AND.",
+        "verifiedFrom": "src/server/mcpIssuePage.ts:5-23"
+      },
+      {
+        "text": "The issue id is the value for the commit trailer 'LPM-Activity: <id>'.",
+        "verifiedFrom": "src/lib/commitActivityLinker.ts:4-6"
+      }
+    ],
+    "verifiedFrom": "server.ts tools/call inline handler for list_issues; src/server/mcpIssuePage.ts readMcpIssuePage; materializeIssueActualsForIssues"
+  },
+  {
+    "name": "list_milestones",
+    "purpose": "Lists all milestones (value checkpoints / delivery commitments) of a project.",
+    "useWhen": [
+      "You need a milestoneId (for create_issue, update_issue, list_issues filter, update_milestone)",
+      "User asks which milestones exist or which are still open"
+    ],
+    "avoidWhen": [
+      "You only need open milestones with open work: get_project_execution_context -> planning.openMilestones",
+      "You know the milestoneId: use get_milestone"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller should have read access to the project",
+      "Under OAuth the project must belong to a workspace in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON array of milestones: id, name, description, targetDate, status (open|closed), assigneeId, requirementId, baselineId, projectId, workspaceId, createdAt.",
+    "pairsWith": [
+      "list_projects",
+      "get_milestone",
+      "list_issues",
+      "create_milestone",
+      "update_issue"
+    ],
+    "errors": [
+      {
+        "when": "Empty array",
+        "fix": "The project has no milestones (or the projectId is wrong); verify with get_project."
+      },
+      {
+        "when": "-32003 (OAuth) not authorized",
+        "fix": "Project outside the grant or without a workspace; call get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Unsorted and unpaginated; sort by targetDate yourself.",
+        "verifiedFrom": "server.ts:38664-38667"
+      },
+      {
+        "text": "To get a milestone's issues call list_issues with milestoneId.",
+        "verifiedFrom": "src/server/mcpIssuePage.ts:5-23"
+      }
+    ],
+    "verifiedFrom": "server.ts tools/call inline handler for list_milestones"
+  },
+  {
+    "name": "list_project_files",
+    "purpose": "Lists the file records registered for a project, newest first, one page at a time.",
+    "useWhen": [
+      "User asks which documents or files are attached to the project",
+      "You need a fileId for delete_project_file"
+    ],
+    "avoidWhen": [
+      "You need evidence files of one activity: use list_activity_attachments",
+      "You need knowledge base items: use list_project_knowledge_items"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "list_project_files -> nextCursor",
+        "notes": "The nextCursor of the previous page (a file id)."
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "Page size 1-100, default 24."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{items:[{id, name, url, storagePath, type, size, userId, createdAt, projectId, workspaceId}], nextCursor (string or null), hasMore (boolean)}. Loop while hasMore is true, passing nextCursor.",
+    "pairsWith": [
+      "get_project",
+      "create_project_file",
+      "delete_project_file"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Check projectId with list_projects; ask the user for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "An unknown or stale cursor is silently ignored and page 1 is returned again; stop looping if you see the same ids twice.",
+        "verifiedFrom": "server.ts:29928-29933"
+      },
+      {
+        "text": "These are metadata records only; the url points to the stored file.",
+        "verifiedFrom": "server.ts:29939-29941"
+      }
+    ],
+    "verifiedFrom": "listProjectFilesCommand"
+  },
+  {
+    "name": "list_projects",
+    "purpose": "Lists the projects the caller can see (as owner, workspace member or team member), optionally filtered by workspace or team; archived projects are hidden unless includeArchived=true.",
+    "useWhen": [
+      "You need a projectId and only know the project name or key",
+      "User asks which projects exist in a workspace or team",
+      "Start of a session, to pick the project to work on"
+    ],
+    "avoidWhen": [
+      "You already have the projectId: use get_project",
+      "You need the open work of a project: use get_project_execution_context",
+      "You need the workspace view of its projects with workspace context: list_workspace_projects is equivalent for one workspace"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "Optional with an API key but REQUIRED under OAuth (ChatGPT/Claude connectors). With a workspace agent credential it defaults to the credential's workspace and any other value is rejected."
+      },
+      {
+        "param": "teamId",
+        "required": false,
+        "source": "list_teams -> id",
+        "notes": "Exact-match filter."
+      },
+      {
+        "param": "includeArchived",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean, default false. Set true to find archived projects (e.g. before unarchive_project)."
+      }
+    ],
+    "preconditions": [
+      "Under OAuth the workspaceId must be a workspace included in the grant"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON array of full project documents: id, name, key, description, ownerId, workspaceId, teamId, archived, createdAt and, when set, governanceAssignments, routingProfile, hourlyRate. Use id as projectId in every project-scoped tool.",
+    "pairsWith": [
+      "list_workspaces",
+      "get_project",
+      "get_project_execution_context",
+      "list_issues"
+    ],
+    "errors": [
+      {
+        "when": "-32602 This project listing requires an explicit workspaceId. (OAuth)",
+        "fix": "Call list_workspaces, take the id of the right workspace, retry with workspaceId."
+      },
+      {
+        "when": "-32003 The requested resource is outside the credential scope",
+        "fix": "You passed a workspaceId other than the agent credential's workspace; omit workspaceId."
+      },
+      {
+        "when": "Empty array",
+        "fix": "Check workspaceId/teamId, retry with includeArchived=true; if still empty the caller has no access. Ask the user; never guess IDs."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": "lpm projects list [--workspace-id <id>] [--team-id <id>] [--include-archived] [--json]",
+    "gotchas": [
+      {
+        "text": "No pagination: returns every matching project.",
+        "verifiedFrom": "server.ts:37139-37151"
+      },
+      {
+        "text": "A project where the caller only holds a governance role (not owner, not workspace/team member) is NOT listed, although get_project works for it.",
+        "verifiedFrom": "server.ts:37145-37149"
+      },
+      {
+        "text": "Without workspaceId (API key) the server scans all projects, so pass workspaceId when known.",
+        "verifiedFrom": "server.ts:37139"
+      },
+      {
+        "text": "Match the user's project by name or key; never guess an ID.",
+        "verifiedFrom": "help:como-usar-mcp-e-cli-com-seguranca"
+      }
+    ],
+    "verifiedFrom": "server.ts tools/call inline handler for list_projects (getAccessibleScopeIds filter, agent-credential default); src/server/oauthToolPolicy.ts rule list_projects (workspace_required)"
+  },
+  {
+    "name": "unarchive_project",
+    "purpose": "Sets archived=false on an archived project so it shows again in active project lists.",
+    "useWhen": [
+      "User asks to restore or reopen an archived project"
+    ],
+    "avoidWhen": [
+      "Project is not archived (check get_project -> archived): nothing to do",
+      "Creating a new project: create_project"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects (includeArchived=true) -> id",
+        "notes": "Archived projects only appear in list_projects with includeArchived=true."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the project",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Project <projectId> restored successfully.'",
+    "pairsWith": [
+      "list_projects",
+      "get_project",
+      "archive_project"
+    ],
+    "errors": [
+      {
+        "when": "Project not found",
+        "fix": "Wrong projectId; list with includeArchived=true."
+      },
+      {
+        "when": "You do not have permission to update this project",
+        "fix": "Caller is not a project manager; tell the user."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Reverses an earlier archive decision, so confirm with the user.",
+        "verifiedFrom": "server.ts:37746-37751"
+      },
+      {
+        "text": "It does not restore deleted data: delete_project removes the project recursively and cannot be undone.",
+        "verifiedFrom": "server.ts:27940"
+      }
+    ],
+    "verifiedFrom": "updateProjectCommand (called with archived=false)"
+  },
+  {
+    "name": "update_cycle",
+    "purpose": "Changes a cycle's name, dates, status or assignee.",
+    "useWhen": [
+      "Start a sprint (status=active), close it (status=completed) or reopen it (status=upcoming)",
+      "Fix a cycle's name, dates or responsible person"
+    ],
+    "avoidWhen": [
+      "Moving issues between cycles: use update_issue cycleId",
+      "Removing the cycle: delete_cycle"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "cycleId",
+        "required": true,
+        "source": "list_cycles -> id",
+        "notes": ""
+      },
+      {
+        "param": "name",
+        "required": false,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "startDate",
+        "required": false,
+        "source": "user",
+        "notes": "ISO date YYYY-MM-DD."
+      },
+      {
+        "param": "endDate",
+        "required": false,
+        "source": "user",
+        "notes": "ISO date YYYY-MM-DD."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "upcoming | active | completed. Not validated with an API key: copy exactly."
+      },
+      {
+        "param": "assigneeId",
+        "required": false,
+        "source": "list_project_assignable_members -> uid",
+        "notes": "Not checked for eligibility."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project (read access is enough)",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Cycle <cycleId> updated successfully.'",
+    "pairsWith": [
+      "list_cycles",
+      "get_cycle",
+      "list_issues",
+      "update_issue"
+    ],
+    "errors": [
+      {
+        "when": "Cycle not found",
+        "fix": "Wrong cycleId for this project; re-list with list_cycles."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Check projectId; ask the user for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Completing a cycle does NOT move or close its unfinished issues: list them with list_issues(cycleId, status) and move them with update_issue.",
+        "verifiedFrom": "server.ts:29485-29486"
+      },
+      {
+        "text": "Send only the fields you change; undeclared fields are written as sent.",
+        "verifiedFrom": "server.ts:29464-29486"
+      }
+    ],
+    "verifiedFrom": "updateCycleCommand"
+  },
+  {
+    "name": "update_issue",
+    "purpose": "Changes fields of one issue: title, description, status, priority, assignee, cycle, milestone, estimate, labels, dates or actual hours.",
+    "useWhen": [
+      "Move an issue through its lifecycle (todo -> in-progress -> done, or canceled)",
+      "Edit title/description, reprioritize, reassign, or move the issue to another cycle or milestone",
+      "Record real labor hours (actualHours to set, actualHoursDelta to add)"
+    ],
+    "avoidWhen": [
+      "Updating many issues: use batch_issue_operations (up to 25) or the bulk_* tools",
+      "Adding a progress note: use create_comment",
+      "Marking a blocker with reason: use set_project_issue_blocker_context (API key)",
+      "Removing the issue: prefer status=canceled over delete_issue"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "Always send it."
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id",
+        "notes": "The server also accepts it as 'id'."
+      },
+      {
+        "param": "title",
+        "required": false,
+        "source": "user",
+        "notes": "Max 500 chars under OAuth."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Max 20,000 chars under OAuth."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "backlog | todo | in-progress | done | canceled. With an API key a misspelled value is stored as is, so copy exactly."
+      },
+      {
+        "param": "priority",
+        "required": false,
+        "source": "constant",
+        "notes": "none | low | medium | high | urgent."
+      },
+      {
+        "param": "assigneeId",
+        "required": false,
+        "source": "list_project_assignable_members -> uid",
+        "notes": "Must be eligible. null clears it (API key only)."
+      },
+      {
+        "param": "cycleId",
+        "required": false,
+        "source": "list_cycles -> id",
+        "notes": "Not validated. null clears it (API key only)."
+      },
+      {
+        "param": "milestoneId",
+        "required": false,
+        "source": "list_milestones -> id",
+        "notes": "Not validated. null clears it (API key only)."
+      },
+      {
+        "param": "estimate",
+        "required": false,
+        "source": "user",
+        "notes": "Non-negative number; null clears it (API key only)."
+      },
+      {
+        "param": "actualHours",
+        "required": false,
+        "source": "user",
+        "notes": "Sets total real hours on the current or latest execution. Do not combine with actualHoursDelta."
+      },
+      {
+        "param": "actualHoursDelta",
+        "required": false,
+        "source": "user",
+        "notes": "ADDS hours on every call. Never retry blindly."
+      },
+      {
+        "param": "labelIds",
+        "required": false,
+        "source": "list_labels -> id",
+        "notes": "Replaces the whole label list."
+      },
+      {
+        "param": "startedAt",
+        "required": false,
+        "source": "user",
+        "notes": "ISO date-time. Set automatically on the first move to in-progress."
+      },
+      {
+        "param": "completedAt",
+        "required": false,
+        "source": "user",
+        "notes": "ISO date-time. Set automatically on done and cleared when reopened."
+      },
+      {
+        "param": "dueDate",
+        "required": false,
+        "source": "user",
+        "notes": "ISO 8601 date. null clears it (API key only)."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project (read access is enough, except closing a factory-governed issue, which needs manage)",
+      "Under OAuth: scope portfolio:manage",
+      "Before status=done: acceptance criteria met and evidence attached (upload_activity_attachment, confirm with list_activity_attachments); a linked commit alone is not proof",
+      "Factory-governed (AISH) issue: status=done requires a current passed audit_aish_issue_delivery"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Issue <issueId> updated successfully.' Call get_issue to read the new state.",
+    "pairsWith": [
+      "list_issues",
+      "get_issue",
+      "list_project_assignable_members",
+      "upload_activity_attachment",
+      "create_comment"
+    ],
+    "errors": [
+      {
+        "when": "Issue not found",
+        "fix": "Wrong issueId for this projectId; re-list with list_issues."
+      },
+      {
+        "when": "Project ID is required",
+        "fix": "Send projectId together with issueId."
+      },
+      {
+        "when": "Assignee is not eligible for this project",
+        "fix": "Use a uid from list_project_assignable_members."
+      },
+      {
+        "when": "Use actualHours or actualHoursDelta, not both in the same issue update",
+        "fix": "Send only one of them."
+      },
+      {
+        "when": "Issue changed during update; reload and retry.",
+        "fix": "Call get_issue, re-check, then retry once."
+      },
+      {
+        "when": "Factory Definition of Done is missing, blocked or stale. / Factory closure requires a current audit.",
+        "fix": "Run audit_aish_issue_delivery, fix its failures, then set done again."
+      },
+      {
+        "when": "Reopen and audit the changed delivery scope before closing.",
+        "fix": "You edited title/description/requirement of a done governed issue: set status in-progress first, then audit."
+      },
+      {
+        "when": "Factory governance fields are server-managed.",
+        "fix": "Remove factoryGovernance/factoryAuditId from the arguments."
+      },
+      {
+        "when": "OPERATION_FAILED (OAuth)",
+        "fix": "A domain rule failed (not found, assignee, factory audit); verify with get_issue before retrying once."
+      }
+    ],
+    "oauthScope": "portfolio:manage",
+    "cli": "lpm issues update --project <projectId> --issue <issueId> [--title <title>] [--description <text>] [--status <status>] [--priority <priority>] [--assignee <userId>] [--clear-assignee] [--cycle <cycleId>] [--clear-cycle] [--milestone <milestoneId>] [--clear-milestone] [--estimate <points>] [--due-date <iso>] [--clear-due-date] [--json] (shortcuts: lpm issues status|assign|priority)",
+    "gotchas": [
+      {
+        "text": "Send only fields you change; with an API key undeclared fields are written into the issue.",
+        "verifiedFrom": "server.ts:28237-28243"
+      },
+      {
+        "text": "Under OAuth, null values are silently ignored, so you cannot clear assignee, cycle, milestone or due date there.",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:188"
+      },
+      {
+        "text": "actualHoursDelta is NOT safe to retry.",
+        "verifiedFrom": "server.ts:5383-5389"
+      },
+      {
+        "text": "Status/priority changes fire webhooks to the workspace's subscribers and write audit entries.",
+        "verifiedFrom": "server.ts:28501-28545"
+      }
+    ],
+    "verifiedFrom": "updateIssueCommand, normalizeIssueLifecycleUpdates (src/lib/issueLifecycle.ts), createDeliveryGuardedIssueBatch (src/server/aishDeliveryStore.ts), resolveIssueActualHoursUpdate; oauthToolPolicy.ts rule update_issue"
+  },
+  {
+    "name": "update_milestone",
+    "purpose": "Changes a milestone's name, description, target date, status or assignee.",
+    "useWhen": [
+      "Close a reached milestone (status=closed) or reopen it (status=open)",
+      "Fix its name or description, or move its target date on the user's request"
+    ],
+    "avoidWhen": [
+      "Moving issues between milestones: use update_issue milestoneId",
+      "Removing the milestone: delete_milestone"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "milestoneId",
+        "required": true,
+        "source": "list_milestones -> id",
+        "notes": ""
+      },
+      {
+        "param": "name",
+        "required": false,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "targetDate",
+        "required": false,
+        "source": "user",
+        "notes": "ISO date YYYY-MM-DD. Moving a commitment date needs the user's say-so."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "open | closed. Not validated with an API key: copy exactly."
+      },
+      {
+        "param": "assigneeId",
+        "required": false,
+        "source": "list_project_assignable_members -> uid",
+        "notes": "Not checked for eligibility."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project (read access is enough)",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Milestone <milestoneId> updated successfully.'",
+    "pairsWith": [
+      "list_milestones",
+      "get_milestone",
+      "list_issues",
+      "update_issue"
+    ],
+    "errors": [
+      {
+        "when": "Milestone not found",
+        "fix": "Wrong milestoneId for this project; re-list with list_milestones."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Check projectId; ask the user for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Closing a milestone does not close its issues; check list_issues(milestoneId) first and report open ones to the user.",
+        "verifiedFrom": "server.ts:29714-29727"
+      },
+      {
+        "text": "Send only the fields you change; undeclared fields are written as sent.",
+        "verifiedFrom": "server.ts:29724-29727"
+      }
+    ],
+    "verifiedFrom": "updateMilestoneCommand"
+  },
+  {
+    "name": "update_project",
+    "purpose": "Changes project settings: name, description, archived flag, workspace or team placement, governance role assignments or routing profile.",
+    "useWhen": [
+      "User asks to rename the project or edit its description",
+      "The owner explicitly instructs to set the project-owner, product-owner or delivery-lead assignments",
+      "The owner explicitly instructs to move the project to another workspace or team"
+    ],
+    "avoidWhen": [
+      "Only archiving or restoring: use archive_project or unarchive_project",
+      "Changing work items: use update_issue, update_cycle or update_milestone",
+      "Changing scope or roadmap: use the governed flows (change sets, submit_workspace_roadmap_change), not project settings"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "name",
+        "required": false,
+        "source": "user",
+        "notes": "Trimmed; empty string is rejected."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Trimmed."
+      },
+      {
+        "param": "archived",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean. Prefer archive_project / unarchive_project."
+      },
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "Moves the project to that workspace and recomputes its routing profile."
+      },
+      {
+        "param": "teamId",
+        "required": false,
+        "source": "list_teams -> id",
+        "notes": "Moves the project to that team."
+      },
+      {
+        "param": "governanceAssignments",
+        "required": false,
+        "source": "user (userId from list_project_assignable_members -> uid)",
+        "notes": "Array of {role: project-owner|product-owner|delivery-lead, userId}. REPLACES the whole list; one entry per role; userIds starting with 'agent:' are dropped."
+      },
+      {
+        "param": "routingProfile",
+        "required": false,
+        "source": "user",
+        "notes": "Object of string arrays: domains, ownedCapabilities, ownedComponents, ownedSystems, aliases, intakeKeywords, excludedKeywords, escalationRules, maintainedBy. Requires the project to belong to a workspace."
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the project (project owner, project-owner role, workspace manager or team admin)",
+      "governanceAssignments, routingProfile and workspace/team moves only on explicit owner instruction, because they change who decides",
+      "API key authentication (not offered to OAuth connectors)"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain text: 'Project <projectId> updated successfully.' Call get_project to read the new state.",
+    "pairsWith": [
+      "get_project",
+      "list_project_assignable_members",
+      "list_workspaces"
+    ],
+    "errors": [
+      {
+        "when": "Project not found",
+        "fix": "Wrong projectId; get it from list_projects (includeArchived=true)."
+      },
+      {
+        "when": "You do not have permission to update this project",
+        "fix": "Caller is not a project manager. Stop and tell the user who can do it (get_project -> governanceAssignments)."
+      },
+      {
+        "when": "You do not have access to the target workspace / target team",
+        "fix": "Use a workspace or team the caller belongs to."
+      },
+      {
+        "when": "Project routing profile requires the project to belong to a workspace",
+        "fix": "Set workspaceId first (owner decision) or drop routingProfile."
+      },
+      {
+        "when": "Hourly rate must be a valid number / Operational curation SLA must be between 1 and 720 hours",
+        "fix": "You sent an undeclared field; remove it (hourlyRate is a financial decision for the owner)."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Every argument except projectId is written into the project document as sent; the server does not reject unknown fields.",
+        "verifiedFrom": "server.ts:27765-27766"
+      },
+      {
+        "text": "Send ONLY the fields you mean to change and never send fields outside the schema.",
+        "verifiedFrom": "server.ts:27873-27874"
+      },
+      {
+        "text": "governanceAssignments replaces the full list: read get_project first and resend the roles you keep.",
+        "verifiedFrom": "server.ts:27822-27824"
+      },
+      {
+        "text": "Records a 'settings updated' activity only when something changed.",
+        "verifiedFrom": "server.ts:27865-27882"
+      }
+    ],
+    "verifiedFrom": "updateProjectCommand"
+  }
+]

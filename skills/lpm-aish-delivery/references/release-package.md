@@ -1,0 +1,56 @@
+# AISH release package
+Load when: for any release step
+Applies to: lpm-aish-delivery    Source: cards {{tool:create_aish_release}}, {{tool:get_aish_release}}, {{tool:approve_aish_release}}, {{tool:claim_aish_release}}, {{tool:complete_aish_release}}, {{tool:get_aish_execution_session}}; lpm `src/cli/lpm.ts` (`handleAishCloudRunRelease`, `handleAishPipelineRecord`)
+
+## Summary
+A release package is a sealed, immutable deploy request for one deploy-gated plan node. Creating it never deploys.
+Order: create [C] → the managing human approves [O] → the named executor claims once [C] → one external deploy → receipt [A] → authenticated smoke evidence.
+`releaseId` is the package hash; approval sends it again as `expectedPackageHash`.
+Only the first claim returns `execute: true`. Deploy only then, and only once.
+A bounded-run or plan authorization never covers a deploy: each package needs its own approval.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| `status` | `awaiting-approval` → `approved` → `claimed` → `succeeded` or `failed` | read it with {{tool:get_aish_release}} before every step |
+| deploy-gated job | node with a release-gate checkpoint, stage `local-deploy`, `staging` or `production`, job `queued` and funded | another job → "Release requires a governed deploy-gated workflow job." |
+| session gate | session `executing`, no active checkpoint, current plan hash == approved plan hash, plan `deployAllowed`, not past `timeoutMinutes` | else STOP → {{skill:lpm-aish-jobs}} |
+| `environment` | must equal the node stage | copy it from the plan node |
+| promotion | `local-deploy` → `staging` → `production`; `previousReleaseId` = the succeeded previous stage, `null` for `local-deploy` | same revision and image digest as the previous release |
+| `target` | `{provider: "cloud-run" or "external", project, region, service}`, each `[a-zA-Z0-9_-]{1,160}`, no other keys | ask the user; never guess a service |
+| `executorUserId` / `executorId` | the LPM user who will claim and complete (ask the user for this id; never guess) / a host allowed by the plan (none listed → ask) | both must match at claim and completion |
+| `rollbackImage` | `<registry>/<path>@sha256:<64 hex>` | digest-pinned only |
+| `healthUrl` | https, no credentials, query or fragment, ≤ 1,000 chars | used by the `health` check |
+| preflight | evidence, engineering reports, API audit, no open findings | any evidence change later → approve/claim fail as stale |
+| approval | human user credential that manages the project; owner-only by LPM rule; reason 8–3,000 chars, no secrets | no revoke tool; valid until `approval.expiresAt` |
+| claim | caller == `executorUserId` and `executorId` == the package's, else "Release executor identity mismatch."; `budgetVersion: "aish-budget/1"`; locks the target, opens the financial attempt, job → `running` | lost response → claim again: `execute: false` + the existing claim; never deploy twice |
+| `financialBudget.remaining` | spend left in this attempt | stay within it |
+| receipt `checks` | 1–100 `{name, assertion (8+ chars), passed}` | `succeeded` needs all passed AND checks named `health` and `artifact-digest` |
+| receipt times | `startedAt` ≥ `claim.at`; `finishedAt` ≥ `startedAt`, ≤ 60 s in the future | observed values only |
+| receipt | immutable; a `failed` receipt is final for this package | a new attempt needs a plan retry, a new package and a new approval |
+| `lpm aish release run-cloud-run` | claims, deploys once with gcloud, checks health and records the receipt; Linux/macOS executor; only provider `cloud-run` at `staging`/`production` (other targets: {{ref:flow-release}} step 11) | "did not return a verified result" → reconcile; never start a second deploy |
+| `lpm aish pipeline record` | creates a completed standalone AISH job holding the pipeline/smoke evidence | omit `--issue`: a completed standalone job with evidence is not an orphan |
+
+### Errors that need the owner
+| Message | Do |
+|---|---|
+| "Job has no available authorized financial reservation." / "Financial circuit breaker blocks new execution." | STOP → {{skill:lpm-ai-cost}} (funding is the owner's) |
+| "Release execution authorization expired." | the session timeout passed: a new reviewed session/plan (owner) |
+| "A governance decision blocks this release." | the owner resolves the governance thread first |
+| "An agent cannot approve its own release." | only the owner's user credential approves |
+
+## Rules
+1. Never call {{tool:approve_aish_release}} without the owner's order for this exact package, quoted from this conversation.
+2. Deploy only after a claim with `execute: true`, and only the package's `image` and `revision`.
+3. Report `succeeded` only after real `health` and `artifact-digest` checks; otherwise send `failed`.
+4. Deploy outcome unknown → no receipt; keep the claim and report.
+5. No deploy claim without pipeline evidence and an authenticated smoke against the deployed target, attached to the activity.
+6. Deploying the LPM product itself is not an AISH release: {{skill:lpm-release-product}}.
+
+## Examples
+```text
+example: create_aish_release(...) → release.id=<releaseId>, status "awaiting-approval"
+owner: "approve release <releaseId>" → approve_aish_release(releaseId, expectedPackageHash=<releaseId>, reason="<owner words>")
+claim_aish_release(releaseId, executorId, budgetVersion="aish-budget/1") → execute=true → deploy once
+complete_aish_release(..., status="succeeded", checks=[{name:"health",...},{name:"artifact-digest",...}])
+```

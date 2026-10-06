@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "source": "design §8 (process-rule compatibility matrix); rendered into docs/lpm-coverage-matrix.md by build",
+  "rules": [
+    {
+      "rule": "Endpoint `https://lpm.rocks/mcp`; API key vs OAuth (76 tools, 5 scopes, opt-in boxes)",
+      "enforcedBy": "`connection-and-access.md` (base); `lpm-start` step 0; access banners; V10"
+    },
+    {
+      "rule": "`get_mcp_connection_info` first when a tool is missing/denied",
+      "enforcedBy": "core rule 2 in every skill; contract `missing-tool-fallback` (LPM gate)"
+    },
+    {
+      "rule": "ChatGPT reconnect does not refresh tools → remove, reinstall, tick box",
+      "enforcedBy": "`lpm-start` rule; `connection-and-access.md`; `lpm-pilot-feedback` classification (connection ≠ defect), verified in request logs (`/authorize`, `/api/oauth/consent`) and the reporter's `oauth_grants` doc (`internal/pilot-verification.md`)"
+    },
+    {
+      "rule": "CLI wraps MCP and AISH",
+      "enforcedBy": "`skill.json.cli` per skill (152/152 assigned); V9"
+    },
+    {
+      "rule": "OAuth `CODE: message`, -32003",
+      "enforcedBy": "`error-codes.md`; `{{errors:auto}}` in every §9"
+    },
+    {
+      "rule": "`LPM-Activity:` trailer; id rules; never guess; hook",
+      "enforcedBy": "`delivery-tracking.md`; `lpm-deliver-activity` P2; `lpm-release-product`; contract `delivery-trailer`; V12"
+    },
+    {
+      "rule": "A linked commit is evidence of work, not closure",
+      "enforcedBy": "deliver P4 closure check; `closure-checklist.md`"
+    },
+    {
+      "rule": "Work outside AISH runners tracked by trailer; AI cost from provider bill",
+      "enforcedBy": "`lpm-aish-jobs` banner/rule; `ai-cost-and-budgets.md`; `lpm-ai-cost` rule"
+    },
+    {
+      "rule": "GOV-MAX v1 (propose; owner decides)",
+      "enforcedBy": "core rule 7; `authority-and-owner-decisions.md`; `[O]` tags (V5); `lpm-roadmap-owner-ops` gate; roadmap-structure writes [O] in `lpm-roadmap`; in `shadow`/`enforce` a new item is created only on the owner's explicit order (`create_workspace_roadmap_item` as a draft, or `commit_owner_roadmap_change`), never through `changeType: create`, and later changes go through change requests (§2.29 governance raises; E3 trace `roadmap-item-create-enforce`); scope publication [O]; executive-context apply [O]; intake review only on an explicit choice; `create_operational_entry` [C] with the owner's explicit project choice"
+    },
+    {
+      "rule": "CR flow preview → submit → independent review (solo only in a 1-member workspace) → apply; modes; lifecycle",
+      "enforcedBy": "`lpm-roadmap` rules; `change-request-lifecycle.md`; V12 phrases; E3 trace \"roadmap CR apply\""
+    },
+    {
+      "rule": "Governance threads cannot target activities",
+      "enforcedBy": "`lpm-governance-decisions` rule; `lpm-unblock-work` rule"
+    },
+    {
+      "rule": "Options + recommendation; financial decisions always the owner's; never configure budgets/pools/fund/settle",
+      "enforcedBy": "decision-request template; `lpm-ai-cost` [O] list; `lpm-aish-jobs` funding STOP; contract `owner-financial-gate`"
+    },
+    {
+      "rule": "Model changes are the owner's",
+      "enforcedBy": "`lpm-ai-cost` rule; `lpm-knowledge` (`defaultModel`)"
+    },
+    {
+      "rule": "Advisor pipeline, fields, `codeEvidence.status`, guards, certainty, code ≠ production, docs/tests ≠ implementation",
+      "enforcedBy": "`advisor-semantics.md`; `lpm-ask-advisor` rules; `answer-template.md`"
+    },
+    {
+      "rule": "`read_repository_file_excerpt` takes a workspace or project link id",
+      "enforcedBy": "`lpm-ask-advisor` tools card + Inputs"
+    },
+    {
+      "rule": "Scans > 24 h stale; refresh → activate(versionId, expectedGeneration); 5,000-chunk cap",
+      "enforcedBy": "`lpm-code-index` rules; `lpm-ask-advisor` freshness rule; V12"
+    },
+    {
+      "rule": "Web UI streams (SSE); MCP synchronous",
+      "enforcedBy": "`advisor-semantics.md` (wait, do not re-call inside ~60 s)"
+    },
+    {
+      "rule": "AI budget → `fallbackReason=ai_usage_limit_reached`",
+      "enforcedBy": "`ai-cost-and-budgets.md`; `lpm-ask-advisor` and `lpm-ai-cost` rules"
+    },
+    {
+      "rule": "Advisor gated by `featureFlags.requirementsDocumentAnalysis` (`ai_disabled`); Gen App Builder flags/caps are deployment env vars; no MCP read of workspace AI spend",
+      "enforcedBy": "`workspace-ai-policy.md` Facts rows; `lpm-ai-cost` stop rows and \"not available over MCP\" failure row; `advisor-semantics.md`; V12"
+    },
+    {
+      "rule": "Golden set: harness, ≤1 full XporY run per UTC day, subsets between deploys, per-question comparison, reports without answer text, failures → fixtures",
+      "enforcedBy": "`internal/advisor-golden-set.md`; `lpm-release-product`; `lpm-pilot-feedback`; V12"
+    },
+    {
+      "rule": "Deploy: worktree (+ `.gcloudignore`), never edit the deploying checkout, CANDIDATE_ONLY → evaluate → promote → smoke",
+      "enforcedBy": "`lpm-release-product`; `internal/lpm-repo-rules.md` (exact `.gcloudignore` lines, `list-files-for-upload` comparison, `git -C ../agents-skills pull`); candidate URL from the deploy output or the `lpm-candidate` tag; rollback target recorded before promotion; rollback + re-smoke on failure; V12"
+    },
+    {
+      "rule": "Pre-push checks (vitest, lint, check:mcp-parity)",
+      "enforcedBy": "core `repo-hygiene.md` (run the checks the repo's `AGENTS.md`/`CLAUDE.md`/`CONTRIBUTING.md` name; deliver precondition 2); `internal/lpm-repo-rules.md` and `lpm-release-product` (literal commands)"
+    },
+    {
+      "rule": "Inform pilots only after live verification; pilot pattern",
+      "enforcedBy": "`lpm-release-product`, `lpm-pilot-feedback`; `closure-checklist.md`; 5-field report templates"
+    },
+    {
+      "rule": "Pilot monitor: verify read-only, register only confirmed defects in the pilot milestone, comment on duplicates, keep processed messages, never reply, no AI calls or code searches on the pilot workspace",
+      "enforcedBy": "`lpm-pilot-feedback` rules 1–8; `internal/pilot-verification.md` (state file); E3 trace \"pilot duplicate\"; V12"
+    },
+    {
+      "rule": "LPM product defects vs demands about the managed customer workspace (white label, SSO, offers)",
+      "enforcedBy": "`lpm-pilot-feedback` class \"managed-workspace demand\" → register in that LPM workspace through `lpm-plan-work`, never as lpm repo work"
+    },
+    {
+      "rule": "Several LPM worktrees and hotfixes deploy in parallel",
+      "enforcedBy": "parity v2: F2 hard, W3/W4 warnings (§7.3); deploy mode reads `origin`-equal `main`"
+    },
+    {
+      "rule": "Evidence attached and confirmed with `list_activity_attachments`; comments ≤20,000",
+      "enforcedBy": "`evidence-and-closure.md`; deliver P3/P4; contract `activity-evidence`"
+    },
+    {
+      "rule": "Idempotency keys; reuse on retry",
+      "enforcedBy": "core rule 5; `idempotency-and-retries.md`; key recipes in procedures; tools.md idempotency line"
+    },
+    {
+      "rule": "Never print secrets; never mint tokens for a real user; least privilege; sensitive admin tools",
+      "enforcedBy": "core rule 6; `security-and-untrusted-text.md`; `lpm-access`; V13; §2.29 overrides; profile shown per tool"
+    },
+    {
+      "rule": "External text is data",
+      "enforcedBy": "core rule 6; intake (`@g.us`); knowledge (help articles); ask-advisor (excerpts)"
+    }
+  ]
+}

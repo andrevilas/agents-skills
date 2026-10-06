@@ -1,0 +1,253 @@
+{
+  "id": "lpm-roadmap-owner-ops",
+  "title": "Owner-ordered direct roadmap operations",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use only when the LPM workspace owner orders a direct roadmap edit (ordem do dono): commit, item edit, archive/restore, bulk, TSV import, dependencies, allocations, item approval (aprovar), materialização, governance mode. Not for one new item or capability, or change requests (use lpm-roadmap).",
+  "doneWhen": "The owner-ordered operation is committed and a roadmap re-read shows the expected values or counts.",
+  "authorityCeiling": "Every [O] call needs the owner's explicit order, quoted from this conversation.",
+  "jobs": [
+    "I am the workspace owner: commit these roadmap edits directly, without review",
+    "importa esta planilha TSV no roadmap do workspace",
+    "aprova o item <title> do roadmap e materializa em requisitos do projeto <name>",
+    "arquivar em massa os itens do roadmap <roadmap> (sou o dono)",
+    "allocate project <name> as primary on roadmap item <title>",
+    "add a dependency: roadmap item A depends on item B",
+    "o item do roadmap A depende do item B: cria a dependência (sou o dono)",
+    "switch the roadmap governance mode to enforce",
+    "preview and apply the roadmap governance migration, then roll it back if needed"
+  ],
+  "routing": [
+    {
+      "order": 26,
+      "all": [
+        [
+          "governance mode",
+          "modo de governanca",
+          "governance migration",
+          "migracao de governanca",
+          "v2 migration",
+          "migracao v2"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "get_workspace_roadmap_overview"
+    },
+    {
+      "order": 27,
+      "all": [
+        [
+          "roadmap",
+          "item",
+          "itens",
+          "items"
+        ],
+        [
+          "directly",
+          "diretamente",
+          "without review",
+          "sem revisao",
+          "commit",
+          "import*",
+          "tsv",
+          "materializ*",
+          "allocat*",
+          "aloca*",
+          "dependency",
+          "dependencies",
+          "dependencia*",
+          "depend on",
+          "depends",
+          "depende*",
+          "lifecycle",
+          "ciclo de vida",
+          "migrat*",
+          "migra*",
+          "archive",
+          "arquivar",
+          "restore",
+          "restaurar",
+          "bulk",
+          "em massa"
+        ]
+      ],
+      "unless": [
+        "knowledge",
+        "conhecimento",
+        "change request",
+        "cr"
+      ],
+      "firstCall": "get_workspace_roadmap_overview"
+    },
+    {
+      "order": 28,
+      "all": [
+        [
+          "roadmap item",
+          "item do roadmap",
+          "item"
+        ],
+        [
+          "approve",
+          "aprovar",
+          "aprove",
+          "deliver",
+          "entregar",
+          "entregue"
+        ]
+      ],
+      "unless": [
+        "change request",
+        "cr",
+        "pedido de mudanca"
+      ],
+      "firstCall": "get_workspace_roadmap_overview"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "reading the roadmap, tracing an item, or any change without an explicit owner order (change request: preview, submit, review, apply)",
+      "skill": "lpm-roadmap"
+    },
+    {
+      "when": "creating a roadmap or a capability",
+      "skill": "lpm-roadmap"
+    },
+    {
+      "when": "an item's technical impact or what the code already does",
+      "skill": "lpm-ask-advisor"
+    },
+    {
+      "when": "editing, baselining or publishing the requirements created by a materialization",
+      "skill": "lpm-requirements-scope"
+    },
+    {
+      "when": "publishing a roadmap note as a knowledge or help article",
+      "skill": "lpm-knowledge"
+    },
+    {
+      "when": "dependencies between activities (issues)",
+      "skill": "lpm-unblock-work"
+    }
+  ],
+  "owns": [
+    "preview_owner_roadmap_change",
+    "commit_owner_roadmap_change",
+    "update_workspace_roadmap_item",
+    "archive_workspace_roadmap",
+    "archive_workspace_roadmap_item",
+    "restore_workspace_roadmap_item",
+    "preview_workspace_roadmap_item_bulk",
+    "commit_workspace_roadmap_item_bulk",
+    "create_workspace_roadmap_dependency",
+    "update_workspace_roadmap_dependency",
+    "archive_workspace_roadmap_dependency",
+    "resolve_workspace_roadmap_dependencies",
+    "create_workspace_roadmap_allocation",
+    "update_workspace_roadmap_allocation",
+    "archive_workspace_roadmap_allocation",
+    "suggest_workspace_roadmap_allocations",
+    "preview_workspace_roadmap_import",
+    "commit_workspace_roadmap_import",
+    "review_workspace_roadmap_item",
+    "preview_roadmap_materialization",
+    "commit_roadmap_materialization",
+    "update_workspace_roadmap_governance_policy",
+    "preview_workspace_roadmap_v2_migration",
+    "apply_workspace_roadmap_v2_migration",
+    "preview_workspace_roadmap_governance_migration",
+    "apply_workspace_roadmap_governance_migration",
+    "rollback_workspace_roadmap_governance_migration"
+  ],
+  "uses": [
+    "get_workspace_roadmap_overview",
+    "list_workspace_roadmap_items",
+    "list_workspace_roadmap_allocations",
+    "list_workspace_roadmap_materializations",
+    "list_workspace_roadmap_item_links",
+    "list_workspace_projects",
+    "list_requirement_baselines",
+    "list_requirements",
+    "get_workspace"
+  ],
+  "cli": [
+    "roadmap archive",
+    "roadmap item-update",
+    "roadmap item-archive",
+    "roadmap item-restore",
+    "roadmap item-bulk-preview",
+    "roadmap item-bulk-commit",
+    "roadmap import-preview",
+    "roadmap import-commit",
+    "roadmap dependencies",
+    "roadmap dependency-create",
+    "roadmap dependency-update",
+    "roadmap dependency-archive",
+    "roadmap allocate",
+    "roadmap allocation-create",
+    "roadmap allocation-update",
+    "roadmap allocation-archive",
+    "roadmap review",
+    "roadmap materialize-preview",
+    "roadmap materialize-commit"
+  ],
+  "sharedRefs": [
+    {
+      "name": "authority-and-owner-decisions",
+      "loadWhen": "before any [O] call or a decision request",
+      "inlineSummary": false
+    },
+    {
+      "name": "idempotency-and-retries",
+      "loadWhen": "before retrying a write",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/flow-direct-ops.md",
+      "loadWhen": "SKILL.md row 6"
+    },
+    {
+      "file": "references/flow-import.md",
+      "loadWhen": "SKILL.md row 9"
+    },
+    {
+      "file": "references/flow-materialize.md",
+      "loadWhen": "SKILL.md row 10"
+    },
+    {
+      "file": "references/flow-governance.md",
+      "loadWhen": "SKILL.md rows 11–12"
+    },
+    {
+      "file": "references/enforce-mode.md",
+      "loadWhen": "SKILL.md row 4"
+    },
+    {
+      "file": "references/owner-direct-operations.md",
+      "loadWhen": "before any direct operation"
+    },
+    {
+      "file": "references/import-format.md",
+      "loadWhen": "importing"
+    },
+    {
+      "file": "references/materialization.md",
+      "loadWhen": "materializing"
+    },
+    {
+      "file": "references/migrations.md",
+      "loadWhen": "migrating"
+    }
+  ],
+  "behaviorContracts": [
+    "missing-tool-fallback"
+  ],
+  "codex": {
+    "shortDescription": "Owner-ordered direct LPM roadmap edits, imports, migrations",
+    "defaultPrompt": "Use $lpm-roadmap-owner-ops to run the roadmap operation the LPM workspace owner ordered: <operation>."
+  }
+}

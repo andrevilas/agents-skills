@@ -1,0 +1,70 @@
+{
+  "id": "lpm-release-product",
+  "title": "Release the LPM product (maintainers)",
+  "version": "2.0.0",
+  "pack": "internal",
+  "kind": "process",
+  "invocation": "implicit",
+  "description": "Use only inside the LPM product repository (lpm), for LPM maintainers shipping to production (implantar em produção): worktree, checks, candidate deploy, promotion and smoke. Not for activity delivery (use lpm-deliver-activity).",
+  "doneWhen": "The promoted revision serves all traffic and the smoke passed.",
+  "authorityCeiling": "Process skill; stops on any failed check.",
+  "jobs": [
+    "deploy the LPM product",
+    "promote the candidate revision",
+    "run the smoke after the deploy",
+    "implantar a nova versão em produção",
+    "promover a revisão candidata"
+  ],
+  "routing": [
+    {
+      "order": 4,
+      "all": [
+        [
+          "deploy*",
+          "implantar",
+          "promote",
+          "promover"
+        ]
+      ],
+      "unless": [
+        "aish"
+      ],
+      "firstCall": "git worktree list",
+      "internal": true,
+      "stopText": "Deploying the LPM product is an LPM-maintainer procedure. Ask an LPM maintainer."
+    }
+  ],
+  "notFor": [
+    {
+      "when": "delivering one activity",
+      "skill": "lpm-deliver-activity"
+    }
+  ],
+  "owns": [],
+  "uses": [
+    "get_issue",
+    "create_comment"
+  ],
+  "cli": [],
+  "sharedRefs": [
+    {
+      "name": "lpm-repo-rules",
+      "loadWhen": "before deploying the LPM product",
+      "inlineSummary": false
+    },
+    {
+      "name": "repo-hygiene",
+      "loadWhen": "before editing code",
+      "inlineSummary": false
+    }
+  ],
+  "references": [],
+  "behaviorContracts": [
+    "delivery-trailer",
+    "release-no-advisor"
+  ],
+  "codex": {
+    "shortDescription": "Ship the LPM product with candidate and smoke",
+    "defaultPrompt": "Use $lpm-release-product to ship the LPM product."
+  }
+}

@@ -1,0 +1,55 @@
+# Health thresholds and payloads
+Load when: classifying a project or portfolio status
+Applies to: lpm-review-health    Source: lpm `src/lib/deliveryHealthAnalytics.ts` (`getHealthStatus`, integrity status), `src/lib/projectOwnerReadModel.ts` (`normalizeCompletionRateRatio`, `delivery.healthStatus`, `finance`), `server.ts` (`repairOrphanRequirementsForProject`, `getProjectOwnerSurfaceCommand`), `src/server/mcpResponseLimit.ts`, `src/lib/workspaceOwnerReadModel.ts` (portfolio rule), `server.ts` `getWorkspaceReadModelCommand`; cards `get_project_analytics`, `get_project_read_model`, `get_workspace_read_model`, `get_workspace_owner_surface`, `get_project_owner_surface`
+
+## Summary
+- The server computes the status. Copy it and name its source tool; never compute a softer one.
+- Project rule: critical if integrity is critical, `blockedIssuesOpen >= 5` or `avgLeadTimeDays >= 14`; watch if integrity is watch, `blockedIssuesOpen > 0`, `avgLeadTimeDays >= 7` or `avgCycleTimeDays >= 5`; else healthy.
+- Any server integrity signal (`metrics.integrity.signals[]`) → at least watch. Never call a project healthy while one exists. Signals you derive yourself (connector) never change the status.
+- No burndown, status distribution, velocity or trend over MCP; `cycleId` is ignored.
+- `completionRate` is a percent in analytics and a ratio (0–1) in every `ownerView`.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| `metrics.healthStatus` ({{tool:get_project_analytics}}) | canonical project status, rule above | report as-is, "source: get_project_analytics" |
+| `metrics.integrity.status` | critical when `invalidIssueStatuses + orphanAishJobs + orphanAutopilotIssues + terminalIssueJobMismatches >= 5`; watch when any signal fires; else healthy | `staleActiveCycles` and `requirementsUpdatedAfterCurrentBaseline` only reach watch |
+| `metrics.integrity.signals[]` | ids of the firing signals | map each with `integrity-signals.md` |
+| `metrics.integrity.details.orphanAishJobs[]`, `.terminalIssueJobMismatches[]` | up to 50 `{jobId, category, reason}` each | quote `jobId` + `category` as evidence |
+| `metrics.blockedIssuesOpen` | open issues blocked by an open blocking link or an active blocker context | > 0 → watch; >= 5 → critical |
+| `metrics.avgLeadTimeDays` | created → done, in days | >= 7 watch; >= 14 critical |
+| `metrics.avgCycleTimeDays` | started → done, in days | >= 5 watch |
+| `metrics.avgBlockedTimeDays` | average time blocked, in days | not in the project rule; the workspace rule uses `> 5` |
+| `metrics.throughput30d` | issues completed in the last 30 days | low value + old `blockedSince` = stagnation evidence |
+| `metrics.completionRate` | percent 0–100, one decimal; canceled issues excluded | divide by 100 before comparing with an `ownerView` value |
+| `projects[0].blockedIssues[]` | up to 200 `{issueId, title, status, blockedSince, blockedBy[], reason}` | blocker evidence without a governance role |
+| `ownerView.delivery.healthStatus` ({{tool:get_project_read_model}}, {{tool:get_project_owner_surface}}) | the `metrics.healthStatus` of analytics, so integrity is already included; no breakdown | report it exactly; on a connector write "integrity breakdown not available on a connector" |
+| `ownerView.delivery.completionRate` | ratio 0–1 | multiply by 100 before reporting a percent |
+| `ownerView.projects[].healthStatus` ({{tool:get_workspace_read_model}}, {{tool:get_workspace_owner_surface}}) | simplified rule: critical if any open blocked issue or `avgBlockedTimeDays > 5`; watch if any open work; ignores integrity | label "source: workspace read model"; never mix with the project rule unnamed |
+| `ownerView.portfolio.healthStatus` | critical if any project is critical or any issue is blocked; watch if any project is watch or any issue is overdue | inherits the simplified rule |
+| `ownerView.projects[]` order | sorted by `attentionScore` (health, drift, blocked, overdue, missing roles, risks) | the first entries are the review candidates |
+| `cycleId` on {{tool:get_project_analytics}} | declared, ignored | cycle scope → project metrics + "no per-cycle metrics over MCP" |
+| burndown, status distribution, velocity, trend | not returned by any MCP tool | never claim them; daily exports → {{skill:lpm-integrations}} |
+| archived project | analytics throws "You do not have access to this project"; read models exclude it | write "archived: not reviewed"; do not retry |
+| caches | analytics ~10 s per instance; project read model ~4 s; workspace read model ~5 s per user | a re-read right after a fix can be old: re-read once after ~10 s |
+| API-key side effect | {{tool:get_project_owner_surface}}, {{tool:get_project_read_model}}, {{tool:list_project_resolution_risks}}, {{tool:get_project_resolution_context}}, {{tool:list_project_resolution_entities}}, {{tool:get_project_resolution_action_catalog}} (and `get_project_execution_context`) silently re-point orphan requirements to the current baseline and set `updatedAt` = now; `scope:requirements-awaiting-baseline` then turns into working-scope drift. Connectors (OAuth) skip it | call {{tool:get_project_scope_resolution_context}} first (P1 step 1) so the orphan count is the state before the review; count > 0 and one of these tools ran later → the Done line MUST end with "; LPM may have re-attached <n> orphan requirements (server side effect)" |
+| API-key quota | {{tool:get_project_owner_surface}}, {{tool:list_project_resolution_risks}} (and `get_project_execution_context`, `get_project_decision_inbox`) each run the owner surface, which with grounding enabled may spend the daily document-search quota | at most one of them per project per review: when P2 runs, skip P1 step 3 |
+| `ownerView.finance` | reporting rollups (forecast, actual, variance), present in every owner surface and read model | leave it out unless the user asked for finance; never an authorization for budgets or pools |
+| RESPONSE_TOO_LARGE | a non-paged result over 1,000,000 bytes ({{tool:get_workspace_read_model}}, {{tool:get_workspace_owner_surface}}, {{tool:get_project_read_model}}); nothing returned | workspace: {{tool:list_workspace_projects}}, user picks at most 5, per-project {{tool:get_project_analytics}} ("ranking source: per-project analytics") or P4; project read model: status "not read". The owner bundle has no health or attention fields: never rank with it |
+| payload privacy | {{tool:get_project_read_model}} carries labor and ledger data | never paste it to third parties |
+
+## Rules
+1. Copy the server status and name the tool; never downgrade it.
+2. A server signal present while a field says healthy → report status watch or worse and the LPM defect "healthy with integrity signals". A signal derived by the agent goes under Interpretation ("derived by agent") and never changes the status.
+3. `currentBaseline == null` → post-baseline drift is 0 by construction: report "no current baseline" as its own finding.
+4. Overdue, unassigned, unestimated work and pending decisions do not change `healthStatus`: report them as separate facts.
+5. Raise a local signal to a portfolio claim only when at least 2 projects show it.
+6. Ranking: integrity critical → blocked >= 5 → lead time >= 14 → watch items, then by `entityCount`.
+
+## Examples
+```text
+example: metrics.healthStatus=watch, blockedIssuesOpen=2, avgLeadTimeDays=6.1, signals=[]
+→ "watch (source: get_project_analytics): 2 open blocked issues (threshold > 0)"
+example: metrics.healthStatus=healthy, signals=["stale-active-cycles"]
+→ "watch: integrity signal stale-active-cycles; LPM defect: healthStatus healthy with a signal"
+```

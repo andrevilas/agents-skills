@@ -1,0 +1,238 @@
+{
+  "id": "lpm-ai-cost",
+  "title": "AI and AISH cost governance",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when asked about LPM AI or AISH cost and limits (custo, orçamento): workspace AI policy, models, token/request budgets, Advisor limits, code-search quota, AISH budgets, pools, funding, consumption, accounting. Reads and proposes; changes are owner-only. Not for API keys (use lpm-access).",
+  "doneWhen": "The cost question is answered from tool results, or a decision request with options and a recommendation is in front of the owner, or an owner-instructed change is re-read and quoted before/after.",
+  "authorityCeiling": "Reads are [A]; accounting reconcile is [C]; 9 financial/model tools are [O] and run only on the owner's explicit instruction for that exact change.",
+  "jobs": [
+    "quanto gastamos com IA neste mês?",
+    "troque o modelo do Advisor para o Pro",
+    "desligue a análise de documentos para economizar",
+    "qual o limite de uso do Advisor e da busca de código hoje?",
+    "why did the Advisor answer with ai_usage_limit_reached?",
+    "how much of the AISH budget of project <projectId> is left?",
+    "fund AISH job <jobId> as the owner ordered",
+    "reconcile the AISH accounting of activity <issueId>"
+  ],
+  "routing": [
+    {
+      "order": 5,
+      "all": [
+        [
+          "budget*",
+          "orcamento*",
+          "custo*",
+          "cost",
+          "costs",
+          "spend",
+          "spent",
+          "gasto*",
+          "gastamos",
+          "pool",
+          "pools",
+          "funding",
+          "fund",
+          "financiar",
+          "quota",
+          "cota",
+          "usage limit",
+          "limite de uso",
+          "flash",
+          "gemini pro",
+          "model change",
+          "change model",
+          "trocar modelo",
+          "mudar modelo",
+          "trocar o modelo",
+          "ai config",
+          "configuracao de ia",
+          "ai policy",
+          "politica de ia",
+          "document analysis",
+          "analise de documentos",
+          "requirementsdocumentanalysis",
+          "accounting",
+          "contabilidade",
+          "ai_usage_limit_reached",
+          "ai_disabled",
+          "workspace_ai_budget_exceeded",
+          "modelo de ia",
+          "modelo da ia",
+          "modelos de ia",
+          "ai model",
+          "ai models",
+          "advisor model",
+          "modelo do advisor",
+          "troque o modelo",
+          "troca o modelo",
+          "mude o modelo",
+          "mudar o modelo",
+          "altere o modelo",
+          "alterar o modelo",
+          "switch the model",
+          "change the model",
+          "switch model",
+          "settle the aish",
+          "settle aish",
+          "settle the job",
+          "settle job",
+          "settle the reservation",
+          "aish settlement",
+          "liquidar o job",
+          "liquide o job",
+          "liquidar a reserva",
+          "liquidacao",
+          "external cost",
+          "custo externo",
+          "financial visibility",
+          "visibilidade financeira",
+          "reader exposure",
+          "readerexposure",
+          "adjust consumption",
+          "ajustar consumo",
+          "historical hours",
+          "horas historicas",
+          "code-search cap*",
+          "code-search limit*",
+          "limite da busca de codigo",
+          "fatura de infraestrutura",
+          "fatura da infraestrutura",
+          "fatura do provedor",
+          "fatura de ia",
+          "registrar a fatura",
+          "infrastructure invoice",
+          "infrastructure bill",
+          "provider invoice",
+          "provider bill",
+          "ai bill",
+          "ai invoice",
+          "record the invoice",
+          "record the bill",
+          "claude code bill",
+          "codex bill",
+          "detailed ledger",
+          "financial ledger",
+          "ledger visibility",
+          "ledger exposure",
+          "see the ledger",
+          "ver o ledger",
+          "ledger detalhado",
+          "consumption correction*",
+          "correct the consumption",
+          "fix the consumption",
+          "adjust the consumption",
+          "correcao de consumo",
+          "corrigir o consumo",
+          "corrigir o recibo*",
+          "ajustar o recibo*",
+          "ajuste de consumo"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "get_workspace_ai_config"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "API keys, AI provider keys or agent credentials",
+      "skill": "lpm-access"
+    },
+    {
+      "when": "creating, approving or dispatching AISH jobs",
+      "skill": "lpm-aish-jobs"
+    },
+    {
+      "when": "runner hosts, leases or a runner recording its consumption",
+      "skill": "lpm-aish-runners"
+    },
+    {
+      "when": "answering a code question with the Advisor",
+      "skill": "lpm-ask-advisor"
+    },
+    {
+      "when": "refreshing or activating a code index",
+      "skill": "lpm-code-index"
+    },
+    {
+      "when": "deploying LPM or changing its environment variables",
+      "skill": "lpm-release-product"
+    }
+  ],
+  "owns": [
+    "adjust_aish_consumption",
+    "configure_aish_budget",
+    "configure_aish_financial_pool",
+    "fund_aish_job",
+    "get_aish_accounting",
+    "get_aish_budget",
+    "get_aish_financial_pool",
+    "get_aish_financial_report",
+    "get_aish_usage_report",
+    "get_owner_agent_usage",
+    "get_workspace_ai_config",
+    "import_aish_accounting",
+    "list_aish_consumption",
+    "list_workspace_ai_provider_models",
+    "reconcile_aish_accounting",
+    "record_aish_financial_pool_cost",
+    "set_aish_financial_visibility",
+    "settle_aish_budget",
+    "update_workspace_ai_config"
+  ],
+  "uses": [
+    "get_aish_job",
+    "list_aish_jobs",
+    "list_issues",
+    "list_workspace_ai_credentials",
+    "list_workspace_projects",
+    "list_workspaces"
+  ],
+  "cli": [
+    "aish consumption",
+    "aish usage report"
+  ],
+  "sharedRefs": [
+    {
+      "name": "ai-cost-and-budgets",
+      "loadWhen": "an AI cost, limit, quota or fallback question comes up",
+      "inlineSummary": false
+    },
+    {
+      "name": "authority-and-owner-decisions",
+      "loadWhen": "an [O] call or a decision request is next",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/workspace-ai-policy.md",
+      "loadWhen": "reading or changing AI config"
+    },
+    {
+      "file": "references/budget-model.md",
+      "loadWhen": "an AISH money question or an AISH financial write"
+    },
+    {
+      "file": "references/accounting.md",
+      "loadWhen": "consumption receipts, accounting, reconcile or import"
+    },
+    {
+      "file": "references/flow-aish-write.md",
+      "loadWhen": "decision row 5 of SKILL.md"
+    }
+  ],
+  "behaviorContracts": [
+    "ai-cost-advisor-gate",
+    "ai-cost-owner-gate",
+    "missing-tool-fallback",
+    "owner-financial-gate"
+  ],
+  "codex": {
+    "shortDescription": "Read LPM AI and AISH costs; run owner-ordered budget changes",
+    "defaultPrompt": "Use $lpm-ai-cost to explain the AI and AISH cost, limits and budgets of LPM workspace <workspaceId>."
+  }
+}

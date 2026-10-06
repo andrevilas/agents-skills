@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "commands": [
+    {
+      "key": "issues get",
+      "usage": [
+        "lpm issues get --project <projectId> --issue <issueId> [--json]"
+      ]
+    },
+    {
+      "key": "issues update",
+      "usage": [
+        "lpm issues update --project <projectId> --issue <issueId> [--status <status>]"
+      ]
+    },
+    {
+      "key": "mcp status",
+      "usage": [
+        "lpm mcp status [--json]"
+      ]
+    }
+  ]
+}

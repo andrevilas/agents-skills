@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "source": "design §6.6 step 1; LPM scripts/check-mcp-parity.ts AGENT_SKILL_REQUIRED_MENTIONS (legacy mode)",
+  "transitionOnly": true,
+  "see": "lpm-deliver-activity",
+  "removeAfter": "§6.6 step 5: after LPM parity v2 is live, delete these files and this file",
+  "excludeFromInstall": true,
+  "excludeFromDiscovery": true,
+  "rule": "`build` writes every file below. LPM legacy mode checks each path exists and contains each tool as a substring. legacy-compat files are generated stubs that point at the v2 skill; the coverage matrix is the regular generated matrix.",
+  "files": [
+    {
+      "path": "docs/lpm-coverage-matrix.md",
+      "lpmLabel": "agents-skills LPM coverage matrix",
+      "kind": "coverage-matrix",
+      "tools": [
+        "delete_activity_attachment",
+        "list_activity_attachments",
+        "list_workspace_activities",
+        "upload_activity_attachment"
+      ],
+      "phrases": []
+    },
+    {
+      "path": "skills/software-project-orchestrator/targets/antigravity/software-project-orchestrator/PLAYBOOK.md",
+      "lpmLabel": "software-project-orchestrator Antigravity playbook",
+      "kind": "legacy-compat",
+      "tools": [
+        "delete_activity_attachment",
+        "list_activity_attachments",
+        "upload_activity_attachment"
+      ],
+      "phrases": [
+        "Deprecated: see lpm-deliver-activity"
+      ]
+    },
+    {
+      "path": "skills/software-project-orchestrator/targets/codex/software-project-orchestrator/SKILL.md",
+      "lpmLabel": "software-project-orchestrator Codex skill",
+      "kind": "legacy-compat",
+      "tools": [
+        "delete_activity_attachment",
+        "list_activity_attachments",
+        "list_workspace_activities",
+        "upload_activity_attachment"
+      ],
+      "phrases": [
+        "Deprecated: see lpm-deliver-activity"
+      ]
+    },
+    {
+      "path": "skills/software-project-orchestrator/targets/codex/software-project-orchestrator/references/lpm-capabilities.md",
+      "lpmLabel": "software-project-orchestrator Codex capabilities",
+      "kind": "legacy-compat",
+      "tools": [
+        "create_activity_attachment",
+        "delete_activity_attachment",
+        "list_activity_attachments",
+        "list_workspace_activities",
+        "upload_activity_attachment"
+      ],
+      "phrases": [
+        "Deprecated: see lpm-deliver-activity"
+      ]
+    }
+  ]
+}

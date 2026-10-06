@@ -1,0 +1,62 @@
+# Workspace AI policy
+Load when: reading or changing AI config
+Applies to: lpm-ai-cost    Source: lpm `server.ts` (`ensureWorkspaceAiOperationEnabled`, `openAdvisorAiSession`, `buildWorkspaceAiErrorResponse`, `resolveWorkspaceAiRuntimeModel`, `buildDefaultWorkspaceAiConfig`), `src/server/workspaceAiQuota.ts`, `src/server/aishVertexQuota.ts`, `src/lib/genAppBuilderConfig.ts`, `docs/workspace-ai-cost-incident-runbook.md`; cards `get_workspace_ai_config`, `update_workspace_ai_config`, `list_workspace_ai_provider_models`, `list_workspace_ai_credentials`, `get_owner_agent_usage`
+
+## Summary
+One policy per workspace: `enabled`, `defaultProvider`, `allowedProviders`, `models`, `featureFlags`, `usageLimits`.
+{{tool:update_workspace_ai_config}} is [O] and replaces the whole policy: read, change one field, send every field, re-read.
+`featureFlags.requirementsDocumentAnalysis` also gates the Advisor; turning it off makes every `answer_*` call return `ai_disabled`.
+Only Gemini executes in this runtime. Code-search (Gen App Builder) flags and caps are deployment settings, not MCP.
+There is no MCP read of workspace AI spend: say what cannot be answered.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| `enabled` | `false` turns off all workspace AI; any other value turns it on | `false` → every AI operation and the Advisor stop (`ai_disabled`) |
+| `defaultProvider` | `gemini`, `openai` or `anthropic` | only `gemini` runs; another value → AI operations fail `workspace_ai_provider_not_supported` (409) and the Advisor returns `ai_disabled` |
+| `allowedProviders` | list; the write REPLACES it; `defaultProvider` is added automatically | resend the current list unless the owner changed it |
+| `models.requirementsDocumentAnalysis` | model for document analysis AND the Advisor answer model | ids are not validated on write: a typo breaks Advisor answers; check with {{tool:list_workspace_ai_provider_models}} first |
+| `models.embedding` | embedding model | a change makes stored embeddings stale until they are backfilled again; tell the owner |
+| `models.operationalEntrySuggestion` | model for operational-entry suggestions | omitted keys keep the current value |
+| `featureFlags.requirementsDocumentAnalysis` | gates document analysis AND the Advisor: the Advisor session calls `ensureWorkspaceAiOperationEnabled(policy, "requirementsDocumentAnalysis")` (`server.ts` `openAdvisorAiSession`) | `false` → every `answer_*` call falls back with `fallbackReason: "ai_disabled"`; state this in the decision request even when the owner ordered the change |
+| `featureFlags.embeddings`, `featureFlags.operationalEntrySuggestion` | per-operation switches | `false` → that operation fails `workspace_ai_feature_disabled` (403) |
+| `usageLimits.dailyTokenBudget`, `monthlyTokenBudget`, `dailyRequestLimit` | non-negative numbers; `null` = no limit; `0` blocks every AI call | limits, not consumption; `0` also stops the Advisor: treat it like disabling AI |
+| `null` sent on write | keeps the old value | "no limit" cannot be restored over MCP |
+| budget check | each AI call reserves its estimated tokens against measured usage plus every call in flight | parallel calls exhaust a budget fast; daily window 00:00 UTC, monthly window = UTC calendar month |
+| AISH Vertex calls | AISH model calls on the server's Vertex Gemini hold tokens against the same daily/monthly counters | AISH work can exhaust the workspace AI budget; message "Workspace AI quota is missing or insufficient." |
+| near a limit | at a usage ratio of 0.8 by default the server can switch an operation to a degraded model, when the deployment configures one | the Advisor's `advisor.model` shows the model actually used |
+| `source: "default"` | no policy stored; server defaults apply (`enabled: true`, every flag true, deployment default limits) | the first write stores a full policy; send every field |
+| `fallbackReason: "ai_usage_limit_reached"` / `workspace_ai_budget_exceeded` (429) | a limit is reached; `advisor.fallbackDetail` (or the error) names it: "daily request limit" → `dailyRequestLimit`, "daily token budget" → `dailyTokenBudget`, "monthly token budget" → `monthlyTokenBudget` | quote it; never raise the limit yourself |
+| `fallbackReason: "ai_disabled"` | `enabled` false, the operation flag false, a non-Gemini `defaultProvider`, or a deployment-wide switch | `advisor.fallbackDetail` names the cause ("disabled for this workspace", "feature is disabled for this workspace", "not yet supported by this runtime", "global runtime policy"); the deployment switch is not MCP |
+| `ai_provider_unavailable` / `workspace_ai_not_configured` (412) | no usable provider credential | {{tool:list_workspace_ai_credentials}}; keys belong to {{skill:lpm-access}} (Gemini can still run on the server's Vertex backend) |
+| `workspace_ai_access_denied` (403) | the caller lacks AI access in this workspace | ask the workspace owner |
+| `workspace_ai_*` codes | REST/web codes; MCP returns the same messages | match on the message text |
+| model nickname ("Pro", "Flash") | not an id | exactly one listed id containing it with `supportsOperation`, `isPreview` false, `isDeprecated` false → use it; 0 or 2+ → list the candidates and ask |
+| empty `models` | nothing to check a model against | ask the owner for the exact id; warn "ids are not validated on write" |
+| model catalog | {{tool:list_workspace_ai_provider_models}}: live per `operation`, cached 5 minutes | check a model against its operation's list; `source: "unavailable"` is not an error: read `unavailableReason` |
+| update permissions | workspace owner, or an active member with role owner/admin; a human's API key, profile `full` or `custom` | -32003 "not allowed to call MCP tool" → the key profile lacks the sensitive tool |
+| Gen App Builder (code search, ranking, grounding, indexing) | flags and daily caps are deployment environment variables (`src/lib/genAppBuilderConfig.ts`), not MCP-controllable; the owner forbids env-var experiments | STOP: it is a deployment change for an LPM maintainer |
+| code-search quota | workspace daily cap; per-credential rows | {{tool:get_owner_agent_usage}} (UTC `dateKey`): total = `workspace.codeSearchLeased`, never a sum of `credentials[]`; counts searches |
+| workspace AI spend | no MCP read exists; the REST ai-cost-governance endpoint is web-only | answer "visible only in the web UI (AI cost governance)" and name what cannot be answered |
+| canonical runbook | lpm `docs/workspace-ai-cost-incident-runbook.md` | point maintainers there for AI cost incidents |
+
+## Rules
+1. Read {{tool:get_workspace_ai_config}} right before every write; keep the whole object as `before`.
+2. Change only the field the owner ordered; send all 7 fields; compare the 6 policy fields of the re-read with `before` (`source`, `updatedAt`, `updatedBy` change on every write).
+3. A model change, a limit change and an on/off change are the owner's decisions, every time (e.g. Flash ↔ Pro).
+4. Any change that touches `featureFlags.requirementsDocumentAnalysis`, `enabled` or `defaultProvider`, or sets a `usageLimits` value to 0, carries the Advisor consequence in the decision request.
+5. Never test a limit by calling an AI tool; never change env vars or ask for them to be changed as an experiment.
+
+## Examples
+```text
+example: owner says "troque o modelo do Advisor para gemini-2.5-pro"
+before = get_workspace_ai_config(workspaceId)
+list_workspace_ai_provider_models(workspaceId, provider="gemini", operation="requirementsDocumentAnalysis")
+  -> "gemini-2.5-pro" present, supportsOperation true
+update_workspace_ai_config(workspaceId, enabled=before.enabled, defaultProvider=before.defaultProvider,
+  allowedProviders=before.allowedProviders,
+  models={...before.models, requirementsDocumentAnalysis: "gemini-2.5-pro"},
+  featureFlags=before.featureFlags, usageLimits=before.usageLimits)
+get_workspace_ai_config(workspaceId) -> models.requirementsDocumentAnalysis == "gemini-2.5-pro"; the other policy fields
+  unchanged (source "workspace", updatedAt and updatedBy change)
+```

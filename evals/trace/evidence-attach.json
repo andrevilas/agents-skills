@@ -1,0 +1,122 @@
+{
+  "id": "evidence-attach",
+  "title": "Evidence attach: resolve the feed activityId (not the issueId), upload once, list it back",
+  "skill": "lpm-deliver-activity",
+  "source": "lpm-deliver-activity §4 row 5 → references/flow-evidence.md",
+  "request": "Workspace ws_trace, project prj_trace, activity iss_102 (\"Export CSV of activities\"). Attach the test report I just generated as evidence on the activity: file e2e-report.txt, type text/plain, base64 content VGVzdHMgcGFzc2VkOiA0Mi80Mgo= (\"Tests passed: 42/42\"), captured 2026-10-06T10:00:00Z.",
+  "ownerInstruction": null,
+  "fixtures": {
+    "get_mcp_connection_info": {
+      "credential": "api_key",
+      "allowedToolCount": 383,
+      "workspaceId": null,
+      "howToChange": "Create another API key in LPM Settings > API keys."
+    },
+    "get_issue": {
+      "id": "iss_102",
+      "projectId": "prj_trace",
+      "title": "Export CSV of activities",
+      "status": "in-progress",
+      "blockerContext": null,
+      "factoryGovernance": null,
+      "updatedAt": "2026-10-06T09:00:00.000Z"
+    },
+    "list_workspace_activities": [
+      {
+        "id": "act_950",
+        "projectId": "prj_trace",
+        "workspaceId": "ws_trace",
+        "type": "comment_added",
+        "targetType": "issue",
+        "targetId": "iss_177",
+        "targetName": "Unrelated activity",
+        "timestamp": "2026-10-06T09:40:00.000Z"
+      },
+      {
+        "id": "act_902",
+        "projectId": "prj_trace",
+        "workspaceId": "ws_trace",
+        "type": "comment_added",
+        "targetType": "issue",
+        "targetId": "iss_102",
+        "targetName": "Export CSV of activities",
+        "timestamp": "2026-10-06T09:30:00.000Z"
+      },
+      {
+        "id": "act_870",
+        "projectId": "prj_trace",
+        "workspaceId": "ws_trace",
+        "type": "issue_created",
+        "targetType": "issue",
+        "targetId": "iss_102",
+        "targetName": "Export CSV of activities",
+        "timestamp": "2026-10-01T08:00:00.000Z"
+      }
+    ],
+    "list_activity_attachments": {
+      "$when": [
+        {
+          "after": "upload_activity_attachment",
+          "response": [
+            {
+              "id": "private-att-77",
+              "activityId": "act_902",
+              "projectId": "prj_trace",
+              "workspaceId": "ws_trace",
+              "fileName": "e2e-report.txt",
+              "fileType": "text/plain",
+              "description": "e2e report: 42/42 passed",
+              "size": 20,
+              "createdAt": "2026-10-06T10:01:00.000Z"
+            }
+          ]
+        }
+      ],
+      "$default": []
+    },
+    "upload_activity_attachment": "Activity attachment uploaded with ID: private-att-77",
+    "list_comments": [],
+    "create_comment": "Comment created with ID: cmt_anchor_1"
+  },
+  "expect": {
+    "orderedCalls": [
+      "list_workspace_activities",
+      "list_activity_attachments",
+      {
+        "tool": "upload_activity_attachment",
+        "args": {
+          "projectId": "prj_trace",
+          "activityId": "act_902",
+          "fileName": "e2e-report.txt"
+        }
+      },
+      "list_activity_attachments"
+    ],
+    "forbiddenCalls": [
+      {
+        "tool": "upload_activity_attachment",
+        "args": {
+          "activityId": "iss_102"
+        }
+      },
+      {
+        "tool": "list_activity_attachments",
+        "args": {
+          "activityId": "iss_102"
+        }
+      },
+      "delete_activity_attachment",
+      "update_issue"
+    ],
+    "requiresVerify": [
+      {
+        "after": "upload_activity_attachment",
+        "read": "list_activity_attachments"
+      }
+    ],
+    "ownerOnlyTools": [],
+    "maxCalls": {
+      "upload_activity_attachment": 1
+    }
+  }
+}

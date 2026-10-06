@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "scopes": {
+    "skill": {
+      "antigravity": [
+        "dist/antigravity/<id>/SKILL.md"
+      ],
+      "claude-code": [
+        "dist/claude-code/<id>/SKILL.md"
+      ],
+      "codex": [
+        "dist/codex/<id>/SKILL.md"
+      ],
+      "generic": [
+        "dist/generic/<id>.md"
+      ]
+    },
+    "bundle": {
+      "antigravity": [
+        "dist/antigravity/<id>/**"
+      ],
+      "claude-code": [
+        "dist/claude-code/<id>/**"
+      ],
+      "codex": [
+        "dist/codex/<id>/**"
+      ],
+      "generic": [
+        "dist/generic/<id>.md",
+        "dist/generic/<id>.refs.md",
+        "dist/generic/<id>.tools.md"
+      ]
+    }
+  },
+  "contracts": [
+    {
+      "id": "delivery-trailer",
+      "skills": [
+        "lpm-deliver-activity",
+        "lpm-release-product"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "LPM-Activity:",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "owner-budget-gate",
+      "skills": [
+        "lpm-deliver-activity"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": "## 6. Stop and ask",
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "configure_aish_budget",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "release-no-advisor",
+      "skills": [
+        "lpm-release-product"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "bundle",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "absent",
+          "text": "answer_project_question",
+          "caseSensitive": true
+        }
+      ]
+    }
+  ]
+}

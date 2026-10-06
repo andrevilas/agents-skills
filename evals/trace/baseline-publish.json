@@ -1,0 +1,559 @@
+{
+  "id": "baseline-publish",
+  "title": "Baseline publish: owner order, pre-publication checks, one live publication, closure re-read",
+  "skill": "lpm-requirements-scope",
+  "source": "lpm-requirements-scope §4 row 10 → P5 Publish a baseline (+ references/publication-checklist.md)",
+  "request": "Workspace ws_trace, project prj_trace. Change set cs_42 (\"Q4 scope: SSO and audit log\") was approved. Publish the new baseline from the working scope: name \"Escopo Q4\", version \"v2.0\".",
+  "ownerInstruction": "I am the workspace owner: publish the working scope of project prj_trace as baseline \"Escopo Q4\" version \"v2.0\", with change set cs_42.",
+  "fixtures": {
+    "get_mcp_connection_info": {
+      "credential": "api_key",
+      "allowedToolCount": 383,
+      "workspaceId": null,
+      "howToChange": "Create another API key in LPM Settings > API keys."
+    },
+    "get_project_scope_resolution_context": {
+      "$when": [
+        {
+          "after": "publish_baseline_from_working_scope",
+          "response": {
+            "project": {
+              "id": "prj_trace",
+              "name": "Trace project"
+            },
+            "currentBaseline": {
+              "id": "bl_2",
+              "name": "Escopo Q4",
+              "version": "v2.0",
+              "isCurrent": true
+            },
+            "workingScope": {
+              "mode": "inferred-live-requirements",
+              "currentBaselineId": "bl_2",
+              "addedCount": 0,
+              "changedCount": 0,
+              "removedCount": 0,
+              "unchangedCount": 13,
+              "affectedCount": 0
+            },
+            "requirementsAwaitingBaseline": {
+              "count": 0,
+              "items": []
+            },
+            "publicationGate": {
+              "requiresFormalReview": false,
+              "shouldBlockPublication": false,
+              "matchedApprovedChangeSetId": null,
+              "materiality": "none",
+              "reasonCodes": []
+            },
+            "changeSets": {
+              "latest": [
+                {
+                  "id": "cs_42",
+                  "status": "published"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "$default": {
+        "project": {
+          "id": "prj_trace",
+          "name": "Trace project"
+        },
+        "currentBaseline": {
+          "id": "bl_1",
+          "name": "Escopo Q3",
+          "version": "v1.0",
+          "isCurrent": true
+        },
+        "workingScope": {
+          "mode": "inferred-live-requirements",
+          "currentBaselineId": "bl_1",
+          "addedCount": 2,
+          "changedCount": 1,
+          "removedCount": 0,
+          "unchangedCount": 10,
+          "affectedCount": 3
+        },
+        "requirementsAwaitingBaseline": {
+          "count": 0,
+          "items": []
+        },
+        "publicationGate": {
+          "requiresFormalReview": true,
+          "shouldBlockPublication": true,
+          "matchedApprovedChangeSetId": "cs_42",
+          "materiality": "material",
+          "reasonCodes": [
+            "material_scope_change"
+          ]
+        },
+        "changeSets": {
+          "latest": [
+            {
+              "id": "cs_42",
+              "status": "approved"
+            }
+          ]
+        }
+      }
+    },
+    "get_change_set": {
+      "$when": [
+        {
+          "after": "publish_baseline_from_working_scope",
+          "response": {
+            "id": "cs_42",
+            "title": "Q4 scope: SSO and audit log",
+            "status": "published",
+            "sourceBaselineId": "bl_1",
+            "publicationBaselineId": "bl_2",
+            "publicationBaselineName": "Escopo Q4",
+            "reviewPolicy": {
+              "materiality": "material",
+              "requiresFormalReview": true,
+              "reasonCodes": [
+                "material_scope_change"
+              ]
+            }
+          }
+        }
+      ],
+      "$default": {
+        "id": "cs_42",
+        "title": "Q4 scope: SSO and audit log",
+        "status": "approved",
+        "sourceBaselineId": "bl_1",
+        "publicationBaselineId": null,
+        "reviewPolicy": {
+          "materiality": "material",
+          "requiresFormalReview": true,
+          "reasonCodes": [
+            "material_scope_change"
+          ]
+        },
+        "approvedAt": "2026-10-05T18:00:00.000Z",
+        "approvedBy": "usr_owner"
+      }
+    },
+    "list_requirement_baselines": {
+      "$when": [
+        {
+          "after": "publish_baseline_from_working_scope",
+          "response": [
+            {
+              "id": "bl_2",
+              "name": "Escopo Q4",
+              "version": "v2.0",
+              "isCurrent": true,
+              "previousBaselineId": "bl_1",
+              "changeSetId": "cs_42",
+              "requirementCount": 13
+            },
+            {
+              "id": "bl_1",
+              "name": "Escopo Q3",
+              "version": "v1.0",
+              "isCurrent": false,
+              "previousBaselineId": null,
+              "requirementCount": 11
+            }
+          ]
+        }
+      ],
+      "$default": [
+        {
+          "id": "bl_1",
+          "name": "Escopo Q3",
+          "version": "v1.0",
+          "isCurrent": true,
+          "previousBaselineId": null,
+          "requirementCount": 11
+        }
+      ]
+    },
+    "list_working_scope_delta_entities": {
+      "$when": [
+        {
+          "args": {
+            "changeType": "added"
+          },
+          "response": {
+            "projectId": "prj_trace",
+            "summary": {
+              "mode": "inferred-live-requirements",
+              "currentBaselineId": "bl_1",
+              "addedCount": 2,
+              "changedCount": 1,
+              "removedCount": 0,
+              "unchangedCount": 10
+            },
+            "totalCount": 2,
+            "items": [
+              {
+                "requirementId": "req_21",
+                "baselineId": "bl_1",
+                "title": "SSO with SAML",
+                "type": "functional",
+                "status": "pending",
+                "changeType": "added",
+                "changedAt": "2026-10-04T10:00:00.000Z"
+              },
+              {
+                "requirementId": "req_22",
+                "baselineId": "bl_1",
+                "title": "Audit log export",
+                "type": "functional",
+                "status": "pending",
+                "changeType": "added",
+                "changedAt": "2026-10-04T11:00:00.000Z"
+              }
+            ],
+            "nextCursor": null
+          }
+        },
+        {
+          "args": {
+            "changeType": "changed"
+          },
+          "response": {
+            "projectId": "prj_trace",
+            "summary": {
+              "mode": "inferred-live-requirements",
+              "currentBaselineId": "bl_1",
+              "addedCount": 2,
+              "changedCount": 1,
+              "removedCount": 0,
+              "unchangedCount": 10
+            },
+            "totalCount": 1,
+            "items": [
+              {
+                "requirementId": "req_05",
+                "baselineId": "bl_1",
+                "title": "Password policy",
+                "type": "non-functional",
+                "status": "pending",
+                "changeType": "changed",
+                "changedAt": "2026-10-03T09:00:00.000Z"
+              }
+            ],
+            "nextCursor": null
+          }
+        },
+        {
+          "args": {
+            "changeType": "removed"
+          },
+          "response": {
+            "projectId": "prj_trace",
+            "summary": {
+              "mode": "inferred-live-requirements",
+              "currentBaselineId": "bl_1",
+              "addedCount": 2,
+              "changedCount": 1,
+              "removedCount": 0,
+              "unchangedCount": 10
+            },
+            "totalCount": 0,
+            "items": [],
+            "nextCursor": null
+          }
+        }
+      ],
+      "$default": {
+        "projectId": "prj_trace",
+        "summary": {
+          "mode": "inferred-live-requirements",
+          "currentBaselineId": "bl_1",
+          "addedCount": 2,
+          "changedCount": 1,
+          "removedCount": 0,
+          "unchangedCount": 10
+        },
+        "totalCount": 3,
+        "items": [
+          {
+            "requirementId": "req_21",
+            "baselineId": "bl_1",
+            "title": "SSO with SAML",
+            "type": "functional",
+            "status": "pending",
+            "changeType": "added",
+            "changedAt": "2026-10-04T10:00:00.000Z"
+          },
+          {
+            "requirementId": "req_22",
+            "baselineId": "bl_1",
+            "title": "Audit log export",
+            "type": "functional",
+            "status": "pending",
+            "changeType": "added",
+            "changedAt": "2026-10-04T11:00:00.000Z"
+          },
+          {
+            "requirementId": "req_05",
+            "baselineId": "bl_1",
+            "title": "Password policy",
+            "type": "non-functional",
+            "status": "pending",
+            "changeType": "changed",
+            "changedAt": "2026-10-03T09:00:00.000Z"
+          }
+        ],
+        "nextCursor": null
+      }
+    },
+    "list_requirements": {
+      "$when": [
+        {
+          "args": {
+            "baselineId": "bl_2"
+          },
+          "after": "publish_baseline_from_working_scope",
+          "response": [
+            {
+              "id": "req_bl2_01",
+              "title": "SSO with SAML",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_02",
+              "title": "Audit log export",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_03",
+              "title": "Password policy",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_04",
+              "title": "Login",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_05",
+              "title": "Logout",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_06",
+              "title": "Session timeout",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_07",
+              "title": "Profile page",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_08",
+              "title": "Roles",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_09",
+              "title": "Permissions",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_10",
+              "title": "CSV export",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_11",
+              "title": "Notifications",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_12",
+              "title": "Search",
+              "status": "pending",
+              "baselineId": "bl_2"
+            },
+            {
+              "id": "req_bl2_13",
+              "title": "Audit trail retention",
+              "status": "pending",
+              "baselineId": "bl_2"
+            }
+          ]
+        }
+      ],
+      "$default": [
+        {
+          "id": "req_21",
+          "title": "SSO with SAML",
+          "status": "pending",
+          "baselineId": "bl_1"
+        },
+        {
+          "id": "req_22",
+          "title": "Audit log export",
+          "status": "pending",
+          "baselineId": "bl_1"
+        }
+      ]
+    },
+    "publish_baseline_from_working_scope": {
+      "$when": [
+        {
+          "args": {
+            "changeSetId": {
+              "$present": true
+            }
+          },
+          "response": {
+            "$error": "Immutable proposal not found"
+          }
+        }
+      ],
+      "$default": {
+        "baseline": {
+          "id": "bl_2",
+          "name": "Escopo Q4",
+          "version": "v2.0",
+          "isCurrent": true,
+          "previousBaselineId": "bl_1"
+        },
+        "publication": {
+          "version": "v2.0",
+          "previousBaselineId": "bl_1",
+          "previousBaselineName": "Escopo Q3"
+        }
+      }
+    }
+  },
+  "expect": {
+    "orderedCalls": [
+      {
+        "unordered": [
+          "get_project_scope_resolution_context",
+          {
+            "tool": "get_change_set",
+            "args": {
+              "changeSetId": "cs_42"
+            }
+          },
+          "list_requirement_baselines",
+          {
+            "tool": "list_working_scope_delta_entities",
+            "args": {
+              "changeType": "added"
+            }
+          },
+          {
+            "tool": "list_working_scope_delta_entities",
+            "args": {
+              "changeType": "changed"
+            }
+          }
+        ]
+      },
+      {
+        "tool": "publish_baseline_from_working_scope",
+        "args": {
+          "projectId": "prj_trace",
+          "name": "Escopo Q4",
+          "version": "v2.0",
+          "changeSetId": {
+            "$absent": true
+          }
+        }
+      },
+      {
+        "unordered": [
+          "get_project_scope_resolution_context",
+          {
+            "tool": "get_change_set",
+            "args": {
+              "changeSetId": "cs_42"
+            }
+          },
+          {
+            "tool": "list_requirements",
+            "args": {
+              "baselineId": "bl_2"
+            }
+          },
+          "list_requirement_baselines"
+        ]
+      }
+    ],
+    "forbiddenCalls": [
+      "publish_change_set",
+      "publish_project_baseline_from_resolution",
+      "create_requirement_baseline",
+      "update_requirement_baseline",
+      "update_project_change_set_status",
+      "update_change_set",
+      {
+        "tool": "publish_baseline_from_working_scope",
+        "args": {
+          "isCurrent": false
+        }
+      },
+      {
+        "tool": "publish_baseline_from_working_scope",
+        "args": {
+          "changeSetId": {
+            "$present": true
+          }
+        }
+      }
+    ],
+    "requiresVerify": [
+      {
+        "after": "publish_baseline_from_working_scope",
+        "read": "get_project_scope_resolution_context"
+      },
+      {
+        "after": "publish_baseline_from_working_scope",
+        "read": {
+          "tool": "get_change_set",
+          "args": {
+            "changeSetId": "cs_42"
+          }
+        }
+      },
+      {
+        "after": "publish_baseline_from_working_scope",
+        "read": {
+          "tool": "list_requirements",
+          "args": {
+            "baselineId": "bl_2"
+          }
+        }
+      },
+      {
+        "after": "publish_baseline_from_working_scope",
+        "read": "list_requirement_baselines"
+      }
+    ],
+    "ownerOnlyTools": [
+      "publish_baseline_from_working_scope"
+    ],
+    "maxCalls": {
+      "publish_baseline_from_working_scope": 1
+    }
+  },
+  "requireArgs": [
+    "publish_baseline_from_working_scope"
+  ]
+}

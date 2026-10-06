@@ -1,0 +1,79 @@
+{
+  "id": "lpm-review-health",
+  "title": "Review project or portfolio health (read-only)",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when a read-only health, status, risk or integrity review of an LPM project or portfolio is asked (saúde, revisão semanal, 'what needs my attention'). Names the fixing skill per finding; never edits. Not for fixes (use lpm-plan-work) or unowned capabilities (use lpm-executive-context).",
+  "doneWhen": "A report exists where every number comes from a tool result of this run and every finding names the skill that fixes it.",
+  "authorityCeiling": "Read-only: this skill owns no write tool (validator-enforced).",
+  "jobs": [
+    "revisão de saúde do projeto <nome>",
+    "o que precisa da minha atenção no portfólio?",
+    "relatório de status semanal do workspace",
+    "weekly review of project <projectId>",
+    "list the risks of this project and the skill that fixes each one",
+    "is this project really healthy? check the integrity signals"
+  ],
+  "routing": [
+    {
+      "order": 34,
+      "all": [
+        ["health", "saude", "status report", "relatorio de status", "risk", "risks", "riscos", "integrity", "integridade", "weekly review", "revisao semanal", "portfolio", "attention", "atencao"]
+      ],
+      "unless": [],
+      "firstCall": "get_project_scope_resolution_context"
+    }
+  ],
+  "notFor": [
+    { "when": "fixing overdue, unassigned or unestimated work, or a stale cycle", "skill": "lpm-plan-work" },
+    { "when": "fixing a blocked activity or a dependency", "skill": "lpm-unblock-work" },
+    { "when": "scope drift, orphan requirements, change sets or baselines", "skill": "lpm-requirements-scope" },
+    { "when": "orphan AISH jobs or job/activity mismatches", "skill": "lpm-aish-delivery" },
+    { "when": "deciding a pending governance decision", "skill": "lpm-governance-decisions" },
+    { "when": "historical health trends (daily exports)", "skill": "lpm-integrations" }
+  ],
+  "owns": [
+    "get_project_analytics",
+    "get_project_owner_surface",
+    "get_project_read_model",
+    "list_project_resolution_risks",
+    "get_project_resolution_context",
+    "list_project_resolution_entities",
+    "get_project_resolution_action_catalog",
+    "get_workspace_owner_surface",
+    "get_workspace_read_model",
+    "get_workspace_owner_context_bundle"
+  ],
+  "uses": [
+    "list_overdue_project_issues",
+    "list_unassigned_project_issues",
+    "get_project_dependency_summary",
+    "list_blocked_project_issues",
+    "get_project_scope_resolution_context",
+    "list_aish_jobs",
+    "get_workspace_decision_inbox",
+    "get_operational_analytics",
+    "generate_workspace_readiness_report",
+    "list_workspaces",
+    "list_projects",
+    "list_workspace_projects",
+    "list_cycles",
+    "list_issues",
+    "list_issue_links"
+  ],
+  "cli": [],
+  "sharedRefs": [],
+  "references": [
+    { "file": "references/health-thresholds.md", "loadWhen": "classifying a project or portfolio status" },
+    { "file": "references/integrity-signals.md", "loadWhen": "any integrity signal, risk id or other finding is present" },
+    { "file": "references/report-template.md", "loadWhen": "writing the report" },
+    { "file": "references/flow-portfolio-connector.md", "loadWhen": "a portfolio or weekly review; one project on a connector or after -32003" }
+  ],
+  "behaviorContracts": ["missing-tool-fallback"],
+  "codex": {
+    "shortDescription": "Read-only LPM project and portfolio health review",
+    "defaultPrompt": "Use $lpm-review-health to review the health of LPM project <projectId>."
+  }
+}

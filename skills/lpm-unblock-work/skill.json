@@ -1,0 +1,195 @@
+{
+  "id": "lpm-unblock-work",
+  "title": "Resolve blockers and dependencies",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when LPM activities are blocked (bloqueada) or depend on other work: find blockers, record or resolve a blocker reason, add or remove dependency links (any project or workspace), read the dependency graph/critical path. Not for roadmap-item dependencies (use lpm-roadmap-owner-ops).",
+  "doneWhen": "Each blocked activity has its cause recorded as a link, a blocker context or a decision thread, and the blocked list reflects it.",
+  "authorityCeiling": "Links and blocker contexts are [A]; deletes and cross-workspace links are [C]; scope decisions are handed to governance.",
+  "jobs": [
+    "por que a atividade <id> está bloqueada?",
+    "o que está bloqueado no projeto <P>? qual é o caminho crítico?",
+    "mark activity <X> as blocked by activity <Y>",
+    "registre o bloqueio: aguardando acesso do fornecedor",
+    "the vendor delivered the API access, unblock <X>",
+    "vincule esta atividade à atividade <Y> do outro workspace",
+    "remove the wrong dependency link between <X> and <Y>",
+    "this blocker needs an owner decision on scope: escalate it",
+    "which projects of the workspace depend most on each other?"
+  ],
+  "routing": [
+    {
+      "order": 18,
+      "all": [
+        [
+          "bloquead*",
+          "bloqueio*",
+          "blocked",
+          "blocker*",
+          "blocks",
+          "unblock*",
+          "desbloque*",
+          "impediment*",
+          "impedid*",
+          "travad*",
+          "depend",
+          "depends",
+          "depende",
+          "dependem",
+          "dependent",
+          "dependente*",
+          "dependencia*",
+          "dependency",
+          "dependencies",
+          "critical path",
+          "caminho critico",
+          "only start after",
+          "so pode comecar depois",
+          "so pode iniciar depois",
+          "waits for",
+          "espera a tarefa",
+          "espera a atividade"
+        ]
+      ],
+      "unless": [
+        "roadmap"
+      ],
+      "firstCall": "list_blocked_project_issues"
+    },
+    {
+      "order": 19,
+      "all": [
+        [
+          "link",
+          "links",
+          "vincul*"
+        ],
+        [
+          "activity",
+          "activities",
+          "atividade",
+          "atividades",
+          "issue",
+          "issues"
+        ]
+      ],
+      "unless": [
+        "repository",
+        "repositorio",
+        "roadmap",
+        "requisito*",
+        "requirement*"
+      ],
+      "firstCall": "list_issue_links"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "dependencies between roadmap items",
+      "skill": "lpm-roadmap-owner-ops"
+    },
+    {
+      "when": "finishing or closing the activity once it is unblocked",
+      "skill": "lpm-deliver-activity"
+    },
+    {
+      "when": "owners, due dates or estimates of the blocked chain",
+      "skill": "lpm-plan-work"
+    },
+    {
+      "when": "deciding the governance thread opened from a blocker",
+      "skill": "lpm-governance-decisions"
+    },
+    {
+      "when": "a health or risk report of the whole project or portfolio",
+      "skill": "lpm-review-health"
+    },
+    {
+      "when": "linking a repository to a project",
+      "skill": "lpm-code-index"
+    }
+  ],
+  "owns": [
+    "create_issue_link",
+    "create_portfolio_work_item_link",
+    "create_workspace_issue_link",
+    "delete_issue_link",
+    "delete_workspace_issue_link",
+    "get_project_dependency_graph",
+    "get_project_dependency_heatmap",
+    "get_project_dependency_summary",
+    "list_blocked_project_issues",
+    "list_issue_links",
+    "list_portfolio_work_item_links",
+    "list_workspace_issue_links",
+    "prepare_governance_thread_from_blocker",
+    "resolve_project_issue_blocker_context",
+    "set_project_issue_blocker_context",
+    "update_portfolio_work_item_link"
+  ],
+  "uses": [
+    "create_comment",
+    "create_governance_thread",
+    "get_issue",
+    "list_comments",
+    "list_issues",
+    "list_project_resolution_risks",
+    "list_workspace_projects",
+    "list_workspaces"
+  ],
+  "cli": [
+    "portfolio-links create",
+    "portfolio-links list",
+    "portfolio-links update"
+  ],
+  "sharedRefs": [
+    {
+      "name": "comment-templates",
+      "loadWhen": "writing a blocker, release or decision comment",
+      "inlineSummary": false
+    },
+    {
+      "name": "enums",
+      "loadWhen": "a link type or status value is unclear",
+      "inlineSummary": false
+    },
+    {
+      "name": "idempotency-and-retries",
+      "loadWhen": "retrying a write after a timeout or unclear result",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/blocked-semantics.md",
+      "loadWhen": "when explaining why an activity is or is not blocked"
+    },
+    {
+      "file": "references/flow-add-link.md",
+      "loadWhen": "decision row 5 (add a dependency link, P2)"
+    },
+    {
+      "file": "references/flow-owner-decision.md",
+      "loadWhen": "decision row 7 (owner decision)"
+    },
+    {
+      "file": "references/flow-remove-link.md",
+      "loadWhen": "decision row 10 (remove or close a link)"
+    },
+    {
+      "file": "references/flow-resolve-release.md",
+      "loadWhen": "decision rows 8-9 (resolve a context, P4; release after U ends, P5)"
+    },
+    {
+      "file": "references/link-or-context-or-thread.md",
+      "loadWhen": "when choosing how to record a dependency"
+    }
+  ],
+  "behaviorContracts": [],
+  "codex": {
+    "shortDescription": "Find and clear LPM blockers and dependency links",
+    "defaultPrompt": "Use $lpm-unblock-work to find and resolve the blocked activities of LPM project <projectId>."
+  }
+}

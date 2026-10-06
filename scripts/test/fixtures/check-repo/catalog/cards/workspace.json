@@ -1,0 +1,139 @@
+[
+  {
+    "name": "configure_aish_budget",
+    "status": "verified",
+    "purpose": "Configure the AISH budget of a workspace.",
+    "useWhen": [
+      "the user asks to configure the aish budget of a workspace"
+    ],
+    "avoidWhen": [],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      }
+    ],
+    "preconditions": [],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "not idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts:100-110"
+  },
+  {
+    "name": "create_api_key",
+    "status": "verified",
+    "purpose": "Create an API key for a workspace.",
+    "useWhen": [
+      "the user asks to create an api key for a workspace"
+    ],
+    "avoidWhen": [],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      },
+      {
+        "param": "name",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      }
+    ],
+    "preconditions": [],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts:100-110"
+  },
+  {
+    "name": "get_mcp_connection_info",
+    "status": "verified",
+    "purpose": "Describe the current MCP connection.",
+    "useWhen": [
+      "the user asks to describe the current mcp connection"
+    ],
+    "avoidWhen": [],
+    "inputs": [],
+    "preconditions": [],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [],
+    "oauthScope": "workspace:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Owner-agent credentials cannot call it.",
+        "verifiedFrom": "help:mcp-connection"
+      }
+    ],
+    "verifiedFrom": "server.ts:100-110"
+  },
+  {
+    "name": "list_workspaces",
+    "status": "verified",
+    "purpose": "List the workspaces of the caller.",
+    "useWhen": [
+      "the user asks to list the workspaces of the caller"
+    ],
+    "avoidWhen": [],
+    "inputs": [],
+    "preconditions": [],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [],
+    "oauthScope": "workspace:read",
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts:100-110"
+  },
+  {
+    "name": "search_help_articles",
+    "status": "verified",
+    "purpose": "Search the LPM help articles.",
+    "useWhen": [
+      "the user asks to search the lpm help articles"
+    ],
+    "avoidWhen": [],
+    "inputs": [
+      {
+        "param": "query",
+        "required": true,
+        "source": "user",
+        "notes": ""
+      }
+    ],
+    "preconditions": [],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "The record.",
+    "pairsWith": [],
+    "errors": [],
+    "oauthScope": "workspace:read",
+    "cli": null,
+    "gotchas": [],
+    "verifiedFrom": "server.ts:100-110"
+  }
+]

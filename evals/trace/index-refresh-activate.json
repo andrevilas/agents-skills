@@ -1,0 +1,229 @@
+{
+  "id": "index-refresh-activate",
+  "title": "Index refresh + activate: status, preview commit, one refresh, one activate with the read generation, status read-back",
+  "skill": "lpm-code-index",
+  "source": "lpm-code-index §4 row 4 → P2 Refresh and activate (+ references/code-index-lifecycle.md)",
+  "request": "Workspace ws_trace. The code index of repository link rl_7 (https://github.com/trace-org/trace-app, branch main) is stale. Refresh it and make the new index active. I confirm both steps.",
+  "ownerInstruction": null,
+  "fixtures": {
+    "get_mcp_connection_info": {
+      "credential": "api_key",
+      "allowedToolCount": 383,
+      "workspaceId": null,
+      "howToChange": "Create another API key in LPM Settings > API keys."
+    },
+    "list_workspace_repository_links": [
+      {
+        "id": "rl_7",
+        "workspaceId": "ws_trace",
+        "repositoryUrl": "https://github.com/trace-org/trace-app",
+        "defaultBranch": "main",
+        "agentVisible": true,
+        "lastScanAt": "2026-10-06T07:00:00.000Z",
+        "lastScanStatus": "completed"
+      }
+    ],
+    "reconcile_workspace_code_indexes": {
+      "workspaceId": "ws_trace",
+      "repositories": [
+        {
+          "repositoryLinkId": "rl_7",
+          "state": "stale",
+          "indexedCommitSha": "1111111111111111111111111111111111111111",
+          "repositoryCommitSha": "2222222222222222222222222222222222222222"
+        }
+      ]
+    },
+    "get_repository_index_status": {
+      "$when": [
+        {
+          "after": "activate_repository_code_index",
+          "response": {
+            "workspaceId": "ws_trace",
+            "repositoryLinkId": "rl_7",
+            "pointer": {
+              "activeIndexVersionId": "iv_new",
+              "previousIndexVersionId": "iv_old",
+              "expectedRepositoryCommitSha": "2222222222222222222222222222222222222222",
+              "generation": 5,
+              "updatedAt": "2026-10-06T12:20:00.000Z"
+            },
+            "versions": [
+              {
+                "id": "iv_new",
+                "branch": "main",
+                "commitSha": "2222222222222222222222222222222222222222",
+                "status": "active",
+                "documentCount": 120
+              },
+              {
+                "id": "iv_old",
+                "branch": "main",
+                "commitSha": "1111111111111111111111111111111111111111",
+                "status": "superseded",
+                "documentCount": 118
+              }
+            ]
+          }
+        }
+      ],
+      "$default": {
+        "workspaceId": "ws_trace",
+        "repositoryLinkId": "rl_7",
+        "pointer": {
+          "activeIndexVersionId": "iv_old",
+          "previousIndexVersionId": "iv_older",
+          "expectedRepositoryCommitSha": "1111111111111111111111111111111111111111",
+          "generation": 4,
+          "updatedAt": "2026-09-30T12:00:00.000Z"
+        },
+        "versions": [
+          {
+            "id": "iv_old",
+            "branch": "main",
+            "commitSha": "1111111111111111111111111111111111111111",
+            "status": "active",
+            "documentCount": 118
+          },
+          {
+            "id": "iv_older",
+            "branch": "main",
+            "commitSha": "0000000000000000000000000000000000000000",
+            "status": "superseded",
+            "documentCount": 117
+          }
+        ]
+      }
+    },
+    "preview_repository_code_index": {
+      "repositoryUrl": "https://github.com/trace-org/trace-app",
+      "branch": "main",
+      "commitSha": "2222222222222222222222222222222222222222",
+      "eligibleFileCount": 120,
+      "selectedFileCount": 120,
+      "truncated": false,
+      "limits": {
+        "maxFiles": 500,
+        "maxFileBytes": 524288
+      },
+      "dryRun": true
+    },
+    "refresh_repository_code_index": {
+      "id": "iv_new",
+      "status": "validating",
+      "commitSha": "2222222222222222222222222222222222222222",
+      "branch": "main",
+      "searchableChunkCount": 940,
+      "indexedFiles": 120,
+      "excludedFiles": 3,
+      "secretExcludedFiles": 0,
+      "eligibleFileCount": 120,
+      "selectedFileCount": 120,
+      "fileCapTruncated": false,
+      "treeTruncated": false
+    },
+    "activate_repository_code_index": {
+      "repositoryLinkId": "rl_7",
+      "versionId": "iv_new",
+      "activeIndexVersionId": "iv_new",
+      "previousIndexVersionId": "iv_old",
+      "expectedRepositoryCommitSha": "2222222222222222222222222222222222222222",
+      "generation": 5
+    },
+    "search_workspace_code": {
+      "resultCount": 1,
+      "results": [
+        {
+          "repositoryLinkId": "rl_7",
+          "indexVersionId": "iv_new",
+          "commitSha": "2222222222222222222222222222222222222222",
+          "path": "README.md",
+          "startLine": 1,
+          "endLine": 3,
+          "excerpt": "# trace-app",
+          "score": 1,
+          "untrustedInstructionDetected": false,
+          "repositoryUrl": "https://github.com/trace-org/trace-app",
+          "lexicalMatch": true,
+          "excerptStartLine": 1,
+          "citation": "https://github.com/trace-org/trace-app@2222222222222222222222222222222222222222:README.md#L1-L3"
+        }
+      ],
+      "omissions": []
+    }
+  },
+  "expect": {
+    "orderedCalls": [
+      {
+        "tool": "get_repository_index_status",
+        "args": {
+          "workspaceId": "ws_trace",
+          "repositoryLinkId": "rl_7"
+        }
+      },
+      {
+        "tool": "preview_repository_code_index",
+        "args": {
+          "workspaceId": "ws_trace",
+          "repositoryLinkId": "rl_7"
+        }
+      },
+      {
+        "tool": "refresh_repository_code_index",
+        "args": {
+          "workspaceId": "ws_trace",
+          "repositoryLinkId": "rl_7",
+          "commitSha": "2222222222222222222222222222222222222222"
+        }
+      },
+      {
+        "tool": "activate_repository_code_index",
+        "args": {
+          "workspaceId": "ws_trace",
+          "versionId": "iv_new",
+          "expectedGeneration": 4
+        }
+      },
+      "get_repository_index_status",
+      {
+        "tool": "search_workspace_code",
+        "args": {
+          "workspaceId": "ws_trace",
+          "query": {
+            "$not": {
+              "$anyOf": [
+                "trace-app",
+                "trace-org/trace-app",
+                "https://github.com/trace-org/trace-app"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "forbiddenCalls": [
+      "rollback_repository_code_index",
+      "purge_repository_code_index",
+      "archive_workspace_repository_link",
+      "create_workspace_repository_link"
+    ],
+    "requiresVerify": [
+      {
+        "after": "activate_repository_code_index",
+        "read": "get_repository_index_status"
+      },
+      {
+        "after": "activate_repository_code_index",
+        "read": "search_workspace_code"
+      }
+    ],
+    "ownerOnlyTools": [],
+    "maxCalls": {
+      "refresh_repository_code_index": 1,
+      "activate_repository_code_index": 1
+    }
+  },
+  "requireArgs": [
+    "activate_repository_code_index"
+  ]
+}

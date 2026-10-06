@@ -1,0 +1,595 @@
+{
+  "schemaVersion": 1,
+  "source": "design §5.6 V12 (replaces the hard-coded paths of scripts/validate-skill-behavior.sh)",
+  "rule": "V12 checks every assertion against dist/ for every listed skill and target. `contains` fails when the text is missing from the resolved files (for scope `bundle`: from all of them together); `absent` fails when the text appears in any resolved file. `section` limits the check to the lines from that heading to the next `## ` heading.",
+  "scopes": {
+    "skill": {
+      "antigravity": [
+        "dist/antigravity/<id>/SKILL.md"
+      ],
+      "claude-code": [
+        "dist/claude-code/<id>/SKILL.md"
+      ],
+      "codex": [
+        "dist/codex/<id>/SKILL.md"
+      ],
+      "generic": [
+        "dist/generic/<id>.md"
+      ]
+    },
+    "bundle": {
+      "antigravity": [
+        "dist/antigravity/<id>/**"
+      ],
+      "claude-code": [
+        "dist/claude-code/<id>/**"
+      ],
+      "codex": [
+        "dist/codex/<id>/**"
+      ],
+      "generic": [
+        "dist/generic/<id>.md",
+        "dist/generic/<id>.refs.md",
+        "dist/generic/<id>.tools.md"
+      ]
+    }
+  },
+  "contracts": [
+    {
+      "id": "advisor-evidence-status",
+      "skills": [
+        "lpm-ask-advisor"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "codeEvidence.status",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "ai-cost-advisor-gate",
+      "skills": [
+        "lpm-ai-cost"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "ai_disabled",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "requirementsDocumentAnalysis",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "ai-cost-owner-gate",
+      "skills": [
+        "lpm-ai-cost"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": "## 6. Stop and ask",
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "adjust_aish_consumption",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "configure_aish_budget",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "configure_aish_financial_pool",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "fund_aish_job",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "import_aish_accounting",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "record_aish_financial_pool_cost",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "set_aish_financial_visibility",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "settle_aish_budget",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "update_workspace_ai_config",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "aish-jobs-approval",
+      "skills": [
+        "lpm-aish-jobs"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "expectedManifestHash",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "aish-budget/1",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "code-index-activation",
+      "skills": [
+        "lpm-code-index"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "expectedGeneration",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "deliver-repo-hygiene",
+      "skills": [
+        "lpm-deliver-activity"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "repo-hygiene",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "AGENTS.md",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "delivery-trailer-phrase",
+      "skills": [
+        "lpm-deliver-activity",
+        "lpm-release-product"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "LPM-Activity:",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "governance-no-activity-target",
+      "skills": [
+        "lpm-governance-decisions"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "threads cannot target activities",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "governance-record-not-originate",
+      "skills": [
+        "lpm-governance-decisions"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "never originate a decision",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "intake-explicit-project",
+      "skills": [
+        "lpm-intake-triage"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "selectedProjectId",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "owner-roadmap-gate",
+      "skills": [
+        "lpm-roadmap-owner-ops"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "GOVERNANCE_REVIEW_REQUIRED",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "owner order",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "pilot-feedback-rules",
+      "skills": [
+        "lpm-pilot-feedback"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "processed-message state file",
+          "caseSensitive": false
+        },
+        {
+          "kind": "contains",
+          "text": "oauth_grants",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "managed-workspace demand",
+          "caseSensitive": false
+        },
+        {
+          "kind": "contains",
+          "text": "never reply",
+          "caseSensitive": false
+        },
+        {
+          "kind": "absent",
+          "text": "answer_project_question",
+          "caseSensitive": true
+        },
+        {
+          "kind": "absent",
+          "text": "answer_workspace_roadmap_question",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "release-deploy-gates",
+      "skills": [
+        "lpm-release-product"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "CANDIDATE_ONLY=true",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "check:mcp-parity",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "update-traffic",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "smoke-mcp-protocol.mjs",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "one full XporY run per UTC day",
+          "caseSensitive": false
+        }
+      ]
+    },
+    {
+      "id": "release-repo-rules",
+      "skills": [
+        "lpm-release-product"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "bundle",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "rollback target",
+          "caseSensitive": false
+        },
+        {
+          "kind": "contains",
+          "text": "--to-revisions=<rollback target>=100",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "list-files-for-upload",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "#!include:.gitignore",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "git -C ../agents-skills pull",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "roadmap-create-direct-not-cr",
+      "skills": [
+        "lpm-roadmap"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "never `changeType: \"create\"`",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "create_workspace_roadmap_item",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "roadmap-independent-review",
+      "skills": [
+        "lpm-roadmap"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "SELF_REVIEW_FORBIDDEN",
+          "caseSensitive": true
+        },
+        {
+          "kind": "contains",
+          "text": "exactly one member",
+          "caseSensitive": false
+        }
+      ]
+    },
+    {
+      "id": "scope-publication-owner-only",
+      "skills": [
+        "lpm-requirements-scope"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "isCurrent:false",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "scope-removals-explicit",
+      "skills": [
+        "lpm-requirements-scope"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "Never claim \"no removals\"",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "start-oauth-reinstall",
+      "skills": [
+        "lpm-start"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "Permissões adicionais (opcional)",
+          "caseSensitive": true
+        }
+      ]
+    },
+    {
+      "id": "unblock-no-blocked-status",
+      "skills": [
+        "lpm-unblock-work"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ],
+      "scope": "skill",
+      "section": null,
+      "assertions": [
+        {
+          "kind": "contains",
+          "text": "never set status `blocked`",
+          "caseSensitive": true
+        }
+      ]
+    }
+  ]
+}

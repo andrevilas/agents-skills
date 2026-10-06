@@ -1,0 +1,149 @@
+{
+  "id": "lpm-governance-decisions",
+  "title": "Governance threads and decisions",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when a scope/business decision must be raised or recorded in an LPM governance thread (requirement, baseline, roadmap item), for the decision inbox (decisões pendentes), or to turn a decided thread into an activity, requirement or change set. Not for deciding a change request (use lpm-roadmap).",
+  "doneWhen": "The resolution context (connector: `list_governance_threads` → `latestMessagePreview`) shows the expected status and `decisionOutcome`, with `actionTargetId` when an artifact was created.",
+  "authorityCeiling": "Threads and replies [A]; `update_governance_thread` [C]; reopening or recording a decision [O], and only what an authorized human said.",
+  "jobs": [
+    "quais decisões estão pendentes no projeto <P>?",
+    "what governance decisions are waiting across workspace <W>?",
+    "abra uma thread de governança sobre o requisito <R> com opções e recomendação",
+    "reply to governance thread <T> with the evidence the owner asked for",
+    "o dono decidiu criar a atividade; registre a decisão na thread <T>",
+    "turn the decision of thread <T> into a requirement and link it back",
+    "who has to decide this, and which governance roles are uncovered?"
+  ],
+  "routing": [
+    {
+      "order": 20,
+      "all": [
+        [
+          "governance thread",
+          "thread de governanca",
+          "thread",
+          "threads",
+          "governance role*",
+          "papel de governanca",
+          "papeis de governanca",
+          "governance assignment*"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "get_project_decision_inbox"
+    },
+    {
+      "order": 21,
+      "all": [
+        [
+          "decision*",
+          "decisao",
+          "decisoes",
+          "decid*"
+        ]
+      ],
+      "unless": [
+        "change request",
+        "cr",
+        "pedido de mudanca",
+        "roadmap"
+      ],
+      "firstCall": "get_project_decision_inbox"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "reviewing or applying a roadmap change request",
+      "skill": "lpm-roadmap"
+    },
+    {
+      "when": "progress, evidence or closure of one activity",
+      "skill": "lpm-deliver-activity"
+    },
+    {
+      "when": "editing requirements, change-set review, baseline publication",
+      "skill": "lpm-requirements-scope"
+    },
+    {
+      "when": "approving or running the AISH jobs a thread held",
+      "skill": "lpm-aish-jobs"
+    },
+    {
+      "when": "configuring budgets, pools or AI models",
+      "skill": "lpm-ai-cost"
+    }
+  ],
+  "owns": [
+    "create_governance_thread",
+    "draft_activity_from_governance_thread",
+    "draft_change_set_from_governance_thread",
+    "draft_requirement_from_governance_thread",
+    "get_governance_thread_messages",
+    "get_governance_thread_resolution_context",
+    "get_project_decision_inbox",
+    "get_workspace_decision_inbox",
+    "list_governance_threads",
+    "list_project_decision_queue",
+    "prepare_change_set_draft_from_governance_thread",
+    "prepare_issue_draft_from_governance_thread",
+    "prepare_requirement_draft_from_governance_thread",
+    "reply_governance_thread",
+    "reply_to_governance_thread",
+    "resolve_governance_thread_with_decision",
+    "resolve_governance_thread_with_outcome",
+    "update_governance_thread"
+  ],
+  "uses": [
+    "create_change_set",
+    "create_comment",
+    "create_issue",
+    "create_requirement",
+    "get_project",
+    "get_workspace_roadmap_change_request",
+    "list_comments",
+    "list_missing_governance_assignments",
+    "list_project_assignable_members"
+  ],
+  "cli": [],
+  "sharedRefs": [
+    {
+      "name": "authority-and-owner-decisions",
+      "loadWhen": "before recording a decision or writing a decision request",
+      "inlineSummary": false
+    },
+    {
+      "name": "idempotency-and-retries",
+      "loadWhen": "a thread create, reply or artifact create timed out or returned an unclear result",
+      "inlineSummary": false
+    },
+    {
+      "name": "ai-cost-and-budgets",
+      "loadWhen": "the decision enables, expands or cuts AI or AISH spend",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/flow-decision.md",
+      "loadWhen": "decision rows 6 and 7"
+    },
+    {
+      "file": "references/flow-write.md",
+      "loadWhen": "decision rows 4 and 5"
+    },
+    {
+      "file": "references/thread-model.md",
+      "loadWhen": "before creating or resolving a thread"
+    }
+  ],
+  "behaviorContracts": [
+    "missing-tool-fallback"
+  ],
+  "codex": {
+    "shortDescription": "Raise, record and act on LPM governance decisions",
+    "defaultPrompt": "Use $lpm-governance-decisions to triage the pending governance decisions of LPM project <projectId>."
+  }
+}

@@ -1,0 +1,46 @@
+# Flow: baseline publication and records
+Load when: decision rows 10-11 of SKILL.md
+
+## Preconditions
+1. Every step here is [O]: baseline publication is owner-only. Quote the owner's instruction from this conversation ordering this exact action; none → send the decision request ({{ref:authority-and-owner-decisions#decision-request}}) and STOP.
+2. LPM API key (profile `requirements`, `full` or `custom`; delete needs `full` or `custom`). `projectId`, `baselineId`, `changeSetId` come from SKILL.md §3; `expectedProposalFingerprint` from {{tool:get_change_set}} → `scopeProposal.contentFingerprint`.
+3. Never use `isCurrent:false` (on any tool) to dodge review, never set `publicationBaselineId` before publishing, never call {{tool:publish_change_set}} before baseline publication.
+
+## Steps
+1. Publish (row 10): quote the owner's order. Load {{ref:publication-checklist}} and run its pre-publication checks; a check fails → STOP with its fix. Write down now `publicationGate.requiresFormalReview` and `publicationGate.matchedApprovedChangeSetId` (both reset after publication; step 5b needs them).
+2. `shouldBlockPublication == true` → STOP → {{ref:flow-change-set}} first. `requiresFormalReview == false` → no change set is needed; never create one now.
+3. Mode (decide before the call): a `changeSetId` is in play → {{tool:get_change_set}}(projectId, changeSetId) → `scopeProposal`: absent → LIVE; present → PROPOSAL. No change set in play → LIVE.
+   - LIVE: {{tool:publish_baseline_from_working_scope}}(projectId, name, version, publicationNotes="<owner quote>; change set <changeSetId, or none needed (materiality <m>)>") [O]. NEVER pass `changeSetId`, even when the owner says "with change set <X>": the change set id goes ONLY inside `publicationNotes`. Any `changeSetId` switches the tool to proposal mode, which fails with "Immutable proposal not found".
+   - PROPOSAL: the same call plus `changeSetId` AND `expectedProposalFingerprint` = `scopeProposal.contentFingerprint`, always together, never one without the other.
+   - Both: omit `isCurrent`. {{tool:publish_project_baseline_from_resolution}} [O] is the live-only twin (no `changeSetId`): use it only when the canonical tool is absent.
+4. Timeout or unclear result → {{tool:list_requirement_baselines}}(projectId): the version exists → published; never retry blindly (each live call creates a baseline). Never call {{tool:publish_change_set}} afterwards: publication marks the matched set `published`; an unmatched low-materiality set stays `approved` (its id is in `publicationNotes`).
+5. Verify (publish): run every sub-step; never substitute another read.
+   - 5a. {{tool:get_project_scope_resolution_context}}(projectId) → `currentBaseline.id` == the new id, `publicationGate.shouldBlockPublication == false`, live mode `workingScope.addedCount == 0` and `changedCount == 0`.
+   - 5b. A `changeSetId` is in this request, or step 1 read `matchedApprovedChangeSetId` not null (then changeSetId = that id) → ALWAYS call {{tool:get_change_set}}(projectId, changeSetId) after publishing → `requiresFormalReview` kept in step 1 was true: `status == "published"` and `publicationBaselineId` == the new id; it was false: `status` unchanged (normally `approved`), not published. `changeSets.latest` from the scope context and `list_requirement_baselines[].changeSetId` do NOT replace this read.
+   - 5c. {{tool:list_requirements}}(projectId, baselineId=<new id>) → the expected requirements are listed (ids are new copies).
+   - 5d. {{tool:list_requirement_baselines}}(projectId) → exactly one item has `isCurrent == true`, and it is the new id.
+6. First baseline (row 11, no baseline listed): {{tool:publish_baseline_from_working_scope}}(projectId, name, version, publicationNotes="<owner quote>") [O]; omit isCurrent. The gate is off without a current baseline; orphans are attached as `unchanged`. Requirements added afterwards are `changed` and follow {{ref:flow-change-set}}. Baselines exist but none is current → ask the owner which one to restore (step 7). Never {{tool:create_requirement_baseline}} for this.
+7. Rename a baseline or restore an older one as current (row 11): {{tool:update_requirement_baseline}}(projectId, baselineId, <changed fields only>) [O]. A current baseline exists and the owner wants new scope → step 1.
+8. Delete a baseline (row 11): {{tool:list_requirements}}(projectId, baselineId) → count → delete text below → {{tool:delete_requirement_baseline}}(projectId, baselineId) [O].
+9. Verify (records): {{tool:list_requirement_baselines}}(projectId) → the `id` has the sent fields (absent after delete) and exactly one `isCurrent == true`.
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| no owner order for this exact action | decision request ({{ref:authority-and-owner-decisions#decision-request}}), STOP |
+| delete a baseline | "Delete baseline <name> <version> with <n> requirements? They are hard-deleted, linked work loses its baseline, and if it is current the newest other baseline becomes current without the gate. It cannot be restored." |
+| "Reconcile unbaselined requirements before publication" | orphans first ({{ref:flow-requirements}} step 7), then step 3 |
+| {{tool:publish_change_set}}, `isCurrent:false`, or `publicationBaselineId` set before publishing | {{tool:publish_change_set}} only closes an approved change set against a baseline already published by other means; never call it before baseline publication. Refuse the other two: they dodge or break the gate |
+
+## Verify
+| After | Re-read with | Pass when |
+|---|---|---|
+| publication | step 5 (5a-5d) = {{ref:publication-checklist}} Closure | every sub-step you ran passes; 5b runs whenever a change set is in play |
+| baseline create / update / delete | {{tool:list_requirement_baselines}}(projectId) | the sent fields (absent after delete), exactly one `isCurrent == true` |
+| {{tool:publish_change_set}} | {{tool:get_change_set}}(projectId, changeSetId) | `status == "published"` |
+
+## Report fields
+- Done: new baseline id, name, version; change set id and its `status` read in 5b (`published`, or `approved` when `requiresFormalReview` was false), or `none needed`.
+- Evidence: owner quote; 5a `currentBaseline.id`, `addedCount`, `changedCount`; 5b `get_change_set` → `status`, `publicationBaselineId`. List only reads you made; never write "all checks pass".
+- Pending: none, or the failed checklist item and who must act.
+- Next: one action for the user, e.g. "plan activities for req_21/req_22 (lpm-plan-work)" or "none"; not a status line.

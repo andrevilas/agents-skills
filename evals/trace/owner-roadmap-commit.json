@@ -1,0 +1,262 @@
+{
+  "id": "owner-roadmap-commit",
+  "title": "Owner roadmap commit: gate on mode, preview, commit the exact preview with the verbatim rationale, overview read-back",
+  "skill": "lpm-roadmap-owner-ops",
+  "source": "lpm-roadmap-owner-ops §4 row 6 → P1 Gate, references/flow-direct-ops.md A",
+  "request": "Workspace ws_trace, roadmap rm_1. As one owner change: rename item ri_12 (\"Checkout\") to \"Checkout v2\", and create a new item \"Checkout v2 rollout\" (priority high) in roadmap rm_1. Rationale: \"Board decision of 2026-10-05 to prioritise checkout\".",
+  "ownerInstruction": "I am the workspace owner and I order this direct owner change on roadmap rm_1: rename item ri_12 to \"Checkout v2\" and create item \"Checkout v2 rollout\" (priority high), rationale \"Board decision of 2026-10-05 to prioritise checkout\". Commit it.",
+  "fixtures": {
+    "get_mcp_connection_info": {
+      "credential": "api_key",
+      "allowedToolCount": 383,
+      "workspaceId": null,
+      "howToChange": "Create another API key in LPM Settings > API keys."
+    },
+    "get_workspace": {
+      "id": "ws_trace",
+      "name": "Trace workspace",
+      "ownerId": "usr_owner",
+      "roadmapGovernanceEnabled": true,
+      "roadmapGovernanceMode": "shadow",
+      "roadmapGovernancePolicy": {
+        "soloMaterialAlertThreshold": 5
+      },
+      "updatedAt": "2026-10-01T10:00:00.000Z"
+    },
+    "list_workspace_members": [
+      {
+        "id": "usr_owner",
+        "workspaceId": "ws_trace",
+        "userId": "usr_owner",
+        "userEmail": "owner@trace.example",
+        "role": "owner",
+        "status": "active"
+      }
+    ],
+    "list_workspace_roadmap_items": {
+      "$when": [
+        {
+          "after": "commit_owner_roadmap_change",
+          "response": [
+            {
+              "id": "ri_12",
+              "roadmapId": "rm_1",
+              "title": "Checkout v2",
+              "lifecycle": "approved",
+              "priority": "medium",
+              "isArchived": false,
+              "updatedAt": "2026-10-06T12:00:00.000Z"
+            },
+            {
+              "id": "3f9c2b7e1a4d6c8b0e5f7a9d2c4b6e8f",
+              "roadmapId": "rm_1",
+              "title": "Checkout v2 rollout",
+              "lifecycle": "draft",
+              "priority": "high",
+              "isArchived": false,
+              "updatedAt": "2026-10-06T12:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "$default": [
+        {
+          "id": "ri_12",
+          "roadmapId": "rm_1",
+          "title": "Checkout",
+          "lifecycle": "approved",
+          "priority": "medium",
+          "isArchived": false,
+          "updatedAt": "2026-10-02T09:00:00.000Z"
+        }
+      ]
+    },
+    "get_workspace_roadmap_overview": {
+      "$when": [
+        {
+          "after": "commit_owner_roadmap_change",
+          "response": {
+            "workspaceId": "ws_trace",
+            "roadmaps": [
+              {
+                "id": "rm_1",
+                "title": "2026 product roadmap",
+                "status": "active"
+              }
+            ],
+            "items": [
+              {
+                "id": "ri_12",
+                "roadmapId": "rm_1",
+                "title": "Checkout v2",
+                "lifecycle": "approved",
+                "priority": "medium",
+                "isArchived": false,
+                "updatedAt": "2026-10-06T12:00:00.000Z"
+              },
+              {
+                "id": "3f9c2b7e1a4d6c8b0e5f7a9d2c4b6e8f",
+                "roadmapId": "rm_1",
+                "title": "Checkout v2 rollout",
+                "lifecycle": "draft",
+                "priority": "high",
+                "isArchived": false,
+                "updatedAt": "2026-10-06T12:00:00.000Z"
+              }
+            ],
+            "capabilities": []
+          }
+        }
+      ],
+      "$default": {
+        "workspaceId": "ws_trace",
+        "roadmaps": [
+          {
+            "id": "rm_1",
+            "title": "2026 product roadmap",
+            "status": "active",
+            "updatedAt": "2026-10-02T09:00:00.000Z"
+          }
+        ],
+        "items": [
+          {
+            "id": "ri_12",
+            "roadmapId": "rm_1",
+            "title": "Checkout",
+            "lifecycle": "approved",
+            "priority": "medium",
+            "isArchived": false,
+            "updatedAt": "2026-10-02T09:00:00.000Z"
+          }
+        ],
+        "capabilities": []
+      }
+    },
+    "preview_owner_roadmap_change": {
+      "id": "orp_1",
+      "workspaceId": "ws_trace",
+      "operations": [
+        {
+          "type": "update_item",
+          "itemId": "ri_12",
+          "expectedVersion": "2026-10-02T09:00:00.000Z",
+          "patch": {
+            "title": "Checkout v2"
+          }
+        },
+        {
+          "type": "create_item",
+          "entityId": "3f9c2b7e1a4d6c8b0e5f7a9d2c4b6e8f",
+          "roadmapId": "rm_1",
+          "values": {
+            "title": "Checkout v2 rollout",
+            "description": null,
+            "category": null,
+            "priority": "high"
+          },
+          "roadmapVersion": "2026-10-02T09:00:00.000Z"
+        }
+      ],
+      "rationale": "{{call.args.rationale}}",
+      "affectedEntityIds": [
+        "ri_12",
+        "rm_1"
+      ],
+      "actorPrincipalId": null,
+      "accountableOwnerUserId": "usr_owner",
+      "credentialId": null,
+      "createdAt": "2026-10-06T11:59:00.000Z",
+      "expiresAt": "2099-01-01T00:00:00.000Z",
+      "digest": "5d1e7c3a9b2f4e6d8c0a1b3e5f7d9c2a4b6e8f0a1c3e5d7f9b2a4c6e8d0f1a3b"
+    },
+    "commit_owner_roadmap_change": {
+      "commitId": "orc_1",
+      "previewId": "orp_1",
+      "previewDigest": "5d1e7c3a9b2f4e6d8c0a1b3e5f7d9c2a4b6e8f0a1c3e5d7f9b2a4c6e8d0f1a3b",
+      "affectedEntityIds": [
+        "ri_12",
+        "3f9c2b7e1a4d6c8b0e5f7a9d2c4b6e8f"
+      ],
+      "committedAt": "2026-10-06T12:00:00.000Z"
+    }
+  },
+  "expect": {
+    "orderedCalls": [
+      {
+        "tool": "get_workspace",
+        "args": {
+          "workspaceId": "ws_trace"
+        }
+      },
+      {
+        "tool": "preview_owner_roadmap_change",
+        "args": {
+          "workspaceId": "ws_trace",
+          "operations": {
+            "$contains": [
+              {
+                "type": "update_item",
+                "itemId": "ri_12",
+                "expectedVersion": "2026-10-02T09:00:00.000Z",
+                "patch": {
+                  "title": "Checkout v2"
+                }
+              },
+              {
+                "type": "create_item",
+                "roadmapId": "rm_1",
+                "values": {
+                  "title": "Checkout v2 rollout",
+                  "priority": "high"
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "tool": "commit_owner_roadmap_change",
+        "args": {
+          "workspaceId": "ws_trace",
+          "previewId": "orp_1",
+          "previewDigest": "5d1e7c3a9b2f4e6d8c0a1b3e5f7d9c2a4b6e8f0a1c3e5d7f9b2a4c6e8d0f1a3b",
+          "rationale": "Board decision of 2026-10-05 to prioritise checkout"
+        }
+      },
+      {
+        "anyOf": [
+          "get_workspace_roadmap_overview",
+          "list_workspace_roadmap_items"
+        ]
+      }
+    ],
+    "forbiddenCalls": [
+      "update_workspace_roadmap_item",
+      "create_workspace_roadmap_item",
+      "submit_workspace_roadmap_change",
+      "apply_workspace_roadmap_change",
+      "commit_workspace_roadmap_item_bulk"
+    ],
+    "requiresVerify": [
+      {
+        "after": "commit_owner_roadmap_change",
+        "read": {
+          "anyOf": [
+            "get_workspace_roadmap_overview",
+            "list_workspace_roadmap_items"
+          ]
+        }
+      }
+    ],
+    "ownerOnlyTools": [
+      "commit_owner_roadmap_change"
+    ],
+    "maxCalls": {
+      "commit_owner_roadmap_change": 1
+    }
+  },
+  "requireArgs": [
+    "preview_owner_roadmap_change",
+    "commit_owner_roadmap_change"
+  ]
+}

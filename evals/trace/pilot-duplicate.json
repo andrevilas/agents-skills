@@ -1,0 +1,190 @@
+{
+  "id": "pilot-duplicate",
+  "title": "Pilot report duplicating an open activity: dedupe in the pilot milestone, comment (never a new issue), no AI or code-search call",
+  "skill": "lpm-pilot-feedback",
+  "source": "lpm-pilot-feedback §4 row 4 → P3 Register a confirmed defect (steps 1-3, 5); P4 skipped (no file); P5 record",
+  "request": "Process one pilot message. Pilot project prj_pilot, pilot milestone ms_pilot (PILOTO-TRACE), managed workspace ws_pilot. Item: messageRef wa-20261006-01, receivedAt 2026-10-06T09:12:00-03:00, text: \"O export CSV de atividades sai vazio quando filtro por milestone.\" Verification is already done: confirmed product defect in the lpm main checkout (src/lib/activityExport.ts:88 drops the milestone filter); symptomKey: \"export CSV vazio\". State file: {{scratch}}/{{run}}.pilot-state.json (it has no record for this ref; use only this path). Register it per the skill.",
+  "ownerInstruction": null,
+  "fixtures": {
+    "get_mcp_connection_info": {
+      "credential": "api_key",
+      "allowedToolCount": 383,
+      "workspaceId": null,
+      "howToChange": "Create another API key in LPM Settings > API keys."
+    },
+    "list_milestones": {
+      "$when": [
+        {
+          "args": {
+            "projectId": "prj_pilot"
+          },
+          "response": [
+            {
+              "id": "ms_pilot",
+              "name": "PILOTO-TRACE",
+              "status": "open",
+              "projectId": "prj_pilot",
+              "workspaceId": "ws_lpm",
+              "targetDate": "2026-12-31"
+            }
+          ]
+        }
+      ],
+      "$default": []
+    },
+    "list_issues": {
+      "$when": [
+        {
+          "args": {
+            "projectId": "prj_pilot"
+          },
+          "response": {
+            "items": [
+              {
+                "id": "iss_pilot_9",
+                "title": "PILOTO-TRACE — export CSV vazio com filtro de milestone",
+                "status": "todo",
+                "priority": "high",
+                "milestoneId": "ms_pilot",
+                "updatedAt": "2026-10-03T10:00:00.000Z"
+              },
+              {
+                "id": "iss_pilot_4",
+                "title": "PILOTO-TRACE — login lento no conector",
+                "status": "done",
+                "priority": "medium",
+                "milestoneId": "ms_pilot",
+                "updatedAt": "2026-09-20T10:00:00.000Z"
+              }
+            ],
+            "nextCursor": null,
+            "hasMore": false
+          }
+        }
+      ],
+      "$default": {
+        "items": [],
+        "nextCursor": null,
+        "hasMore": false
+      }
+    },
+    "list_comments": {
+      "$when": [
+        {
+          "after": "create_comment",
+          "response": [
+            {
+              "id": "cmt_p1",
+              "issueId": "iss_pilot_9",
+              "projectId": "prj_pilot",
+              "authorId": "usr_maint",
+              "content": "Reported 2026-10-03 (wa-20261003-02).",
+              "createdAt": "2026-10-03T10:05:00.000Z"
+            },
+            {
+              "id": "cmt_p2",
+              "issueId": "iss_pilot_9",
+              "projectId": "prj_pilot",
+              "authorId": "usr_maint",
+              "content": "2026-10-06T09:12 wa-20261006-01: same symptom; src/lib/activityExport.ts:88.",
+              "createdAt": "2026-10-06T12:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "$default": [
+        {
+          "id": "cmt_p1",
+          "issueId": "iss_pilot_9",
+          "projectId": "prj_pilot",
+          "authorId": "usr_maint",
+          "content": "Reported 2026-10-03 (wa-20261003-02).",
+          "createdAt": "2026-10-03T10:05:00.000Z"
+        }
+      ]
+    },
+    "create_comment": "Comment created with ID: cmt_p2",
+    "get_issue": {
+      "id": "iss_pilot_9",
+      "projectId": "prj_pilot",
+      "title": "PILOTO-TRACE — export CSV vazio com filtro de milestone",
+      "status": "todo",
+      "milestoneId": "ms_pilot",
+      "updatedAt": "2026-10-06T12:00:00.000Z"
+    },
+    "list_workspace_activities": [
+      {
+        "id": "act_p9",
+        "projectId": "prj_pilot",
+        "workspaceId": "ws_lpm",
+        "type": "comment_added",
+        "targetType": "issue",
+        "targetId": "iss_pilot_9",
+        "timestamp": "2026-10-06T12:00:00.000Z"
+      }
+    ],
+    "list_activity_attachments": []
+  },
+  "expect": {
+    "orderedCalls": [
+      "get_mcp_connection_info",
+      {
+        "tool": "list_milestones",
+        "args": {
+          "projectId": "prj_pilot"
+        }
+      },
+      {
+        "tool": "list_issues",
+        "args": {
+          "projectId": "prj_pilot",
+          "milestoneId": "ms_pilot"
+        }
+      },
+      {
+        "tool": "list_comments",
+        "args": {
+          "issueId": "iss_pilot_9"
+        }
+      },
+      {
+        "tool": "create_comment",
+        "args": {
+          "projectId": "prj_pilot",
+          "issueId": "iss_pilot_9",
+          "idempotencyKey": "pilot-wa-20261006-01"
+        }
+      },
+      {
+        "tool": "list_comments",
+        "args": {
+          "issueId": "iss_pilot_9"
+        }
+      }
+    ],
+    "forbiddenCalls": [
+      "create_issue",
+      "answer_*",
+      "search_*_code",
+      "analyze_*",
+      "batch_issue_operations",
+      "update_issue",
+      "upload_activity_attachment"
+    ],
+    "requiresVerify": [
+      {
+        "after": "create_comment",
+        "read": {
+          "tool": "list_comments",
+          "args": {
+            "issueId": "iss_pilot_9"
+          }
+        }
+      }
+    ],
+    "ownerOnlyTools": [],
+    "maxCalls": {
+      "create_comment": 1
+    }
+  }
+}

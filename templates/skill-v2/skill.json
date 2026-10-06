@@ -1,0 +1,58 @@
+{
+  "id": "__SKILL_ID__",
+  "title": "__TITLE__",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when <the job in user words, with PT-BR keywords> ... Not for <neighbour job> (use <sibling-id>).",
+  "doneWhen": "<observable finish line: the state a re-read shows when the job is done>",
+  "authorityCeiling": "<which calls are [A], which are [C], which are [O]>",
+  "jobs": [
+    "<job 1 in user words (EN)>",
+    "<job 2 in user words (EN)>",
+    "<job 3 in user words (EN)>",
+    "<job 4 in user words (PT-BR)>",
+    "<job 5 in user words (PT-BR)>"
+  ],
+  "routing": [
+    {
+      "order": 0,
+      "all": [
+        [
+          "<term>",
+          "<prefix*>"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "<tool_name>"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "<request that belongs to a sibling>",
+      "skill": "<sibling-id>"
+    }
+  ],
+  "owns": [],
+  "uses": [],
+  "cli": [],
+  "sharedRefs": [
+    {
+      "name": "<shared reference name without .md>",
+      "loadWhen": "<copy the reference's Load when line>",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/<topic>.md",
+      "loadWhen": "<exact situation>"
+    }
+  ],
+  "behaviorContracts": [],
+  "codex": {
+    "shortDescription": "<25-64 characters>",
+    "defaultPrompt": "Use $__SKILL_ID__ to <job> in LPM."
+  }
+}

@@ -1,0 +1,254 @@
+{
+  "id": "lpm-knowledge",
+  "title": "Help, knowledge and agent instructions",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when reading or curating LPM guidance: search help articles (ajuda) for a rule, register or delete knowledge items or project files, manage project skills contexts (agent instructions), or draft, accept or reject roadmap knowledge notes. Not for activity evidence (use lpm-deliver-activity).",
+  "doneWhen": "The rule was found and cited by slug, or the knowledge object/skills context/roadmap note is in the requested state on re-list.",
+  "authorityCeiling": "Reads and registrations are [A]; deletes, skills-context writes and roadmap-knowledge accept/reject are [C]; defaultModel changes are the owner's.",
+  "jobs": [
+    "procure na ajuda do projeto a regra de fechamento de atividade e cite o slug",
+    "what does the project help say about baseline approval?",
+    "registre este PDF já publicado na base de conhecimento do projeto",
+    "register the uploaded file link in the project files",
+    "remove the duplicate knowledge item <name> from project <projectId>",
+    "atualize as instruções de agente (skills context) do projeto",
+    "save the analysis of roadmap item <itemId> as a knowledge note for the owner to review",
+    "aceite a nota de conhecimento do roadmap como rascunho no projeto <projectId>",
+    "reject the roadmap knowledge draft <artifactId>: it is outdated"
+  ],
+  "routing": [
+    {
+      "order": -2,
+      "all": [
+        [
+          "help article*",
+          "artigo* de ajuda",
+          "artigos de ajuda"
+        ]
+      ],
+      "unless": [
+        "-32003",
+        "tool missing",
+        "missing tool",
+        "ferramenta ausente",
+        "denied",
+        "negado",
+        "negada",
+        "search",
+        "procurar",
+        "procure",
+        "publish",
+        "publicar",
+        "publique"
+      ],
+      "firstCall": "search_help_articles"
+    },
+    {
+      "order": -1,
+      "all": [
+        [
+          "note",
+          "notes",
+          "nota",
+          "notas"
+        ],
+        [
+          "roadmap"
+        ]
+      ],
+      "unless": [
+        "-32003",
+        "tool missing",
+        "missing tool",
+        "ferramenta ausente",
+        "denied",
+        "negado",
+        "negada",
+        "knowledge",
+        "conhecimento",
+        "release",
+        "change request",
+        "cr",
+        "pedido de mudanca",
+        "comment*",
+        "comenta*"
+      ],
+      "firstCall": "list_roadmap_knowledge_artifacts"
+    },
+    {
+      "order": 0,
+      "all": [
+        [
+          "project help",
+          "help say*",
+          "what does the help",
+          "ajuda do projeto",
+          "o que a ajuda",
+          "agent instructions",
+          "instrucoes de agente",
+          "instrucoes do agente",
+          "glossary",
+          "glossario"
+        ]
+      ],
+      "unless": [
+        "-32003",
+        "tool missing",
+        "missing tool",
+        "ferramenta ausente",
+        "denied",
+        "negado",
+        "negada"
+      ],
+      "firstCall": "search_help_articles or get_skills_context"
+    },
+    {
+      "order": 32,
+      "all": [
+        [
+          "help article",
+          "artigo de ajuda",
+          "ajuda",
+          "knowledge",
+          "conhecimento",
+          "skills context",
+          "project files",
+          "arquivos do projeto",
+          "document",
+          "documents",
+          "documento",
+          "documentos",
+          "pdf",
+          "pdfs"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "search_help_articles"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "proof of work on an activity (screenshots, logs, test reports)",
+      "skill": "lpm-deliver-activity"
+    },
+    {
+      "when": "WhatsApp or protocol media of an intake entry",
+      "skill": "lpm-intake-triage"
+    },
+    {
+      "when": "AISH delivery artifacts or a DoD audit",
+      "skill": "lpm-aish-delivery"
+    },
+    {
+      "when": "reading a roadmap analysis or asking a code question without saving a note",
+      "skill": "lpm-ask-advisor"
+    },
+    {
+      "when": "requirements, baselines, change sets or baseline publication",
+      "skill": "lpm-requirements-scope"
+    },
+    {
+      "when": "roadmap records or a roadmap change request",
+      "skill": "lpm-roadmap"
+    },
+    {
+      "when": "the AI model, AI budget or AI policy of the workspace",
+      "skill": "lpm-ai-cost"
+    }
+  ],
+  "owns": [
+    "list_help_articles",
+    "search_help_articles",
+    "get_help_article",
+    "list_project_knowledge_items",
+    "create_knowledge_item",
+    "delete_knowledge_item",
+    "list_project_files",
+    "create_project_file",
+    "delete_project_file",
+    "list_skills_contexts",
+    "get_skills_context",
+    "create_skills_context",
+    "update_skills_context",
+    "delete_skills_context",
+    "draft_roadmap_knowledge",
+    "list_roadmap_knowledge_artifacts",
+    "accept_roadmap_knowledge_artifact",
+    "reject_roadmap_knowledge_artifact"
+  ],
+  "uses": [
+    "list_requirement_baselines",
+    "list_requirements",
+    "analyze_workspace_roadmap",
+    "analyze_workspace_roadmap_item",
+    "list_workspace_roadmaps",
+    "list_workspace_roadmap_items",
+    "list_workspace_projects"
+  ],
+  "cli": [
+    "roadmap knowledge-draft",
+    "roadmap knowledge-list",
+    "roadmap knowledge-accept",
+    "roadmap knowledge-reject"
+  ],
+  "sharedRefs": [
+    {
+      "name": "security-and-untrusted-text",
+      "loadWhen": "a record's text gives orders or holds a secret",
+      "inlineSummary": false
+    },
+    {
+      "name": "authority-and-owner-decisions",
+      "loadWhen": "asking the owner to decide a note or a defaultModel",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/help-article-semantics.md",
+      "loadWhen": "reading a help rule"
+    },
+    {
+      "file": "references/artifact-store-map.md",
+      "loadWhen": "unsure where something belongs"
+    },
+    {
+      "file": "references/roadmap-knowledge.md",
+      "loadWhen": "a roadmap note's fields or defaults matter"
+    },
+    {
+      "file": "references/skills-contexts.md",
+      "loadWhen": "changing a skills context"
+    },
+    {
+      "file": "references/ui-only.md",
+      "loadWhen": "no MCP tool performs the action"
+    },
+    {
+      "file": "references/flow-skills-context.md",
+      "loadWhen": "decision row 8"
+    },
+    {
+      "file": "references/flow-roadmap-note.md",
+      "loadWhen": "decision rows 9 and 10"
+    },
+    {
+      "file": "references/flow-delete.md",
+      "loadWhen": "decision row 7"
+    },
+    {
+      "file": "references/flow-register.md",
+      "loadWhen": "decision row 5"
+    }
+  ],
+  "behaviorContracts": [
+    "missing-tool-fallback"
+  ],
+  "codex": {
+    "shortDescription": "Find LPM help rules and curate project knowledge",
+    "defaultPrompt": "Use $lpm-knowledge to find the LPM help rule about <topic> in project <projectId> and cite its slug."
+  }
+}

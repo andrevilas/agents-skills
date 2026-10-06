@@ -1,85 +1,24 @@
 #!/usr/bin/env bash
+# DEPRECATED (one release): use `node scripts/skills.mjs install --agent codex --include-external` (design §6.2).
+# v2 installs every active external bundle (external/*/metadata.json status == active) together with the
+# selected LPM profile (core by default); the bundle name argument is only checked for existence.
 set -euo pipefail
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/deprecated.sh"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-usage() {
-  cat <<'EOF'
-Usage:
-  install-external-codex-skill.sh <skill-name> [--dest <dir>] [--force]
-
-Installs an external Codex skill bundle from:
-  external/<skill-name>/codex/<skill-name>/
-
-Default destination:
-  ${CODEX_SKILLS_DIR:-$HOME/.codex/skills}
-EOF
-}
-
-if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
+if [[ $# -gt 0 && "$1" != --* ]]; then
+  if [[ ! -f "$DEPRECATED_REPO_ROOT/external/$1/codex/$1/SKILL.md" ]]; then
+    echo "External Codex bundle not found for $1: external/$1/codex/$1" >&2
+    exit 1
+  fi
+  shift
 fi
-
-if [[ $# -lt 1 ]]; then
-  usage >&2
-  exit 1
-fi
-
-SKILL="$1"
-shift
-DEST="${CODEX_SKILLS_DIR:-$HOME/.codex/skills}"
-FORCE=0
-
+ARGS=(install --agent codex --include-external)
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --dest)
-      DEST="${2:-}"
-      shift 2
-      ;;
-    --force)
-      FORCE=1
-      shift
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "Unknown argument: $1" >&2
-      usage >&2
-      exit 1
-      ;;
+    --dest) ARGS+=(--dest "${2:-}"); shift 2 ;;
+    --force) shift ;;
+    *) ARGS+=("$1"); shift ;;
   esac
 done
-
-SOURCE_DIR="$REPO_ROOT/external/$SKILL/codex/$SKILL"
-TARGET_DIR="$DEST/$SKILL"
-
-if [[ ! -d "$SOURCE_DIR" ]]; then
-  echo "External Codex bundle not found for $SKILL: $SOURCE_DIR" >&2
-  exit 1
-fi
-
-if [[ ! -f "$SOURCE_DIR/SKILL.md" ]]; then
-  echo "Invalid external bundle for $SKILL: missing SKILL.md" >&2
-  exit 1
-fi
-
-mkdir -p "$DEST"
-
-if [[ -e "$TARGET_DIR" && "$FORCE" -ne 1 ]]; then
-  echo "Target already exists: $TARGET_DIR" >&2
-  echo "Use --force to overwrite." >&2
-  exit 1
-fi
-
-rm -rf "$TARGET_DIR"
-cp -R "$SOURCE_DIR" "$TARGET_DIR"
-
-if ! diff -qr "$SOURCE_DIR" "$TARGET_DIR" >/dev/null; then
-  echo "Installed external skill differs from catalog source: $TARGET_DIR" >&2
-  exit 1
-fi
-
-echo "Installed external Codex skill $SKILL at $TARGET_DIR"
+deprecated_notice install-external-codex-skill.sh "${ARGS[@]}"
+deprecated_run "${ARGS[@]}"

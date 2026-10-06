@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "aliases": [
+    {
+      "alias": "update_project_issue_due_date",
+      "canonical": "set_project_issue_due_date",
+      "owner": "lpm-deliver-activity",
+      "note": ""
+    }
+  ],
+  "stepExceptions": []
+}

@@ -1,0 +1,103 @@
+{
+  "id": "lpm-requirements-scope",
+  "title": "Requirements, baselines and change sets",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when handling LPM requirements (requisitos) and scope (escopo): create, edit, group, link requirements, check drift, reconcile orphans, review change sets before publishing, publish a baseline on owner order. Not for roadmap items or change requests (use lpm-roadmap).",
+  "doneWhen": "Requirements reflect the request and, when publication was authorized, the scope context shows the new current baseline with no pending delta.",
+  "authorityCeiling": "Reads and drafts [A]; requirement edits, reconciliation and change-set moves [C]; change-set approval and baseline publication [O].",
+  "jobs": [
+    "o escopo do projeto <P> mudou desde a baseline? já dá para publicar?",
+    "crie o requisito <título> e vincule à atividade <id>",
+    "mark requirement <R> as obsolete instead of deleting it",
+    "there are requirements without a baseline: attach them to the current one",
+    "prepare a change set with the unpublished scope changes and send it to review",
+    "propose a rewrite of the description of requirement <R> for the owner to review",
+    "o dono aprovou: publique a baseline v2.0 do projeto <P>",
+    "requirement <R> is done: can I mark it met?"
+  ],
+  "routing": [
+    {
+      "order": -4,
+      "all": [["orphan requirement*", "requisito* orfao*", "requisitos orfaos", "requirement* without a baseline", "requirement* without baseline", "requisito* sem baseline"]],
+      "unless": [],
+      "firstCall": "get_project_scope_resolution_context"
+    },
+    {
+      "order": 22,
+      "all": [["requisito*", "requirement*", "baseline*", "working scope", "escopo", "change set*", "changeset"]],
+      "unless": ["materializ*", "roadmap"],
+      "firstCall": "get_project_scope_resolution_context"
+    }
+  ],
+  "notFor": [
+    { "when": "roadmap items or change requests", "skill": "lpm-roadmap" },
+    { "when": "materializing a roadmap item", "skill": "lpm-roadmap-owner-ops" },
+    { "when": "the owner's scope decision in a thread", "skill": "lpm-governance-decisions" },
+    { "when": "activities that deliver a requirement", "skill": "lpm-plan-work" },
+    { "when": "evidence or closure of a linked activity", "skill": "lpm-deliver-activity" }
+  ],
+  "owns": [
+    "create_change_set",
+    "create_project_change_set_from_resolution",
+    "create_requirement",
+    "create_requirement_baseline",
+    "create_requirement_group",
+    "delete_requirement",
+    "delete_requirement_baseline",
+    "delete_requirement_group",
+    "get_change_set",
+    "get_project_scope_resolution_context",
+    "list_change_sets",
+    "list_requirement_baselines",
+    "list_requirement_groups",
+    "list_requirements",
+    "list_requirements_awaiting_baseline",
+    "list_working_scope_delta_entities",
+    "publish_baseline_from_working_scope",
+    "publish_change_set",
+    "publish_project_baseline_from_resolution",
+    "reconcile_orphan_requirements_into_baseline",
+    "update_change_set",
+    "update_project_change_set_status",
+    "update_requirement",
+    "update_requirement_baseline",
+    "update_requirement_group"
+  ],
+  "uses": [
+    "create_governance_thread",
+    "get_help_article",
+    "get_project_execution_context",
+    "list_issues",
+    "list_project_knowledge_items",
+    "list_workspace_roadmap_materializations",
+    "prepare_change_set_draft_from_governance_thread"
+  ],
+  "cli": [
+    "requirements create",
+    "requirements link-issue",
+    "requirements list",
+    "requirements update"
+  ],
+  "sharedRefs": [
+    { "name": "authority-and-owner-decisions", "loadWhen": "before an [O] step or a decision request", "inlineSummary": false},
+    { "name": "idempotency-and-retries", "loadWhen": "a write timed out or was unclear", "inlineSummary": false},
+    { "name": "enums", "loadWhen": "an enum value is unclear", "inlineSummary": false}
+  ],
+  "references": [
+    { "file": "references/requirement-fields.md", "loadWhen": "before a requirement write" },
+    { "file": "references/change-set-state-machine.md", "loadWhen": "before any change-set write" },
+    { "file": "references/materiality-and-gate.md", "loadWhen": "the gate blocks or materiality needs explaining" },
+    { "file": "references/publication-checklist.md", "loadWhen": "publishing a baseline" },
+    { "file": "references/flow-requirements.md", "loadWhen": "rows 3-6" },
+    { "file": "references/flow-change-set.md", "loadWhen": "rows 7-9" },
+    { "file": "references/flow-baseline.md", "loadWhen": "rows 10-11" }
+  ],
+  "behaviorContracts": ["missing-tool-fallback"],
+  "codex": {
+    "shortDescription": "Edit LPM requirements, review scope drift, publish baselines",
+    "defaultPrompt": "Use $lpm-requirements-scope to check the scope and publication gate of LPM project <projectId>."
+  }
+}

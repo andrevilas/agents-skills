@@ -1,0 +1,39 @@
+# Flow: add a dependency link (U blocks X)
+Load when: decision row 5 of SKILL.md (an activity X waits for another activity U)
+
+## Preconditions
+1. Which tool per scope, and why a link and not a context: {{ref:link-or-context-or-thread}}.
+2. `upstreamProjectId` = projectId unless the user or the summary says otherwise (SKILL.md §3).
+3. No create tool checks issue existence, duplicates, self-links or same-project cycles: steps 1–3 and the list reads below are the only guard.
+4. No tool in this flow takes `idempotencyKey`: {{tool:create_issue_link}}, {{tool:create_workspace_issue_link}}, {{tool:create_portfolio_work_item_link}}, {{tool:set_project_issue_blocker_context}}. Never pass one; re-read the step's list before any retry.
+
+## Steps
+### P2 Link U blocks X — row 5
+1. Ids: the user gave ids → use them. Else {{tool:list_issues}}(projectId, limitCount=100; cursor=`nextCursor` until null) → `items[].id` where `title` matches exactly; for U call it with upstreamProjectId. 0 or 2+ matches → Stop and ask. Never guess an id.
+2. {{tool:get_issue}}(projectId, X) → "Issue not found", `isDeleted:true`, or `status` `done`/`canceled` → STOP "X is not an open activity".
+3. {{tool:get_issue}}(upstreamProjectId, U) → `status` `done`/`canceled` or `isDeleted:true` → STOP "U is finished"; "Issue not found" → ask for U.
+4. Scope: upstreamProjectId == projectId → step 5; upstreamProjectId in {{tool:list_workspace_projects}}(workspaceId) → `id` → step 6; else → step 7 (other workspace).
+5. Same project: {{tool:list_issue_links}}(projectId) → `blocks` U→X exists → report it, STOP; reverse X→U (or legacy `is-blocked-by` U→X) → Stop and ask; none → {{tool:create_issue_link}}(projectId, sourceIssueId=U, targetIssueId=X, type="blocks") [A] (no idempotencyKey).
+6. Other project: {{tool:list_workspace_issue_links}}(workspaceId, sourceProjectId=upstreamProjectId) → U→X exists → report it, STOP; {{tool:list_workspace_issue_links}}(workspaceId, sourceProjectId=projectId) → X→U exists → Stop and ask; none → {{tool:create_workspace_issue_link}}(workspaceId, sourceProjectId=upstreamProjectId, sourceIssueId=U, targetProjectId=projectId, targetIssueId=X, type="blocks") [A] (no idempotencyKey).
+7. Other workspace: {{tool:list_portfolio_work_item_links}}(workspaceId, projectId, status="active") → U→X exists → report it, STOP; X→U → Stop and ask; none → SKILL.md §6 confirmation → {{tool:create_portfolio_work_item_link}}(source={workspaceId=otherWorkspaceId, projectId=upstreamProjectId, issueId=U, visibleSummary=<confirmed text>}, target={workspaceId, projectId, issueId=X, visibleSummary=<confirmed text>}, type="blocks", rationale) [C] (no idempotencyKey) → linkId from the text result.
+8. After step 7: SKILL.md P3 with blockerContext="Blocked by portfolio link <linkId>: <U> in <otherWorkspaceId> — owner of <U> — since <date>". Without it the block never shows in {{tool:list_blocked_project_issues}}.
+9. Verify (below). A failed verify is never a reason to create again: re-read the step's list first (no server dedupe, no idempotencyKey).
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| reverse link X blocks U exists | "Which must finish first: <A> or <B>?" (a link both ways deadlocks both) |
+| step 7, before the create | "Link <U> blocks <X>, summary '<≤240 chars, seen by both>'?" — the confirmed text is `visibleSummary`; no confidential text |
+| U or X matches 0 or 2+ activities (step 1) | "Which activity is '<title>'?" then each match as `<id>: <title>`, one per line (none → "No activity titled '<title>' in <projectId>; send its id.") |
+
+## Verify
+| After | Re-read with | Pass when |
+|---|---|---|
+| {{tool:create_issue_link}} | {{tool:list_issue_links}}(projectId) + {{tool:list_blocked_project_issues}}(projectId) | linkId present; X listed with "Bloqueado por" U |
+| {{tool:create_workspace_issue_link}} | {{tool:list_workspace_issue_links}}(workspaceId, sourceProjectId=upstreamProjectId) + {{tool:get_project_dependency_summary}}(projectId) | linkId present; `criticalBlockers[]` has X. {{tool:list_blocked_project_issues}} never shows cross-project links |
+| {{tool:create_portfolio_work_item_link}} | {{tool:list_portfolio_work_item_links}}(workspaceId, projectId, status="active") + {{tool:get_issue}}(projectId, X) | linkId present; `blockerContext.status == "active"` naming the linkId |
+
+## Report fields
+Scope (same project / other project / other workspace), U → X, linkId, the list call that proved it, blocker context (step 8), Pending, Next.
+Next, same project or other project: "Finish U; the block ends by itself when U is `done`/`canceled`." Never say the link must be resolved, closed or removed (row 9 only posts release comments).
+Next, other workspace: "When U is done, close link <linkId> and resolve the context (SKILL.md row 10)."

@@ -1,0 +1,916 @@
+{
+  "schemaVersion": 1,
+  "cli": [
+    {
+      "key": "aish accounts bind-workspace",
+      "usage": [
+        "lpm aish accounts bind-workspace --account <accountId> --workspace <workspaceId> [--json]"
+      ]
+    },
+    {
+      "key": "aish accounts create",
+      "usage": [
+        "lpm aish accounts create [--display-name <name>] [--admin-user-ids <userId; ...>] [--json]"
+      ]
+    },
+    {
+      "key": "aish accounts grants create",
+      "usage": [
+        "lpm aish accounts grants create --account <accountId> --host <hostId> [--allowed-workspaces <id; ...>|--all-bound-workspaces] [--denied-workspaces <id; ...>] [--allowed-projects <id; ...>|--all-projects] [--denied-projects <id; ...>] [--approval-policy <policy>] [--json]"
+      ]
+    },
+    {
+      "key": "aish accounts grants revoke",
+      "usage": [
+        "lpm aish accounts grants revoke --account <accountId> --grant <grantId> [--json]"
+      ]
+    },
+    {
+      "key": "aish accounts list",
+      "usage": [
+        "lpm aish accounts list [--json]"
+      ]
+    },
+    {
+      "key": "aish autopilot approve",
+      "usage": [
+        "lpm aish autopilot approve --job <jobId> [--reason <text>] [--target-host <hostId>] [--json]"
+      ]
+    },
+    {
+      "key": "aish autopilot materialize",
+      "usage": [
+        "lpm aish autopilot materialize --project <projectId> --objective <text> [--requirements <text; text>] [--constraints <text; text>] [--repository <path>] [--create-jobs] [--idempotency-key <key>] [--approve | --dry-run] [--json]"
+      ]
+    },
+    {
+      "key": "aish autopilot plan",
+      "usage": [
+        "lpm aish autopilot plan --project <projectId> --objective <text> [--requirements <text; text>] [--constraints <text; text>] [--repository <path>] [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit approve",
+      "usage": [
+        "lpm aish cockpit approve --session <sessionId> --coordinator <id> --lease-nonce <nonce> --fencing-token <n> --plan-hash <sha256> --command-id <id> [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit command",
+      "usage": [
+        "lpm aish cockpit command --session <sessionId> --command-id <id> --type <type> [--project <id>] [--payload-json <json>] [--next-status <status>] [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit coordinator",
+      "usage": [
+        "lpm aish cockpit coordinator --session <sessionId> --coordinator <id> --idempotency-key <key> [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit create",
+      "usage": [
+        "lpm aish cockpit create --workspace <workspaceId> --scope <project|workspace> --projects <id; id> --objective <text> --idempotency-key <key> [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit dispatch",
+      "usage": [
+        "lpm aish cockpit dispatch --session <sessionId> --coordinator <id> --lease-nonce <nonce> --fencing-token <n> --plan-hash <sha256> [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit get",
+      "usage": [
+        "lpm aish cockpit get --session <sessionId> [--after-sequence <n>] [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit pause",
+      "usage": [
+        "lpm aish cockpit pause --session <sessionId> --coordinator <id> --lease-nonce <nonce> --fencing-token <n> --command-id <id> [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit plan",
+      "usage": [
+        "lpm aish cockpit plan --session <sessionId> --coordinator <id> --lease-nonce <nonce> --fencing-token <n> --plan-file <path> --command-id <id> [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit readiness",
+      "usage": [
+        "lpm aish cockpit readiness --session <sessionId> [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit resume",
+      "usage": [
+        "lpm aish cockpit resume --session <sessionId> --coordinator <id> --lease-nonce <nonce> --fencing-token <n> --command-id <id> [--json]"
+      ]
+    },
+    {
+      "key": "aish cockpit retry",
+      "usage": [
+        "lpm aish cockpit retry --session <sessionId> --coordinator <id> --lease-nonce <nonce> --fencing-token <n> --plan-hash <sha256> --command-id <id> [--json]"
+      ]
+    },
+    {
+      "key": "aish command",
+      "usage": [
+        "lpm aish command <tool> --file <payload.json> [--transport rest|mcp] [--json]"
+      ]
+    },
+    {
+      "key": "aish consumption",
+      "usage": [
+        "lpm aish consumption record --file <receipt.json> [--transport rest|mcp] [--json]",
+        "lpm aish consumption flush [--transport rest|mcp] [--json]"
+      ]
+    },
+    {
+      "key": "aish fleet create",
+      "usage": [
+        "lpm aish fleet create --account <accountId> --kind <pool|agent|slot> --idempotency-key <key> [--name <text>] [--pool <id>] [--host <id>] [--agent <id>] [--ordinal <n>] [--capabilities <text; text>] [--max-concurrent-jobs <n>] [--json]"
+      ]
+    },
+    {
+      "key": "aish fleet rotate-credential",
+      "usage": [
+        "lpm aish fleet rotate-credential --account <accountId> --host <hostId> --expected-generation <n> --reason <text> --show-secret-once [--json]"
+      ]
+    },
+    {
+      "key": "aish fleet topology",
+      "usage": [
+        "lpm aish fleet topology --account <accountId> [--json]"
+      ]
+    },
+    {
+      "key": "aish fleet transition",
+      "usage": [
+        "lpm aish fleet transition --account <accountId> --kind <account|binding|grant|pool|host|agent|slot> --resource <id> --status <active|online|draining|offline|suspended|revoked> --reason <text> --idempotency-key <key> [--json]"
+      ]
+    },
+    {
+      "key": "aish host bootstrap",
+      "usage": [
+        "lpm aish host bootstrap --token <enrollmentToken> [--profile <path>] [--managed-dir <path>] [--slots <n>] [--repo <git-url[#branch]; ...>] [--display-name <name>] [--hostname <name>] [--capabilities <text; text>] [--json]"
+      ]
+    },
+    {
+      "key": "aish host doctor",
+      "usage": [
+        "lpm aish host doctor [--profile <path>] [--json]"
+      ]
+    },
+    {
+      "key": "aish host enroll-wizard",
+      "usage": []
+    },
+    {
+      "key": "aish host heartbeat",
+      "usage": [
+        "lpm aish host heartbeat --host <hostId> --token <hostCredential> [--hostname <name>] [--capabilities <text; text>] [--json]"
+      ]
+    },
+    {
+      "key": "aish host monitor",
+      "usage": [
+        "lpm aish host monitor --project <projectId> [--host <hostId>] [--stale-after-ms <ms>] [--offline-after-ms <ms>] [--json]"
+      ]
+    },
+    {
+      "key": "aish host remote-access",
+      "usage": [
+        "lpm aish host remote-access --profile <path> --action <preflight|status|apply|disable> [--remote-access <disabled|tailscale-ssh>] [--remote-endpoint <private-host>] [--remote-principals <identity; ...>] [--remote-users <local-user; ...>] [--remote-tags <tag:aish-runner; ...>] [--remote-check-period <always|12h>] [--remote-credential-ref <secret://...|env://...>] [--dry-run] [--policy-applied] [--confirm] [--json]"
+      ]
+    },
+    {
+      "key": "aish host start",
+      "usage": [
+        "lpm aish host start (--profile <path> | --project <projectId> --host <hostId> --token <hostCredential>) --executor-command <command> --budget-contract aish-budget/1 [--provider-adapter vertex-bounded] [--runner-id <agentId>] [--workdir <path>] [--timeout-ms <ms>] [--poll-interval-ms <ms>] [--heartbeat-interval-ms <ms>] [--orphan-watchdog-interval-ms <ms>] [--orphan-grace-ms <ms>] [--targeted-only] [--once] [--json]"
+      ]
+    },
+    {
+      "key": "aish host status",
+      "usage": [
+        "lpm aish host status --project <projectId> [--host <hostId>] [--stale-after-ms <ms>] [--offline-after-ms <ms>] [--json]"
+      ]
+    },
+    {
+      "key": "aish host sync-repos",
+      "usage": [
+        "lpm aish host sync-repos [--profile <path>] [--dry-run] [--timeout-ms <ms>] [--json]"
+      ]
+    },
+    {
+      "key": "aish host update-inventory",
+      "usage": [
+        "lpm aish host update-inventory --profile <path> [--expected-version <n>] [--agent-version <version>] [--capabilities <text; text>] [--json]"
+      ]
+    },
+    {
+      "key": "aish host wizard",
+      "usage": [
+        "lpm aish host wizard [--token <enrollmentToken>] --project <anchorProjectId> [--scope <project|workspace|account>] [--account <accountId>] [--remote-access <disabled|tailscale-ssh>] [--remote-endpoint <private-host>] [--remote-principals <identity; ...>] [--remote-users <local-user; ...>] [--remote-tags <tag:aish-runner; ...>] [--remote-check-period <always|12h>] [--remote-credential-ref <secret://...|env://...>] [--profile <path>] [--managed-dir <path>] [--dry-run] [--json]"
+      ]
+    },
+    {
+      "key": "aish hosts create-token",
+      "usage": [
+        "lpm aish hosts create-token --project <anchorProjectId> [--scope <project|workspace|account>] [--account <accountId>] [--allowed-workspaces <id; ...>|--all-bound-workspaces] [--allowed-projects <id; ...>|--all-projects] [--denied-workspaces <id; ...>] [--denied-projects <id; ...>] [--remote-access <disabled|tailscale-ssh>] [--remote-endpoint <private-host>] [--remote-principals <identity; ...>] [--remote-users <local-user; ...>] [--remote-tags <tag:aish-runner; ...>] [--remote-check-period <always|12h>] [--remote-credential-ref <secret://...|env://...>] [--display-name <name>] [--expires-minutes <minutes>] [--json]"
+      ]
+    },
+    {
+      "key": "aish hosts enroll",
+      "usage": [
+        "lpm aish hosts enroll --token <enrollmentToken> [--display-name <name>] [--hostname <name>] [--capabilities <text; text>] [--json]"
+      ]
+    },
+    {
+      "key": "aish hosts list",
+      "usage": [
+        "lpm aish hosts list --project <projectId> [--json]"
+      ]
+    },
+    {
+      "key": "aish hosts remote-access",
+      "usage": [
+        "lpm aish hosts remote-access --account <accountId> --host <hostId> --remote-access <disabled|tailscale-ssh> [--remote-endpoint <private-host>] [--remote-principals <identity; ...>] [--remote-users <local-user; ...>] [--remote-tags <tag:aish-runner; ...>] [--remote-check-period <always|12h>] [--remote-credential-ref <secret://...|env://...>] [--expected-updated-at <iso>] (--dry-run | --confirm --reason <text> --idempotency-key <key>) [--json]"
+      ]
+    },
+    {
+      "key": "aish hosts rename",
+      "usage": [
+        "lpm aish hosts rename --account <accountId> --host <hostId> --display-name <name> [--expected-updated-at <iso>] (--dry-run | --confirm --reason <text> --idempotency-key <key>) [--json]"
+      ]
+    },
+    {
+      "key": "aish hosts revoke",
+      "usage": [
+        "lpm aish hosts revoke --project <projectId> --host <hostId> [--json]"
+      ]
+    },
+    {
+      "key": "aish hosts usage",
+      "usage": [
+        "lpm aish hosts usage --account <accountId> [--include-removed] [--json]"
+      ]
+    },
+    {
+      "key": "aish intake",
+      "usage": [
+        "lpm aish intake transcribe --project <id> --job <id> --attempt <id> --attachment <id> --budget-contract aish-budget/1 [--json]"
+      ]
+    },
+    {
+      "key": "aish jobs close",
+      "usage": [
+        "lpm aish jobs close --job <jobId> --outcome <superseded|compensated|obsolete|canceled> --reason <text> [--json]"
+      ]
+    },
+    {
+      "key": "aish jobs create",
+      "usage": [
+        "lpm aish jobs create --project <projectId> --title <title> --prompt <text> [--intent <analysis|implementation|test|documentation|review>] [--issue <issueId>] [--repository <path>] [--execution-recipe <id>] [--required-capabilities <capability; capability>] [--idempotency-key <key>] [--json]"
+      ]
+    },
+    {
+      "key": "aish jobs disposition",
+      "usage": [
+        "lpm aish jobs disposition --job <jobId> --outcome <partial|superseded|invalidated> --reason <text> [--json]"
+      ]
+    },
+    {
+      "key": "aish jobs get",
+      "usage": [
+        "lpm aish jobs get --job <jobId> [--json]"
+      ]
+    },
+    {
+      "key": "aish jobs lineage-repair",
+      "usage": [
+        "lpm aish jobs lineage-repair --job <jobId> --outcome <reconciled-with-issue|administratively-closed|historically-accepted-with-evidence> --reason <text> --idempotency-key <key> [--issue <issueId>] (--dry-run | --confirm) [--json]"
+      ]
+    },
+    {
+      "key": "aish jobs list",
+      "usage": [
+        "lpm aish jobs list --project <projectId> [--json]"
+      ]
+    },
+    {
+      "key": "aish jobs reconcile",
+      "usage": [
+        "lpm aish jobs reconcile --job <jobId> [--json]"
+      ]
+    },
+    {
+      "key": "aish jobs resolve",
+      "usage": [
+        "lpm aish jobs resolve --job <jobId> --outcome <compensated|historical|ignored> --reason <text> [--json]"
+      ]
+    },
+    {
+      "key": "aish pipeline record",
+      "usage": [
+        "lpm aish pipeline record --project <projectId> --status <completed|failed> [--provider <name>] [--title <title>] [--summary <text>] [--output <text>] [--build-id <id>] [--revision <name>] [--url <url>] [--issue <issueId>] [--repository <path>] [--json]"
+      ]
+    },
+    {
+      "key": "aish release approve",
+      "usage": [
+        "lpm aish release <create|approve|claim|complete> --file <payload.json> [--json]"
+      ]
+    },
+    {
+      "key": "aish release claim",
+      "usage": [
+        "lpm aish release <create|approve|claim|complete> --file <payload.json> [--json]"
+      ]
+    },
+    {
+      "key": "aish release complete",
+      "usage": [
+        "lpm aish release <create|approve|claim|complete> --file <payload.json> [--json]"
+      ]
+    },
+    {
+      "key": "aish release create",
+      "usage": [
+        "lpm aish release <create|approve|claim|complete> --file <payload.json> [--json]"
+      ]
+    },
+    {
+      "key": "aish release get",
+      "usage": [
+        "lpm aish release get --release <id> [--json]"
+      ]
+    },
+    {
+      "key": "aish release run-cloud-run",
+      "usage": [
+        "lpm aish release run-cloud-run --release <id> --executor <id> --budget-contract aish-budget/1 [--json]"
+      ]
+    },
+    {
+      "key": "aish runner start",
+      "usage": [
+        "lpm aish runner start --project <projectId> --executor-command <command> --budget-contract aish-budget/1 [--runner-id <id>] [--host <registeredHostId>] [--workdir <path>] [--timeout-ms <ms>] [--once] [--json]"
+      ]
+    },
+    {
+      "key": "aish usage report",
+      "usage": [
+        "lpm aish usage report --account <accountId> [--from <iso>] [--to <iso>] [--group-by <workspace|project|runner|job>] [--workspace <id>] [--project <id>] [--runner <id>] [--status <status>] [--json]"
+      ]
+    },
+    {
+      "key": "auth login",
+      "usage": [
+        "lpm auth login --api-key <key> [--base-url <url>]"
+      ]
+    },
+    {
+      "key": "auth logout",
+      "usage": [
+        "lpm auth logout"
+      ]
+    },
+    {
+      "key": "auth status",
+      "usage": [
+        "lpm auth status"
+      ]
+    },
+    {
+      "key": "code-index activate",
+      "usage": [
+        "lpm code-index activate --workspace <workspaceId> --version <versionId> --expected-generation <n> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "code-index preview",
+      "usage": [
+        "lpm code-index preview --workspace <workspaceId> --link <repositoryLinkId> [--branch <branch>] [--json]"
+      ]
+    },
+    {
+      "key": "code-index purge",
+      "usage": [
+        "lpm code-index purge --workspace <workspaceId> --version <versionId> --reason <text> [--dry-run | --confirm] [--json]"
+      ]
+    },
+    {
+      "key": "code-index reconcile",
+      "usage": [
+        "lpm code-index reconcile --workspace <workspaceId> [--link <repositoryLinkId>] [--json]"
+      ]
+    },
+    {
+      "key": "code-index refresh",
+      "usage": [
+        "lpm code-index refresh --workspace <workspaceId> --link <repositoryLinkId> --idempotency-key <key> [--branch <branch>] [--commit <sha>] [--json]"
+      ]
+    },
+    {
+      "key": "code-index rollback",
+      "usage": [
+        "lpm code-index rollback --workspace <workspaceId> --link <repositoryLinkId> --expected-generation <n> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "code-index status",
+      "usage": [
+        "lpm code-index status --workspace <workspaceId> --link <repositoryLinkId> [--json]"
+      ]
+    },
+    {
+      "key": "issues assign",
+      "usage": [
+        "lpm issues assign --project <projectId> --issue <issueId> (--assignee <userId> | --clear-assignee) [--json]"
+      ]
+    },
+    {
+      "key": "issues create",
+      "usage": [
+        "lpm issues create --project <projectId> --title <title> [--description <text>] [--priority <priority>] [--assignee <userId>] [--cycle <cycleId>] [--milestone <milestoneId>] [--estimate <points>] [--due-date <iso>] [--json]"
+      ]
+    },
+    {
+      "key": "issues get",
+      "usage": [
+        "lpm issues get --project <projectId> --issue <issueId> [--json]"
+      ]
+    },
+    {
+      "key": "issues list",
+      "usage": [
+        "lpm issues list --project <projectId> [--status <status>] [--priority <priority>] [--json]"
+      ]
+    },
+    {
+      "key": "issues priority",
+      "usage": [
+        "lpm issues priority --project <projectId> --issue <issueId> --priority <priority> [--json]"
+      ]
+    },
+    {
+      "key": "issues status",
+      "usage": [
+        "lpm issues status --project <projectId> --issue <issueId> --status <status> [--json]"
+      ]
+    },
+    {
+      "key": "issues update",
+      "usage": [
+        "lpm issues update --project <projectId> --issue <issueId> [--title <title>] [--description <text>] [--status <status>] [--priority <priority>] [--assignee <userId>] [--clear-assignee] [--cycle <cycleId>] [--clear-cycle] [--milestone <milestoneId>] [--clear-milestone] [--estimate <points>] [--due-date <iso>] [--clear-due-date] [--json]"
+      ]
+    },
+    {
+      "key": "mcp cursor-config",
+      "usage": [
+        "lpm mcp cursor-config [--base-url <url>] [--api-key <key>] [--json]"
+      ]
+    },
+    {
+      "key": "mcp status",
+      "usage": [
+        "lpm mcp status [--base-url <url>] [--api-key <key>]"
+      ]
+    },
+    {
+      "key": "mcp-agent-credentials create",
+      "usage": [
+        "lpm mcp-agent-credentials create --workspace <workspaceId> --principal <principalId> --owner <userId> --profile <roadmap-owner-advisor|roadmap-owner-operator> --allowed-tools <tool; tool> --name <text> --expires-at <iso> --show-secret-once [--synthesis-daily <n>] [--deep-analysis-daily <n>] [--code-search-daily <n>] [--input-tokens-daily <n>] [--json]"
+      ]
+    },
+    {
+      "key": "mcp-agent-credentials list",
+      "usage": [
+        "lpm mcp-agent-credentials list --workspace <workspaceId> [--json]"
+      ]
+    },
+    {
+      "key": "mcp-agent-credentials rotate",
+      "usage": [
+        "lpm mcp-agent-credentials rotate --workspace <workspaceId> --credential <credentialId> --expires-at <iso> --show-secret-once [--overlap-minutes <0..15>] [--json]"
+      ]
+    },
+    {
+      "key": "mcp-agent-credentials status",
+      "usage": [
+        "lpm mcp-agent-credentials status --workspace <workspaceId> --credential <credentialId> --status <active|suspended|revoked> [--confirm] [--json]"
+      ]
+    },
+    {
+      "key": "operational-intake delivery-record",
+      "usage": [
+        "lpm operational-intake delivery-record --workspace <workspaceId> --intake <entryId> --status <pending|sent|failed> [--protocol <code>] [--recipient <hash>] [--channel <name>] [--error-message <text>] [--json]"
+      ]
+    },
+    {
+      "key": "operational-intake evidence-attach",
+      "usage": [
+        "lpm operational-intake evidence-attach --workspace <workspaceId> --intake <entryId> --kind <image|audio|video|document|other> --file-name <name> --mime-type <type> --size <bytes> --sha256 <hash> --storage-path <path> [--protocol <code>] [--source-message <id>] [--source-media <id>] [--sanitized-preview <text>] [--json]"
+      ]
+    },
+    {
+      "key": "operational-intake evidence-list",
+      "usage": [
+        "lpm operational-intake evidence-list --protocol <code> [--json]"
+      ]
+    },
+    {
+      "key": "operational-intake evolutionapi-channel",
+      "usage": [
+        "lpm operational-intake evolutionapi-channel --workspace <workspaceId> --instance <name> --secret <secret> [--max-payload-bytes <bytes>] [--retention-days <days>] [--protocol-namespace <name>] [--disabled] [--json]"
+      ]
+    },
+    {
+      "key": "operational-intake protocol-get",
+      "usage": [
+        "lpm operational-intake protocol-get --protocol <code> [--json]"
+      ]
+    },
+    {
+      "key": "operational-intake protocol-lineage",
+      "usage": [
+        "lpm operational-intake protocol-lineage --protocol <code> [--json]"
+      ]
+    },
+    {
+      "key": "operational-intake routing-preview",
+      "usage": [
+        "lpm operational-intake routing-preview --workspace <workspaceId> --intake <entryId> [--limit <count>] [--json]"
+      ]
+    },
+    {
+      "key": "operational-intake routing-review",
+      "usage": [
+        "lpm operational-intake routing-review --workspace <workspaceId> --intake <entryId> --action <approve-primary|split-projects|reject|defer> [--project <projectId>] [--projects <id; id>] [--review-notes <text>] [--json]"
+      ]
+    },
+    {
+      "key": "operational-intake simulate-evolutionapi",
+      "usage": [
+        "lpm operational-intake simulate-evolutionapi --workspace <workspaceId> --fixture <path> --secret <secret> [--json]"
+      ]
+    },
+    {
+      "key": "portfolio-links create",
+      "usage": [
+        "lpm portfolio-links create --source-workspace <workspaceId> --source-project <projectId> (--source-issue <issueId> | --source-intake <entryId>) --target-workspace <workspaceId> --target-project <projectId> (--target-issue <issueId> | --target-intake <entryId>) --type <blocks|depends_on|relates_to|enables_future_use|shared_capability> [--source-summary <text>] [--target-summary <text>] [--rationale <text>] [--json]"
+      ]
+    },
+    {
+      "key": "portfolio-links list",
+      "usage": [
+        "lpm portfolio-links list --workspace <workspaceId> [--project <projectId>] [--status <active|resolved|archived>] [--json]"
+      ]
+    },
+    {
+      "key": "portfolio-links update",
+      "usage": [
+        "lpm portfolio-links update --workspace <workspaceId> --link <linkId> --status <active|resolved|archived> [--rationale <text>] [--json]"
+      ]
+    },
+    {
+      "key": "project ask",
+      "usage": [
+        "lpm project ask --project <projectId> --question <text> [--no-workspace-ai] [--json]"
+      ]
+    },
+    {
+      "key": "project get",
+      "usage": [
+        "lpm project get <projectId> [--json]"
+      ]
+    },
+    {
+      "key": "project-repos archive",
+      "usage": [
+        "lpm project-repos archive --project <projectId> --link <repositoryLinkId> --reason <text> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "project-repos context",
+      "usage": [
+        "lpm project-repos context --project <projectId> [--json]"
+      ]
+    },
+    {
+      "key": "project-repos create",
+      "usage": [
+        "lpm project-repos create --project <projectId> --url <github-url> [--branch <branch>] [--allowed-branches <branch; branch>] [--analysis-policy <metadata_only|shallow_tree>] [--role <primary|umbrella|component|infra|docs|legacy>] [--component <name>] [--submodule-path <path>] [--relationship <implements|composes|supports|deploys|documents|observes>] [--automated-scan-enabled] [--automated-scan-interval-hours <1..168>] [--agent-hidden] [--json]"
+      ]
+    },
+    {
+      "key": "project-repos list",
+      "usage": [
+        "lpm project-repos list --project <projectId> [--include-archived] [--json]"
+      ]
+    },
+    {
+      "key": "project-repos scan",
+      "usage": [
+        "lpm project-repos scan --project <projectId> --link <repositoryLinkId> [--branch <branch>] [--credential-source <default|workspace>] [--json]"
+      ]
+    },
+    {
+      "key": "project-repos update",
+      "usage": [
+        "lpm project-repos update --project <projectId> --link <repositoryLinkId> [--url <github-url>] [--branch <branch>] [--allowed-branches <branch; branch>] [--analysis-policy <metadata_only|shallow_tree>] [--role <primary|umbrella|component|infra|docs|legacy>] [--component <name>] [--submodule-path <path>] [--relationship <implements|composes|supports|deploys|documents|observes>] [--automated-scan-enabled|--automated-scan-disabled] [--automated-scan-interval-hours <1..168>] [--agent-visible|--agent-hidden] [--json]"
+      ]
+    },
+    {
+      "key": "projects list",
+      "usage": [
+        "lpm projects list [--workspace-id <id>] [--include-archived] [--json]"
+      ]
+    },
+    {
+      "key": "requirements create",
+      "usage": [
+        "lpm requirements create --project <projectId> --baseline <baselineId> --title <title> --description <text> --type <type> --status <status> [--group <groupId>] [--source-document <docId>] [--issue <issueId>] [--json]"
+      ]
+    },
+    {
+      "key": "requirements link-issue",
+      "usage": [
+        "lpm requirements link-issue --project <projectId> --requirement <requirementId> (--issue <issueId> | --clear-issue) [--json]"
+      ]
+    },
+    {
+      "key": "requirements list",
+      "usage": [
+        "lpm requirements list --project <projectId> --baseline <baselineId> [--status <status>] [--type <type>] [--json]"
+      ]
+    },
+    {
+      "key": "requirements update",
+      "usage": [
+        "lpm requirements update --project <projectId> --requirement <requirementId> [--title <title>] [--description <text>] [--type <type>] [--status <status>] [--group <groupId>] [--clear-group] [--source-document <docId>] [--clear-source-document] [--issue <issueId>] [--clear-issue] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap allocate",
+      "usage": [
+        "lpm roadmap allocate --workspace <workspaceId> --roadmap <roadmapId> [--commit --confirm --selected-keys <key; key>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap allocation-archive",
+      "usage": [
+        "lpm roadmap allocation-archive --workspace <workspaceId> --allocation <allocationId> --reason <text> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "roadmap allocation-create",
+      "usage": [
+        "lpm roadmap allocation-create --workspace <workspaceId> --roadmap <roadmapId> --item <itemId> --project <projectId> [--role <primary|contributor|dependent|observer>] [--rationale <text>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap allocation-update",
+      "usage": [
+        "lpm roadmap allocation-update --workspace <workspaceId> --allocation <allocationId> [--role <primary|contributor|dependent|observer>] [--rationale <text>] [--status <active|rejected|archived>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap analyze",
+      "usage": [
+        "lpm roadmap analyze --workspace <workspaceId> [--roadmap <roadmapId>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap analyze-item",
+      "usage": [
+        "lpm roadmap analyze-item --workspace <workspaceId> --item <itemId> [--json]"
+      ]
+    },
+    {
+      "key": "roadmap archive",
+      "usage": [
+        "lpm roadmap archive --workspace <workspaceId> --roadmap <roadmapId> --reason <text> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "roadmap ask",
+      "usage": [
+        "lpm roadmap ask --workspace <workspaceId> --question <text> [--roadmap <roadmapId>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap ask-item",
+      "usage": [
+        "lpm roadmap ask-item --workspace <workspaceId> --item <itemId> --question <text> [--json]"
+      ]
+    },
+    {
+      "key": "roadmap capability-archive",
+      "usage": [
+        "lpm roadmap capability-archive --workspace <workspaceId> --capability <capabilityId> --reason <text> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "roadmap capability-create",
+      "usage": [
+        "lpm roadmap capability-create --workspace <workspaceId> --name <text> [--description <text>] [--status <active|deferred>] [--owner <userId>] [--tags <tag; tag>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap capability-update",
+      "usage": [
+        "lpm roadmap capability-update --workspace <workspaceId> --capability <capabilityId> [--name <text>] [--description <text>] [--status <active|deferred>] [--owner <userId>] [--tags <tag; tag>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap create",
+      "usage": [
+        "lpm roadmap create --workspace <workspaceId> --title <text> [--description <text>] [--status <draft|active>] [--owner <userId>] [--source-ref <text>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap dependencies",
+      "usage": [
+        "lpm roadmap dependencies --workspace <workspaceId> --roadmap <roadmapId> [--commit --confirm --selected-keys <key; key>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap dependency-archive",
+      "usage": [
+        "lpm roadmap dependency-archive --workspace <workspaceId> --link <linkId> --reason <text> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "roadmap dependency-create",
+      "usage": [
+        "lpm roadmap dependency-create --workspace <workspaceId> --roadmap <roadmapId> --source-item <itemId> --target-item <itemId> [--type <depends_on|blocks|relates_to>] [--rationale <text>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap dependency-update",
+      "usage": [
+        "lpm roadmap dependency-update --workspace <workspaceId> --link <linkId> [--type <depends_on|blocks|relates_to>] [--rationale <text>] [--status <active|rejected|archived>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap import-commit",
+      "usage": [
+        "lpm roadmap import-commit --workspace <workspaceId> --file <path> --confirm [--roadmap <roadmapId>] [--title <text>] [--source-ref <text>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap import-preview",
+      "usage": [
+        "lpm roadmap import-preview --workspace <workspaceId> --file <path> [--source-ref <text>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap item-archive",
+      "usage": [
+        "lpm roadmap item-archive --workspace <workspaceId> --item <itemId> --reason <text> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "roadmap item-bulk-commit",
+      "usage": [
+        "lpm roadmap item-bulk-commit --workspace <workspaceId> --item-ids <id; id> --operation <update|archive|restore> --confirm [--roadmap <roadmapId>] [--title <text>] [--description <text>] [--category <text>] [--priority <urgent|high|medium|low|none>] [--reason <text>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap item-bulk-preview",
+      "usage": [
+        "lpm roadmap item-bulk-preview --workspace <workspaceId> --item-ids <id; id> [--operation <update|archive|restore>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap item-create",
+      "usage": [
+        "lpm roadmap item-create --workspace <workspaceId> --roadmap <roadmapId> --title <text> [--description <text>] [--category <text>] [--lifecycle <draft|imported|reviewed>] [--priority <urgent|high|medium|low|none>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap item-restore",
+      "usage": [
+        "lpm roadmap item-restore --workspace <workspaceId> --item <itemId> --reason <text> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "roadmap item-update",
+      "usage": [
+        "lpm roadmap item-update --workspace <workspaceId> --item <itemId> [--roadmap <roadmapId>] [--title <text>] [--description <text>] [--category <text>] [--priority <urgent|high|medium|low|none>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap knowledge-accept",
+      "usage": [
+        "lpm roadmap knowledge-accept --workspace <workspaceId> --artifact <artifactId> --confirm [--project <projectId>] [--status <draft|published>] [--agent-hidden] [--guidance-level <informational|recommended|guardrail|forbidden>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap knowledge-draft",
+      "usage": [
+        "lpm roadmap knowledge-draft --workspace <workspaceId> [--roadmap <roadmapId>] [--item <itemId>] [--project <projectId>] [--title <text>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap knowledge-list",
+      "usage": [
+        "lpm roadmap knowledge-list --workspace <workspaceId> [--roadmap <roadmapId>] [--item <itemId>] [--project <projectId>] [--status <draft|accepted|rejected|superseded>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap knowledge-reject",
+      "usage": [
+        "lpm roadmap knowledge-reject --workspace <workspaceId> --artifact <artifactId> --reason <text> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "roadmap materialize-commit",
+      "usage": [
+        "lpm roadmap materialize-commit --workspace <workspaceId> --item <itemId> --project <projectId> --method <linked_existing|new_requirement|split_from_parent|conflict|deferred> --source-item-version <updatedAt> --idempotency-key <key> --confirm [--requirement <requirementId>] [--baseline <baselineId>] [--rationale <text>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap materialize-preview",
+      "usage": [
+        "lpm roadmap materialize-preview --workspace <workspaceId> --item <itemId> [--project <projectId>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap review",
+      "usage": [
+        "lpm roadmap review --workspace <workspaceId> --item <itemId> --lifecycle <reviewed|approved|deferred|rejected> [--rationale <text>] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap status",
+      "usage": [
+        "lpm roadmap status --workspace <workspaceId> [--roadmap <roadmapId>] [--include-archived] [--json]"
+      ]
+    },
+    {
+      "key": "roadmap update",
+      "usage": [
+        "lpm roadmap update --workspace <workspaceId> --roadmap <roadmapId> [--title <text>] [--description <text>] [--status <draft|active>] [--owner <userId>] [--source-ref <text>] [--json]"
+      ]
+    },
+    {
+      "key": "workspace-github get",
+      "usage": [
+        "lpm workspace-github get --workspace <workspaceId> [--json]"
+      ]
+    },
+    {
+      "key": "workspace-github remove",
+      "usage": [
+        "lpm workspace-github remove --workspace <workspaceId> --expected-revision <n> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "workspace-github set",
+      "usage": [
+        "lpm workspace-github set --workspace <workspaceId> --expected-revision <n> --token-env <ENV_NAME> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "workspace-repos archive",
+      "usage": [
+        "lpm workspace-repos archive --workspace <workspaceId> --link <repositoryLinkId> --reason <text> --confirm [--json]"
+      ]
+    },
+    {
+      "key": "workspace-repos context",
+      "usage": [
+        "lpm workspace-repos context --workspace <workspaceId> [--json]"
+      ]
+    },
+    {
+      "key": "workspace-repos create",
+      "usage": [
+        "lpm workspace-repos create --workspace <workspaceId> --url <github-url> [--branch <branch>] [--allowed-branches <branch; branch>] [--analysis-policy <metadata_only|shallow_tree>] [--role <primary|umbrella|component|infra|docs|legacy>] [--component <name>] [--submodule-path <path>] [--relationship <implements|composes|supports|deploys|documents|observes>] [--project-mapping <projectId:path:component:relationship; ...>] [--agent-hidden] [--json]"
+      ]
+    },
+    {
+      "key": "workspace-repos list",
+      "usage": [
+        "lpm workspace-repos list --workspace <workspaceId> [--include-archived] [--json]"
+      ]
+    },
+    {
+      "key": "workspace-repos scan",
+      "usage": [
+        "lpm workspace-repos scan --workspace <workspaceId> --link <repositoryLinkId> [--branch <branch>] [--credential-source <default|workspace>] [--json]"
+      ]
+    },
+    {
+      "key": "workspace-repos update",
+      "usage": [
+        "lpm workspace-repos update --workspace <workspaceId> --link <repositoryLinkId> [--url <github-url>] [--branch <branch>] [--allowed-branches <branch; branch>] [--analysis-policy <metadata_only|shallow_tree>] [--role <primary|umbrella|component|infra|docs|legacy>] [--component <name>] [--submodule-path <path>] [--relationship <implements|composes|supports|deploys|documents|observes>] [--project-mapping <projectId:path:component:relationship; ...>] [--clear-project-mappings] [--agent-visible|--agent-hidden] [--json]"
+      ]
+    }
+  ]
+}

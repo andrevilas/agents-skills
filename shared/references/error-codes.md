@@ -1,0 +1,63 @@
+# Error codes and next actions
+Load when: a tool returns an error, `isError: true`, or a `CODE: message` text
+Applies to: lpm-start, lpm-code-index (and every skill's §9)    Source: cards `errors[]` (catalog/cards); lpm `server.ts` (`oauthToolError`, `oauthDomainRejection`, workspace AI errors), `src/server/oauthToolPolicy.ts`, `src/server/mcpBatch.ts`
+Owner skill: catalog
+
+## Summary
+- JSON-RPC -32003 = access denied → core rule 2 (`get_mcp_connection_info`, relay, STOP).
+- JSON-RPC -32602 = invalid arguments (OAuth: `data.field`, `data.problem`, `data.limit`, `data.hint`) → fix that field.
+- `CODE: message` (OAuth domain rejection, `isError: true`) → look the CODE up below; never retry blindly.
+- `VERSION_CONFLICT` or a changed `updatedAt` → re-read, re-preview, show the user.
+- An unknown error after a write → re-read the target before any retry (`idempotency-and-retries.md`).
+
+## Facts
+| Error or result contains | Meaning | Do |
+|---|---|---|
+| -32003 | OAuth scope, API-key profile or origin denies the tool | core rule 2 |
+| -32602 `problem: too_long` (shown as `INVALID_ARGUMENT field=content problem=too_long limit=20000`) | text over the limit (content and description 20,000; title 500; question 2,000; query 500) | split into several calls; move logs to an attachment |
+| -32602 `problem: unknown_field` / `missing_required` / `invalid_value` | the OAuth schema accepts only its published fields | send only schema fields; use `data.allowed` values |
+| -32602 "This project listing requires an explicit workspaceId." | all-workspace OAuth grant | pass `workspaceId` |
+| `OPERATION_FAILED` | generic failure hidden from OAuth callers | re-read state; retry once; then report with the time |
+| `REPOSITORY_LINK_NOT_FOUND` | wrong repositoryLinkId | `list_workspace_repository_links` → `id` |
+| `REPOSITORY_LINK_NOT_INDEXED` | only a project link exists; no indexed workspace link | a workspace admin links and indexes it (`lpm-code-index`) |
+| `CODE_INDEX_NOT_ACTIVE` | no active code index for the repository | refresh + activate (`lpm-code-index`) |
+| `PATH_NOT_INDEXED` | the path is not in the active index | use a path exactly as a search result returned it |
+| `codeEvidence.status == "no_active_index"` | the Advisor had no index to search | STOP the answer; `lpm-code-index` |
+| `VERSION_CONFLICT` | the record changed since you read it | re-read, preview again, show the user |
+| `EXPECTED_UPDATED_AT_REQUIRED` | concurrency field missing | pass `updatedAt` from the latest read |
+| `IDEMPOTENCY_CONFLICT` | the key was used with a different payload | new key for new content |
+| `IDEMPOTENCY_KEY_REQUIRED` | the tool requires a key | add one (recipe in `idempotency-and-retries.md`) |
+| `BATCH_IN_PROGRESS` | the same batch still runs | wait; retry with the SAME key and SAME operations |
+| `BATCH_INTERRUPTED` / `INVALID_BATCH` | partial batch / bad structure | re-read, resubmit only missing items with a NEW key / fix the shape |
+| `SELF_REVIEW_FORBIDDEN` | the author tried to review their own change request | an independent reviewer must decide |
+| `SOLO_CONFIRMATION_REQUIRED` | one-member workspace: the author must confirm a solo review | only on the owner's explicit decision |
+| `REVIEWER_NOT_ELIGIBLE` | caller is not the owner or an active member | another person must review |
+| `CHANGE_NOT_APPROVED` | quorum or owner confirmation missing | read the request's reviews; wait for the reviewers |
+| result `status: "stale"` (`VERSION_CONFLICT` / `REVIEW_REVISION_STALE`) | nothing was applied; the request is dead | re-read the items, preview and submit a new request |
+| `GOVERNANCE_REVIEW_REQUIRED` | mode `enforce` blocks a direct roadmap write | do not retry; preview + submit a change request (`lpm-roadmap`) |
+| `ROADMAP_GOVERNANCE_DISABLED` | mode `off`: change requests are not used | direct tools on the owner's order (`lpm-roadmap-owner-ops`), or the owner changes the mode |
+| `INVALID_LIFECYCLE_TRANSITION` | roadmap lifecycle move not allowed | use the transitions in `enums.md` |
+| `ROADMAP_DEPENDENCY_CYCLE` / `INVALID_ROADMAP_LINK_TARGET` | the target is no longer valid | withdraw the request and report it |
+| "Assignee is not eligible for this project" | uid not in the project directory | `list_project_assignable_members` → `uid` |
+| "Factory Definition of Done is missing, blocked or stale." | AISH-governed issue closed without a passed audit | `audit_aish_issue_delivery` (`lpm-aish-delivery`) |
+| "Activity <id> not found" | an issueId was passed as activityId | resolve the feed entry (`ids-and-sources.md`) |
+| "File operation could not be completed." | generic attachment failure | check base64, size, fileName, fileType, key; retry once with the SAME key |
+| `advisor.fallbackReason == "ai_usage_limit_reached"` | workspace AI budget exhausted | deterministic answer + owner note (`ai-cost-and-budgets.md`) |
+| `advisor.fallbackReason == "ai_disabled"` | workspace AI policy disables the operation | deterministic answer + owner note; never retry |
+| `workspace_ai_budget_exceeded` (HTTP 429) | daily requests or daily/monthly tokens reached | wait for the next window or ask the owner |
+| `workspace_ai_not_configured` / `workspace_ai_feature_disabled` | AI not set up or the feature flag is off | owner decision (`lpm-ai-cost`) |
+| "Code index exceeds the configured daily document cap" / "Code-intelligence import exceeds configured document cap <n>" | the per-build document cap (default 5,000 chunks; one LPM platform setting, not a workspace limit) | owner decision → STOP; the decision request says an LPM platform configuration change is needed (no tool raises it) |
+| a publication gate with `shouldBlockPublication: true` | scope publication needs an approved change set | `lpm-requirements-scope` |
+
+## Rules
+1. Read the whole error text and the `data` object before acting.
+2. Match the first row that fits; one fix, then one retry at most.
+3. Never retry a non-idempotent write before re-reading the target.
+4. Report errors you cannot fix with the tool name, the code and the time.
+
+## Examples
+```text
+example: create_comment -> -32602, data {field: "content", problem: "too_long", limit: 20000}
+-> split the text into two comments under 20,000 characters, new idempotencyKey per comment
+example: apply_workspace_roadmap_change -> VERSION_CONFLICT -> get_workspace_roadmap_change_request -> show the user
+```

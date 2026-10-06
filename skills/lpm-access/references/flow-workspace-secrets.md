@@ -1,0 +1,36 @@
+# Flow: workspace secrets (AI provider key, GitHub token)
+Load when: decision row 8 of SKILL.md (set, replace or remove an AI provider key or the workspace GitHub token)
+
+## Preconditions
+1. Run SKILL.md P1 first: the owner's order is quoted and the caller can manage the workspace.
+2. The agent never reads a secret value. AI key: the owner types it in the LPM web UI, "Configurações → Integrações → Credenciais de IA por workspace". GitHub token: the CLI reads it from an env var the owner names (`<ENV_NAME>`); ask for the NAME, never the value; never print, log or commit it.
+3. The MCP upserts put the secret into a tool argument, so it passes through the agent's context and transcript: use them only after the owner accepts that (§ Stop and ask).
+4. Model, provider choice or AI limits → {{skill:lpm-ai-cost}}. Private-repository indexing or search → {{skill:lpm-code-index}}. GitHub token facts: {{ref:repo-credential}}.
+
+## Steps
+1. AI key: {{tool:get_workspace_ai_config}}(workspaceId) → keep `defaultProvider`. Pre-read {{tool:list_workspace_ai_credentials}}(workspaceId) → keep the provider row (`updatedAt`, `keyPreview`) or "absent". Provider is not `gemini` → say "Only Gemini runs workspace AI; this key only serves model listing." Deleting `defaultProvider` → say "AI features on <provider> stop." (gemini: "may stop; a server that runs Gemini on Vertex does not use the stored key").
+2. Set or replace: say "Enter the key in LPM: Configurações → Integrações → Credenciais de IA por workspace. Tell me when it is saved." → Verify. Owner accepted the MCP path → {{tool:upsert_workspace_ai_credential}}(workspaceId, provider, apiKey=<value of $ENV_NAME>, label) [O].
+3. Remove: row "absent" → report "nothing stored", no call; else {{tool:delete_workspace_ai_credential}}(workspaceId, provider) [O]. Leaked key → tell the owner to revoke it at the provider too.
+4. GitHub token: {{tool:get_workspace_repository_credential}}(workspaceId) → keep `revision`, `status`.
+5. Set: `lpm workspace-github set --workspace <workspaceId> --expected-revision <revision> --token-env <ENV_NAME> --confirm`. No CLI → {{tool:upsert_workspace_repository_credential}}(workspaceId, token=<value of $ENV_NAME>, expectedRevision=`revision`) [O] only after the owner accepts the MCP path. Each attempt spends 1 of 5 validations per hour; a failure goes back to the owner, no retry loop.
+6. Remove: `status` `revoked` or `absent` → report "nothing stored", no call. Else `lpm workspace-github remove --workspace <workspaceId> --expected-revision <revision> --confirm`, or {{tool:delete_workspace_repository_credential}}(workspaceId, expectedRevision=`revision`) [O]; then say "Revoke the token at GitHub too; LPM does not."
+7. "Credential changed" → re-read step 4; your own call moved `revision` → done, no repeat.
+8. Verify: run the Verify table below.
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| before {{tool:upsert_workspace_ai_credential}}, {{tool:upsert_workspace_repository_credential}} | "The secret will pass through this agent's context and transcript; the LPM UI (AI key) or the CLI (GitHub token) avoids that. Use the MCP call anyway?" yes → "Which env var holds the secret?" |
+| before {{tool:delete_workspace_ai_credential}}, {{tool:delete_workspace_repository_credential}} | "<provider or GitHub> features on this workspace stop. Remove it?" |
+| a secret pasted into chat | never repeat it; say "It is now in the chat history: put it in an env var and rotate it after saving." |
+
+## Verify
+| After | Re-read with | Pass when |
+|---|---|---|
+| AI key set, replace or delete | {{tool:list_workspace_ai_credentials}}(workspaceId) | provider row present with `updatedAt` later than the pre-read (or new); absent after delete |
+| AI key set, provider `openai` or `anthropic` | {{tool:list_workspace_ai_provider_models}}(workspaceId, provider, operation="requirementsDocumentAnalysis") | `source == "live"` → "key works"; `unavailable` → report `unavailableReason` |
+| AI key set, provider `gemini` | nothing more | report "key stored; validity not proven": a server that runs Gemini on Vertex lists models with `source == "live"` without using the stored key |
+| GitHub token set or remove | {{tool:get_workspace_repository_credential}}(workspaceId) | set: `status == "active"`, `revision` == old + 1, `validatedAt` set; remove: `status == "revoked"`, `revision` == old + 1 |
+
+## Report fields
+Scope, owner order (quoted), provider or GitHub, `status` / `revision` / `updatedAt` after the write (never the secret), Pending (revoke at GitHub or the provider), Next.

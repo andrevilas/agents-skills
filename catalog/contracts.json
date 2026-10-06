@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "source": "design §7.1 (LPM-required contracts, pinned in LPM scripts/check-mcp-parity.ts REQUIRED_CONTRACTS) and §5.5",
+  "rule": "`build` copies each contract into coverage.json `contracts[]` with `renderIn` resolved to paths: the 4 rendered files of the owner of `anchorTool` (scope `owner-of:<tool>`) or of every skill (scope `every-skill`), plus the 4 rendered files of each id in `skills`. `lpmRequires` is the exact §7.1 content; the published `tools`/`phrases`/files must be a superset of it. Tool matches use /(?<![a-z0-9_])<tool>(?![a-z0-9_])/; phrases are substrings.",
+  "policy": {
+    "schemaDrift": "warn",
+    "note": "§10 decision 3: warn for the first month, then fail (copied into coverage.json policy)"
+  },
+  "renderedFiles": {
+    "antigravity": "dist/antigravity/<id>/SKILL.md",
+    "claude-code": "dist/claude-code/<id>/SKILL.md",
+    "codex": "dist/codex/<id>/SKILL.md",
+    "generic": "dist/generic/<id>.md"
+  },
+  "contracts": [
+    {
+      "id": "activity-evidence",
+      "lpmRequires": {
+        "tools": [
+          "create_activity_attachment",
+          "delete_activity_attachment",
+          "list_activity_attachments",
+          "list_workspace_activities",
+          "upload_activity_attachment"
+        ],
+        "phrases": [],
+        "in": "all 4 rendered files of the owner of `upload_activity_attachment`"
+      },
+      "tools": [
+        "create_activity_attachment",
+        "delete_activity_attachment",
+        "list_activity_attachments",
+        "list_workspace_activities",
+        "upload_activity_attachment"
+      ],
+      "phrases": [],
+      "scope": "owner-of:upload_activity_attachment",
+      "anchorTool": "upload_activity_attachment",
+      "skills": [],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ]
+    },
+    {
+      "id": "delivery-trailer",
+      "lpmRequires": {
+        "tools": [],
+        "phrases": [
+          "LPM-Activity:"
+        ],
+        "in": "all 4 rendered files of the owner of `upload_activity_attachment`"
+      },
+      "tools": [],
+      "phrases": [
+        "LPM-Activity:"
+      ],
+      "scope": "owner-of:upload_activity_attachment",
+      "anchorTool": "upload_activity_attachment",
+      "skills": [
+        "lpm-release-product"
+      ],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ]
+    },
+    {
+      "id": "missing-tool-fallback",
+      "lpmRequires": {
+        "tools": [
+          "get_mcp_connection_info"
+        ],
+        "phrases": [],
+        "in": "every rendered SKILL.md and generic file of every skill in skills[]"
+      },
+      "tools": [
+        "get_mcp_connection_info"
+      ],
+      "phrases": [],
+      "scope": "every-skill",
+      "everySkill": true,
+      "skills": [],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ]
+    },
+    {
+      "id": "owner-financial-gate",
+      "lpmRequires": {
+        "tools": [
+          "configure_aish_budget",
+          "configure_aish_financial_pool",
+          "fund_aish_job",
+          "settle_aish_budget"
+        ],
+        "phrases": [],
+        "in": "all 4 rendered files of the owner of `configure_aish_budget`"
+      },
+      "tools": [
+        "configure_aish_budget",
+        "configure_aish_financial_pool",
+        "fund_aish_job",
+        "settle_aish_budget"
+      ],
+      "phrases": [
+        "[O]"
+      ],
+      "scope": "owner-of:configure_aish_budget",
+      "anchorTool": "configure_aish_budget",
+      "skills": [],
+      "targets": [
+        "antigravity",
+        "claude-code",
+        "codex",
+        "generic"
+      ]
+    }
+  ]
+}

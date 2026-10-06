@@ -1,0 +1,122 @@
+{
+  "id": "lpm-aish-delivery",
+  "title": "Prove, close and release AISH work",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when AISH job work must be proven, closed or released (evidência, encerrar): delivery artifacts, DoD audit, findings, execution packs, release packages (pacote de release: create, approve, claim, deploy, complete), requeue, disposition, lineage. Not for creating jobs (use lpm-aish-jobs).",
+  "doneWhen": "The DoD audit passed right before closure, evidence is preserved (artifacts/pack attached to the activity), and any release has a completion receipt plus authenticated smoke evidence.",
+  "authorityCeiling": "Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; release approval is [O] (managing human only).",
+  "jobs": [
+    "register the Playwright screenshot and video as delivery artifacts of AISH job <jobId>",
+    "rode a auditoria de Definition of Done da atividade <issueId> e diga o que falta",
+    "open a blocking finding: the test report of job <jobId> is missing assertions",
+    "posso fechar a atividade do AISH? feche com a evidência do job",
+    "export the execution pack of job <jobId> and attach it to the activity",
+    "crie o pacote de release de staging do job <jobId> e peça a aprovação do dono",
+    "claim the approved release <releaseId>, deploy it and record the receipt",
+    "requeue the dead-lettered automation delivery of job <jobId>",
+    "marque o job concluído como superseded e repare a linhagem do job órfão",
+    "encerrar os jobs do AISH que sobraram na fila"
+  ],
+  "routing": [
+    {
+      "order": 7,
+      "all": [
+        ["definition of done", "dod", "delivery artifact*", "artefato* de entrega", "execution pack", "pacote de execucao", "release package", "pacote de release", "lineage", "linhagem", "disposition", "disposicao", "approve release", "approved release", "claim release", "release receipt", "receipt of release", "receipt of the release", "release of job", "release do job", "release aprovado", "release aprovada", "recibo do release", "recibo da release", "dead-letter*", "dead letter*", "automation delivery", "entrega de automacao", "release-readiness", "release readiness"]
+      ],
+      "unless": [],
+      "firstCall": "list_aish_delivery_artifacts"
+    },
+    {
+      "order": 8,
+      "all": [
+        ["aish", "autopilot", "job", "jobs"],
+        ["close", "fechar", "feche", "encerrar", "encerre", "resolve", "resolver", "reconcile", "reconciliar", "release", "deploy", "prove", "provar", "audit*", "auditoria", "finding*", "evidence", "evidencia"]
+      ],
+      "unless": ["approve", "aprovar", "aprove"],
+      "firstCall": "get_aish_job"
+    }
+  ],
+  "notFor": [
+    { "when": "creating, approving or dispatching AISH jobs, execution plans, sessions or checkpoints", "skill": "lpm-aish-jobs" },
+    { "when": "starting a runner, leasing a job or submitting job evidence from a host", "skill": "lpm-aish-runners" },
+    { "when": "funding a job, budgets, pools or a financial circuit breaker", "skill": "lpm-ai-cost" },
+    { "when": "an activity not run by the AISH factory (commit trailer, attachments, closure)", "skill": "lpm-deliver-activity" },
+    { "when": "closing a cycle or sprint", "skill": "lpm-plan-work" },
+    { "when": "approving a roadmap change request", "skill": "lpm-roadmap" },
+    { "when": "approving or delivering a roadmap item lifecycle gate", "skill": "lpm-roadmap-owner-ops" },
+    { "when": "evidence from WhatsApp or an intake protocol", "skill": "lpm-intake-triage" },
+    { "when": "what the code says, with no AISH job to prove", "skill": "lpm-ask-advisor" },
+    { "when": "a project health or integrity review with no repair", "skill": "lpm-review-health" },
+    { "when": "deploying or rolling back the LPM product itself", "skill": "lpm-release-product" }
+  ],
+  "owns": [
+    "list_aish_delivery_artifacts",
+    "read_aish_delivery_artifact",
+    "register_aish_delivery_artifact",
+    "upload_aish_delivery_artifact",
+    "audit_aish_issue_delivery",
+    "record_aish_delivery_finding",
+    "create_aish_release",
+    "get_aish_release",
+    "approve_aish_release",
+    "claim_aish_release",
+    "complete_aish_release",
+    "get_aish_execution_report",
+    "collect_aish_execution_pack",
+    "get_aish_execution_pack",
+    "export_aish_execution_pack",
+    "tick_aish_automation",
+    "get_aish_automation_delivery",
+    "requeue_aish_automation",
+    "set_aish_completed_job_disposition",
+    "repair_aish_completed_job_lineage"
+  ],
+  "uses": [
+    "get_aish_job",
+    "list_aish_jobs",
+    "get_aish_execution_session",
+    "update_issue",
+    "list_workspace_activities",
+    "upload_activity_attachment",
+    "list_activity_attachments",
+    "get_project_analytics"
+  ],
+  "cli": [
+    "aish jobs resolve",
+    "aish jobs close",
+    "aish jobs disposition",
+    "aish jobs lineage-repair",
+    "aish jobs reconcile",
+    "aish release create",
+    "aish release run-cloud-run",
+    "aish release get",
+    "aish release approve",
+    "aish release claim",
+    "aish release complete",
+    "aish pipeline record"
+  ],
+  "sharedRefs": [
+    { "name": "evidence-and-closure", "loadWhen": "before attaching evidence or closing", "inlineSummary": false },
+    { "name": "authority-and-owner-decisions", "loadWhen": "before approving a release", "inlineSummary": false },
+    { "name": "idempotency-and-retries", "loadWhen": "after a timeout, before a retry", "inlineSummary": false },
+    { "name": "enums", "loadWhen": "a status value is unclear", "inlineSummary": false }
+  ],
+  "references": [
+    { "file": "references/flow-evidence.md", "loadWhen": "running rows 3, 4, 6–8 or P1 step 4" },
+    { "file": "references/flow-release.md", "loadWhen": "running rows 9–11" },
+    { "file": "references/flow-repair.md", "loadWhen": "running row 12" },
+    { "file": "references/dod-audit.md", "loadWhen": "the audit is blocked" },
+    { "file": "references/release-package.md", "loadWhen": "any release step" },
+    { "file": "references/completion-checklist.md", "loadWhen": "before closing" },
+    { "file": "references/integrity-repair.md", "loadWhen": "repairing a job" },
+    { "file": "references/tools.md", "loadWhen": "a call fails" }
+  ],
+  "behaviorContracts": ["missing-tool-fallback"],
+  "codex": {
+    "shortDescription": "Prove, close and release LPM AISH work with DoD evidence",
+    "defaultPrompt": "Use $lpm-aish-delivery to prove and close the AISH work of LPM activity <issueId>."
+  }
+}

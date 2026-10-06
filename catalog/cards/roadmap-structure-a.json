@@ -1,0 +1,2119 @@
+[
+  {
+    "name": "archive_workspace_roadmap",
+    "purpose": "Logically archives a roadmap header (status archived) with a reason; nothing is deleted.",
+    "useWhen": [
+      "The workspace owner decided a roadmap is superseded or abandoned and asked to archive it"
+    ],
+    "avoidWhen": [
+      "Archive individual items -> preview_workspace_roadmap_change with changeType archive (or archive_workspace_roadmap_item when the owner asks for a direct change)",
+      "Just stop using it as the active roadmap -> update_workspace_roadmap with status draft"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "roadmapId",
+        "required": true,
+        "source": "list_workspace_roadmaps -> id",
+        "notes": ""
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty rationale; stored as archiveReason."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap header exists",
+      "The workspace owner explicitly instructed this direct change (GOV-MAX: roadmap changes are otherwise proposed via change requests)"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Header JSON with status 'archived', archivedAt, archivedBy, archiveReason, updatedAt.",
+    "pairsWith": [
+      "list_workspace_roadmaps",
+      "list_workspace_roadmap_items",
+      "update_workspace_roadmap"
+    ],
+    "errors": [
+      {
+        "when": "Workspace roadmap archive requires a reason.",
+        "fix": "Pass a non-empty reason."
+      },
+      {
+        "when": "Workspace roadmap not found",
+        "fix": "Re-read list_workspace_roadmaps and use an existing id."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap archive --workspace <workspaceId> --roadmap <roadmapId> --reason <text> --confirm [--json]",
+    "gotchas": [
+      {
+        "text": "Does NOT archive the roadmap's items, links or allocations: items keep their lifecycle and still show in list_workspace_roadmap_items when no roadmapId filter is used.",
+        "verifiedFrom": "server.ts:13213-13234"
+      },
+      {
+        "text": "New items cannot be created in it and items cannot be moved into it afterwards.",
+        "verifiedFrom": "server.ts:13376-13378"
+      },
+      {
+        "text": "Not blocked by enforce mode and no change request is recorded.",
+        "verifiedFrom": "server.ts:13213-13234"
+      },
+      {
+        "text": "Undo: update_workspace_roadmap with status draft or active.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:736-743"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "archiveWorkspaceRoadmapCommand, buildWorkspaceRoadmapArchivePatch"
+  },
+  {
+    "name": "archive_workspace_roadmap_dependency",
+    "purpose": "Directly archives a roadmap dependency link, storing the reason (no review).",
+    "useWhen": [
+      "Governance mode is shadow or off AND the workspace owner explicitly asked to remove a dependency that no longer applies"
+    ],
+    "avoidWhen": [
+      "A suggested link that was never valid -> update_workspace_roadmap_dependency with status rejected",
+      "Enforce mode -> blocked and there is no governed unlink change type; report to the owner"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "linkId",
+        "required": true,
+        "source": "list_workspace_roadmap_item_links -> id (or create_workspace_roadmap_dependency -> id; archived/rejected links only via get_workspace_roadmap_overview includeArchived:true -> itemLinks[].id)",
+        "notes": "Roadmap dependency link ID."
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty. It overwrites the link's rationale."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap governance mode is not 'enforce' (get_workspace -> roadmapGovernanceMode; missing means 'shadow', 'off' if roadmapGovernanceEnabled is false)",
+      "Link exists",
+      "The workspace owner explicitly instructed this direct change (GOV-MAX: roadmap changes are otherwise proposed via change requests)"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Link JSON with status 'archived', rationale = the reason, updatedAt, updatedBy.",
+    "pairsWith": [
+      "list_workspace_roadmap_item_links",
+      "update_workspace_roadmap_dependency"
+    ],
+    "errors": [
+      {
+        "when": "Roadmap dependency archive requires a reason.",
+        "fix": "Pass a non-empty reason."
+      },
+      {
+        "when": "GOVERNANCE_REVIEW_REQUIRED: this workspace roadmap runs in enforce mode...",
+        "fix": "Do not retry. Propose the change with preview_workspace_roadmap_change then submit_workspace_roadmap_change (changeType edit, prioritize, archive, restore, link...) and let a reviewer approve it."
+      },
+      {
+        "when": "Roadmap dependency not found",
+        "fix": "Re-read list_workspace_roadmap_item_links and use an existing id."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap dependency-archive --workspace <workspaceId> --link <linkId> --reason <text> --confirm [--json]",
+    "gotchas": [
+      {
+        "text": "The reason REPLACES the original rationale (which survives only in the audit event); archivedAt/archivedBy/archiveReason fields are not set.",
+        "verifiedFrom": "server.ts:14798-14799"
+      },
+      {
+        "text": "Archived links still count in create_workspace_roadmap_dependency's cycle check.",
+        "verifiedFrom": "server.ts:14685-14702"
+      },
+      {
+        "text": "Undo: update_workspace_roadmap_dependency with status active.",
+        "verifiedFrom": "server.ts:14762"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "archiveWorkspaceRoadmapDependencyCommand, updateWorkspaceRoadmapDependencyCommand"
+  },
+  {
+    "name": "archive_workspace_roadmap_item",
+    "purpose": "Directly archives one roadmap item with a reason (logical and reversible, no review).",
+    "useWhen": [
+      "Governance mode is shadow or off AND the workspace owner explicitly asked to archive this item directly"
+    ],
+    "avoidWhen": [
+      "Default path (GOV-MAX) and the only path in enforce mode -> preview_workspace_roadmap_change then submit_workspace_roadmap_change with changeType archive and patch {reason}",
+      "Many items -> preview_workspace_roadmap_item_bulk then commit_workspace_roadmap_item_bulk with operation archive",
+      "Archive a whole roadmap -> archive_workspace_roadmap"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "itemId",
+        "required": true,
+        "source": "list_workspace_roadmap_items -> id",
+        "notes": "Roadmap item ID (not an activity/issue ID)."
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty; stored as archiveReason."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap governance mode is not 'enforce' (get_workspace -> roadmapGovernanceMode; missing means 'shadow', 'off' if roadmapGovernanceEnabled is false)",
+      "Item exists",
+      "The workspace owner explicitly instructed this direct change (GOV-MAX: roadmap changes are otherwise proposed via change requests)"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Item JSON with isArchived:true, archivedAt, archivedBy, archiveReason, updatedAt.",
+    "pairsWith": [
+      "get_workspace",
+      "list_workspace_roadmap_items",
+      "restore_workspace_roadmap_item"
+    ],
+    "errors": [
+      {
+        "when": "GOVERNANCE_REVIEW_REQUIRED: this workspace roadmap runs in enforce mode...",
+        "fix": "Do not retry. Propose the change with preview_workspace_roadmap_change then submit_workspace_roadmap_change (changeType edit, prioritize, archive, restore, link...) and let a reviewer approve it."
+      },
+      {
+        "when": "Roadmap item not found",
+        "fix": "Re-read list_workspace_roadmap_items and use an existing id."
+      },
+      {
+        "when": "Roadmap item archive requires a reason.",
+        "fix": "Pass a non-empty reason."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap item-archive --workspace <workspaceId> --item <itemId> --reason <text> --confirm [--json]",
+    "gotchas": [
+      {
+        "text": "Lifecycle is not changed.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:391-404"
+      },
+      {
+        "text": "The item's dependency links and allocations are not archived, but they disappear from default reads (shown again with includeArchived:true).",
+        "verifiedFrom": "server.ts:12091-12101"
+      },
+      {
+        "text": "Works on materialized items.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:391-404"
+      },
+      {
+        "text": "Archiving an already archived item succeeds and overwrites archivedAt and the reason.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:391-404"
+      },
+      {
+        "text": "Undo: restore_workspace_roadmap_item. Writes an audit event.",
+        "verifiedFrom": "server.ts:13481-13483"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "archiveWorkspaceRoadmapItemCommand, assertLegacyRoadmapMutationAllowed, buildRoadmapItemArchivePatch"
+  },
+  {
+    "name": "commit_workspace_roadmap_item_bulk",
+    "purpose": "Directly applies one update, archive or restore to up to 100 roadmap items in a single atomic write, without review (legacy direct path).",
+    "useWhen": [
+      "Governance mode is shadow or off, the workspace owner explicitly approved this bulk change, and preview_workspace_roadmap_item_bulk returned no missingItemIds"
+    ],
+    "avoidWhen": [
+      "Default path (GOV-MAX) and the only path in enforce mode -> preview_workspace_roadmap_change then submit_workspace_roadmap_change with itemIds",
+      "One item -> update_workspace_roadmap_item, archive_workspace_roadmap_item or restore_workspace_roadmap_item"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "itemIds",
+        "required": true,
+        "source": "preview_workspace_roadmap_item_bulk -> items[].id",
+        "notes": "1 to 100 IDs, the same list that was previewed."
+      },
+      {
+        "param": "operation",
+        "required": true,
+        "source": "constant",
+        "notes": "update | archive | restore. Any other value is silently treated as update."
+      },
+      {
+        "param": "updates",
+        "required": false,
+        "source": "user",
+        "notes": "Required for update: object {roadmapId?, title?, description?, category?, priority?} with at least one field; the same values go to every item. Ignored for archive/restore."
+      },
+      {
+        "param": "reason",
+        "required": false,
+        "source": "user",
+        "notes": "Required for archive and restore."
+      },
+      {
+        "param": "confirmed",
+        "required": true,
+        "source": "constant",
+        "notes": "Must be true, and only after the owner approved the preview."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap governance mode is not 'enforce' (get_workspace -> roadmapGovernanceMode; missing means 'shadow', 'off' if roadmapGovernanceEnabled is false)",
+      "All itemIds exist",
+      "For update: no item is archived or materialized",
+      "The workspace owner explicitly instructed this direct change (GOV-MAX: roadmap changes are otherwise proposed via change requests)"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "{operation, updatedItemIds[], updatedCount}.",
+    "pairsWith": [
+      "preview_workspace_roadmap_item_bulk",
+      "list_workspace_roadmap_items"
+    ],
+    "errors": [
+      {
+        "when": "GOVERNANCE_REVIEW_REQUIRED: this workspace roadmap runs in enforce mode...",
+        "fix": "Do not retry. Propose the change with preview_workspace_roadmap_change then submit_workspace_roadmap_change (changeType edit, prioritize, archive, restore, link...) and let a reviewer approve it."
+      },
+      {
+        "when": "Roadmap item bulk commit requires confirmed=true",
+        "fix": "Get owner approval, then pass confirmed:true."
+      },
+      {
+        "when": "Roadmap item bulk commit has missing item ids: <ids>",
+        "fix": "Remove those ids (see preview missingItemIds) and retry."
+      },
+      {
+        "when": "Roadmap item archive requires a reason. / Roadmap item restore requires a reason.",
+        "fix": "Pass a non-empty reason."
+      },
+      {
+        "when": "Archived roadmap items cannot be edited... / Materialized roadmap items cannot be edited...",
+        "fix": "Remove archived and materialized items from itemIds for an update."
+      },
+      {
+        "when": "Roadmap item update has no changes.",
+        "fix": "Pass at least one field inside updates."
+      },
+      {
+        "when": "Roadmap bulk operation supports at most 100 items.",
+        "fix": "Split into batches of at most 100."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap item-bulk-commit --workspace <workspaceId> --item-ids <id; id> --operation <update|archive|restore> --confirm [--roadmap <roadmapId>] [--title <text>] [--description <text>] [--category <text>] [--priority <urgent|high|medium|low|none>] [--reason <text>] [--json]",
+    "gotchas": [
+      {
+        "text": "All-or-nothing: one invalid item aborts the whole batch.",
+        "verifiedFrom": "server.ts:13582-13606"
+      },
+      {
+        "text": "updates.roadmapId is NOT checked for existence or archived status here (unlike update_workspace_roadmap_item): confirm it in list_workspace_roadmaps first.",
+        "verifiedFrom": "server.ts:13594-13600"
+      },
+      {
+        "text": "updates.title gives every item the SAME title. One audit event per item.",
+        "verifiedFrom": "server.ts:13594-13602"
+      },
+      {
+        "text": "No idempotencyKey; repeating gives the same end state.",
+        "verifiedFrom": "server.ts:13552-13606"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "commitWorkspaceRoadmapItemBulkCommand, previewWorkspaceRoadmapItemBulkCommand, assertLegacyRoadmapMutationAllowed, buildRoadmapItemPatch, buildRoadmapItemArchivePatch, buildRoadmapItemRestorePatch"
+  },
+  {
+    "name": "create_portfolio_work_item_link",
+    "purpose": "Creates an active link between an activity (or workspace intake entry) in one workspace and one in a DIFFERENT workspace.",
+    "useWhen": [
+      "The user asks to record that an activity in workspace A is blocked by or depends on an activity in workspace B",
+      "Record that work in two workspaces shares a capability or enables future use"
+    ],
+    "avoidWhen": [
+      "Both sides in the same workspace -> create_workspace_issue_link (this tool rejects same-workspace links)",
+      "Both activities in the same project -> create_issue_link",
+      "Dependency between roadmap items -> preview_workspace_roadmap_change (changeType link) or create_workspace_roadmap_dependency"
+    ],
+    "inputs": [
+      {
+        "param": "source",
+        "required": true,
+        "source": "workspaceId from list_workspaces -> id; projectId from list_workspace_projects -> id; issueId from list_issues -> id; intakeEntryId from the user",
+        "notes": "Object {workspaceId, projectId, issueId?, intakeEntryId?, visibleSummary?}. workspaceId + projectId required and at least one of issueId/intakeEntryId. The project must belong to workspaceId. visibleSummary: max 240 chars, default 'Source: <projectId>'."
+      },
+      {
+        "param": "target",
+        "required": true,
+        "source": "same as source, for the other workspace",
+        "notes": "Same object shape. target.workspaceId must differ from source.workspaceId."
+      },
+      {
+        "param": "type",
+        "required": true,
+        "source": "constant",
+        "notes": "blocks | depends_on | relates_to | enables_future_use | shared_capability. Reads as: source <type> target (e.g. source depends_on target)."
+      },
+      {
+        "param": "rationale",
+        "required": false,
+        "source": "user",
+        "notes": "Why the link exists. Always pass one."
+      }
+    ],
+    "preconditions": [
+      "source.workspaceId differs from target.workspaceId",
+      "Caller can read BOTH workspaces (owner or active member)",
+      "Each projectId exists and belongs to its workspaceId; each issueId exists in that project; each intakeEntryId exists in that workspace",
+      "For blocks/depends_on: no active inverse blocks/depends_on link between the same two items",
+      "No identical link already exists (check list_portfolio_work_item_links; the server does not dedupe)"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "Plain text, not JSON: 'Portfolio work item link created with ID: <linkId>'. Parse linkId from the text. The link starts with status active.",
+    "pairsWith": [
+      "list_workspaces",
+      "list_workspace_projects",
+      "list_issues",
+      "list_portfolio_work_item_links",
+      "update_portfolio_work_item_link"
+    ],
+    "errors": [
+      {
+        "when": "Source workspaceId and projectId are required / Target workspaceId and projectId are required",
+        "fix": "Fill both IDs inside the source/target object."
+      },
+      {
+        "when": "Source must reference an issueId or intakeEntryId (or Target ...)",
+        "fix": "Add issueId from list_issues for that project."
+      },
+      {
+        "when": "Invalid portfolio work item link type",
+        "fix": "Use blocks, depends_on, relates_to, enables_future_use or shared_capability."
+      },
+      {
+        "when": "Portfolio work item links must connect different workspaces. Use workspace issue links for same-workspace dependencies.",
+        "fix": "Use create_workspace_issue_link instead."
+      },
+      {
+        "when": "You need read access to both workspaces to create a portfolio work item link",
+        "fix": "Pick workspaces from list_workspaces; ask the user to obtain membership in the other workspace."
+      },
+      {
+        "when": "Source project was not found / Source project does not belong to the referenced workspace (or Target ...)",
+        "fix": "Re-read list_workspace_projects for that exact workspaceId and use its project id."
+      },
+      {
+        "when": "Source issue was not found (or Target ...)",
+        "fix": "Re-read list_issues for that projectId; the issue must live in that project."
+      },
+      {
+        "when": "Source intake entry was not found (or Target ...)",
+        "fix": "Ask the user for the correct intake entry ID, or link the activity (issueId) instead."
+      },
+      {
+        "when": "Portfolio work item link would create a direct blocking cycle",
+        "fix": "An active inverse blocks/depends_on link exists. Show it (list_portfolio_work_item_links) to the user; resolve/archive it or use relates_to."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm portfolio-links create --source-workspace <workspaceId> --source-project <projectId> (--source-issue <issueId> | --source-intake <entryId>) --target-workspace <workspaceId> --target-project <projectId> (--target-issue <issueId> | --target-intake <entryId>) --type <blocks|depends_on|relates_to|enables_future_use|shared_capability> [--source-summary <text>] [--target-summary <text>] [--rationale <text>] [--json]",
+    "gotchas": [
+      {
+        "text": "Calling twice creates two identical links (no duplicate check); never retry blindly, list first.",
+        "verifiedFrom": "server.ts:32460-32477"
+      },
+      {
+        "text": "visibleSummary is shown to people who cannot read the other workspace, so keep it non-confidential.",
+        "verifiedFrom": "server.ts:32307-32330"
+      },
+      {
+        "text": "The cycle check only catches a direct inverse link, not longer chains.",
+        "verifiedFrom": "server.ts:32414-32432"
+      },
+      {
+        "text": "Despite 'governed' in its description there is no approval step: the link is active immediately and needs only read access.",
+        "verifiedFrom": "server.ts:32445-32477"
+      },
+      {
+        "text": "No MCP tool lists workspace intake entries. No audit event is written.",
+        "verifiedFrom": "server.ts:32436-32480"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "createPortfolioWorkItemLinkCommand, normalizePortfolioWorkItemReference, validatePortfolioWorkItemReference, assertNoPortfolioLinkCycle"
+  },
+  {
+    "name": "create_workspace_roadmap",
+    "purpose": "Creates a new roadmap header (container for roadmap items) in a workspace.",
+    "useWhen": [
+      "The user asks for a new roadmap and list_workspace_roadmaps shows none that fits",
+      "The workspace has no roadmap and items must be created manually"
+    ],
+    "avoidWhen": [
+      "A suitable roadmap already exists -> reuse its id from list_workspace_roadmaps",
+      "Importing a TSV plan -> preview_workspace_roadmap_import then commit_workspace_roadmap_import (without roadmapId it creates the header itself)"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID. A connector (OAuth) grant bound to a single workspace may omit it."
+      },
+      {
+        "param": "title",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty. Connectors: max 500 chars."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Connectors: max 20,000 chars."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "draft (default) | active. 'archived' is rejected; use archive_workspace_roadmap."
+      },
+      {
+        "param": "ownerUserId",
+        "required": false,
+        "source": "list_workspace_members -> userId",
+        "notes": "Defaults to the caller."
+      },
+      {
+        "param": "sourceRef",
+        "required": false,
+        "source": "user",
+        "notes": "Reference of the source plan (file name, URL, document id)."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "User confirmed the new roadmap and its title; no existing roadmap fits"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "Full header JSON {id (roadmapId), workspaceId, title, description, status, ownerUserId, sourceRef, createdAt, createdBy, updatedAt}.",
+    "pairsWith": [
+      "list_workspace_roadmaps",
+      "create_workspace_roadmap_item"
+    ],
+    "errors": [
+      {
+        "when": "Workspace roadmap title is required.",
+        "fix": "Pass a non-empty title."
+      },
+      {
+        "when": "Invalid workspace roadmap status: <value>.",
+        "fix": "Use draft or active, or omit status."
+      },
+      {
+        "when": "Use the archive command to archive a workspace roadmap.",
+        "fix": "Do not pass status archived."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Connector: JSON-RPC -32003 'The OAuth scope \"roadmap:manage\" is required for ...'",
+        "fix": "Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes."
+      },
+      {
+        "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
+        "fix": "Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry."
+      }
+    ],
+    "oauthScope": "roadmap:manage",
+    "cli": "lpm roadmap create --workspace <workspaceId> --title <text> [--description <text>] [--status <draft|active>] [--owner <userId>] [--source-ref <text>] [--json]",
+    "gotchas": [
+      {
+        "text": "Every call creates a new roadmap (no dedupe by title): check list_workspace_roadmaps first and never retry blindly after a timeout.",
+        "verifiedFrom": "server.ts:13139"
+      },
+      {
+        "text": "Not blocked by enforce mode.",
+        "verifiedFrom": "server.ts:13128-13160"
+      },
+      {
+        "text": "The server allows several active roadmaps although the roadmap ADR expects one; ask before creating with status active. Writes an audit event.",
+        "verifiedFrom": "server.ts:13152-13156"
+      }
+    ],
+    "verifiedFrom": "createWorkspaceRoadmapCommand, buildWorkspaceRoadmapHeader"
+  },
+  {
+    "name": "create_workspace_roadmap_dependency",
+    "purpose": "Directly creates an active dependency link between two items of the same roadmap, without review (legacy direct path).",
+    "useWhen": [
+      "Governance mode is shadow or off AND the workspace owner explicitly asked to record that item A depends on / blocks item B"
+    ],
+    "avoidWhen": [
+      "Default path (GOV-MAX) and the only path in enforce mode -> preview_workspace_roadmap_change then submit_workspace_roadmap_change with changeType link, itemId = source item, patch {targetItemId, type, rationale}",
+      "Accept dependencies parsed from an imported TSV -> resolve_workspace_roadmap_dependencies",
+      "Cross-workspace activity link -> create_portfolio_work_item_link",
+      "Activity-to-activity link -> create_workspace_issue_link or create_issue_link"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "roadmapId",
+        "required": true,
+        "source": "list_workspace_roadmaps -> id",
+        "notes": "BOTH items must belong to this roadmap."
+      },
+      {
+        "param": "sourceItemId",
+        "required": true,
+        "source": "list_workspace_roadmap_items -> id",
+        "notes": "The item that depends on / blocks / relates to the target."
+      },
+      {
+        "param": "targetItemId",
+        "required": true,
+        "source": "list_workspace_roadmap_items -> id",
+        "notes": "Different from sourceItemId."
+      },
+      {
+        "param": "type",
+        "required": false,
+        "source": "constant",
+        "notes": "blocks | depends_on | relates_to | shared_capability | enables_future_use. Default depends_on. The server does not validate it, so use only these values."
+      },
+      {
+        "param": "rationale",
+        "required": false,
+        "source": "user",
+        "notes": "Always pass one: the default text is 'Manual dependency confirmed by workspace owner.'"
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap governance mode is not 'enforce' (get_workspace -> roadmapGovernanceMode; missing means 'shadow', 'off' if roadmapGovernanceEnabled is false)",
+      "sourceItemId != targetItemId and both items have roadmapId equal to the given roadmapId",
+      "No active link with the same source, target and type (check list_workspace_roadmap_item_links)",
+      "The new link closes no cycle",
+      "The workspace owner explicitly instructed this direct change (GOV-MAX: roadmap changes are otherwise proposed via change requests)"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "not idempotent",
+    "returns": "Link JSON {id (linkId), workspaceId, roadmapId, sourceItemId, targetItemId, type, status:'active', rationale, createdAt, createdBy}.",
+    "pairsWith": [
+      "get_workspace",
+      "list_workspace_roadmap_items",
+      "list_workspace_roadmap_item_links",
+      "update_workspace_roadmap_dependency"
+    ],
+    "errors": [
+      {
+        "when": "GOVERNANCE_REVIEW_REQUIRED: this workspace roadmap runs in enforce mode...",
+        "fix": "Do not retry. Propose the change with preview_workspace_roadmap_change then submit_workspace_roadmap_change (changeType edit, prioritize, archive, restore, link...) and let a reviewer approve it."
+      },
+      {
+        "when": "Roadmap dependency cannot point to the same item.",
+        "fix": "Use two different item IDs."
+      },
+      {
+        "when": "Both roadmap dependency items must exist in the selected roadmap.",
+        "fix": "Check both items' roadmapId in list_workspace_roadmap_items; cross-roadmap dependencies are not possible here."
+      },
+      {
+        "when": "Active roadmap dependency already exists.",
+        "fix": "Nothing to do; treat as done (also what a retry after success returns)."
+      },
+      {
+        "when": "Roadmap dependency would create a cycle.",
+        "fix": "Inspect get_workspace_roadmap_overview with includeArchived:true -> itemLinks (archived/rejected links count too) and report the cycle to the owner; do not force it."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap dependency-create --workspace <workspaceId> --roadmap <roadmapId> --source-item <itemId> --target-item <itemId> [--type <depends_on|blocks|relates_to>] [--rationale <text>] [--json]",
+    "gotchas": [
+      {
+        "text": "The cycle check counts every link stored in that roadmap, including archived and rejected ones and every type (even relates_to), so it can refuse a valid link; the governed link path ignores archived links.",
+        "verifiedFrom": "server.ts:14685-14702"
+      },
+      {
+        "text": "Archived items are accepted as endpoints. Writes an audit event.",
+        "verifiedFrom": "server.ts:14681-14726"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "createWorkspaceRoadmapDependencyCommand, assertLegacyRoadmapMutationAllowed, readWorkspaceRoadmapData, detectRoadmapCycles"
+  },
+  {
+    "name": "create_workspace_roadmap_item",
+    "purpose": "Creates one roadmap item (a planning record, not an activity) in a non-archived roadmap.",
+    "useWhen": [
+      "The user asks to add a new initiative or feature to the roadmap",
+      "Capture a proposal as a draft item for later review"
+    ],
+    "avoidWhen": [
+      "Many rows from a spreadsheet -> preview_workspace_roadmap_import then commit_workspace_roadmap_import",
+      "Executable work inside a project -> create_issue",
+      "Move an existing item through review/approval -> review_workspace_roadmap_item (or governed changeType lifecycle)"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID. A connector (OAuth) grant bound to a single workspace may omit it."
+      },
+      {
+        "param": "roadmapId",
+        "required": true,
+        "source": "list_workspace_roadmaps -> id",
+        "notes": "Must exist and not be archived."
+      },
+      {
+        "param": "title",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty. Connectors: max 500 chars."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Connectors: max 20,000 chars."
+      },
+      {
+        "param": "category",
+        "required": false,
+        "source": "user",
+        "notes": "Free text."
+      },
+      {
+        "param": "lifecycle",
+        "required": false,
+        "source": "constant",
+        "notes": "Omit (default draft) or 'imported'. Never pass reviewed, approved, materialized, delivered or closed: the server accepts them and that skips the review gates."
+      },
+      {
+        "param": "priority",
+        "required": false,
+        "source": "constant",
+        "notes": "urgent | high | medium | low | none (default none)."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap exists and is not archived",
+      "User confirmed the item; no item with the same title exists in that roadmap"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "Item JSON {id (itemId), roadmapId, title, description, category, lifecycle, governanceLifecycle, priority, isArchived:false, materializationSummary{state:'unmaterialized'}, createdAt, updatedAt}.",
+    "pairsWith": [
+      "list_workspace_roadmaps",
+      "list_workspace_roadmap_items",
+      "review_workspace_roadmap_item",
+      "preview_workspace_roadmap_change"
+    ],
+    "errors": [
+      {
+        "when": "Active workspace roadmap not found",
+        "fix": "roadmapId is missing or archived; pick a non-archived roadmap from list_workspace_roadmaps."
+      },
+      {
+        "when": "Roadmap item roadmapId is required. / Roadmap item title is required.",
+        "fix": "Pass both roadmapId and a non-empty title."
+      },
+      {
+        "when": "Invalid roadmap item lifecycle: <value>.",
+        "fix": "Omit lifecycle (draft) or pass imported."
+      },
+      {
+        "when": "Invalid roadmap item priority: <value>.",
+        "fix": "Use urgent, high, medium, low or none."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Connector: JSON-RPC -32003 'The OAuth scope \"roadmap:manage\" is required for ...'",
+        "fix": "Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes."
+      },
+      {
+        "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
+        "fix": "Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry."
+      }
+    ],
+    "oauthScope": "roadmap:manage",
+    "cli": "lpm roadmap item-create --workspace <workspaceId> --roadmap <roadmapId> --title <text> [--description <text>] [--category <text>] [--lifecycle <draft|imported|reviewed>] [--priority <urgent|high|medium|low|none>] [--json]",
+    "gotchas": [
+      {
+        "text": "No dedupe: check list_workspace_roadmap_items for the same title first and never retry blindly after a timeout.",
+        "verifiedFrom": "server.ts:13382"
+      },
+      {
+        "text": "Allowed even in enforce mode (there is no governed create path).",
+        "verifiedFrom": "server.ts:13364-13410"
+      },
+      {
+        "text": "Creates only a planning item; it never creates activities or requirements. Writes an audit event.",
+        "verifiedFrom": "server.ts:13396-13400"
+      }
+    ],
+    "verifiedFrom": "createWorkspaceRoadmapItemCommand, buildRoadmapItem"
+  },
+  {
+    "name": "explain_workspace_roadmap_traceability_gap",
+    "purpose": "Lists which lineage steps are missing for one roadmap item (project allocation, materialization, linked activities) with one next action per gap.",
+    "useWhen": [
+      "An item looks stuck and you need the next step",
+      "Readiness check of an approved item before reporting progress"
+    ],
+    "avoidWhen": [
+      "Need the actual linked records -> get_workspace_roadmap_traceability",
+      "Find activities that have no roadmap lineage at all -> list_unlinked_project_work"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "itemId",
+        "required": true,
+        "source": "list_workspace_roadmap_items -> id",
+        "notes": "Archived items are accepted."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "Item exists (archived allowed)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspaceId, itemId, complete (boolean), gaps[] ('allocated' | 'materialized' | 'executionLinked'), nextActions[] (one English sentence per gap, same order)}.",
+    "pairsWith": [
+      "list_workspace_roadmap_items",
+      "create_workspace_roadmap_allocation",
+      "preview_roadmap_materialization",
+      "commit_roadmap_materialization",
+      "create_issue"
+    ],
+    "errors": [
+      {
+        "when": "Roadmap item not found",
+        "fix": "Re-read list_workspace_roadmap_items with includeArchived:true and use an existing id."
+      },
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Use a workspaceId from list_workspaces; the caller must be the owner or an active member of that workspace."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Same heavy cost as get_workspace_roadmap_traceability (it calls it).",
+        "verifiedFrom": "server.ts:12928"
+      },
+      {
+        "text": "How to close each gap: allocated -> create_workspace_roadmap_allocation (enforce mode: governed changeType allocate); materialized -> preview_roadmap_materialization then commit_roadmap_materialization (item must be approved and allocated); executionLinked -> only activities created with workOrigin 'roadmap-materialized' and roadmapLineageRefs count, fields the server accepts on create_issue but that are not in its declared schema.",
+        "verifiedFrom": "server.ts:28033-28041"
+      },
+      {
+        "text": "Proposing these steps is fine; executing them follows each tool's own authority.",
+        "verifiedFrom": "docs/governance/workspace-governance.md:11"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "explainWorkspaceRoadmapTraceabilityGapCommand, getWorkspaceRoadmapTraceabilityCommand, createIssueCommand (lineage fields)"
+  },
+  {
+    "name": "get_workspace_roadmap_item_history",
+    "purpose": "Returns the governed change requests and audit events recorded for one roadmap item.",
+    "useWhen": [
+      "Answer who changed an item, when and why",
+      "Check for pending or past change requests on an item before proposing a new one"
+    ],
+    "avoidWhen": [
+      "Lineage to projects, requirements and activities -> get_workspace_roadmap_traceability",
+      "Full detail of one change request -> get_workspace_roadmap_change_request",
+      "All change requests of the workspace -> list_workspace_roadmap_change_requests"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "itemId",
+        "required": true,
+        "source": "list_workspace_roadmap_items -> id",
+        "notes": "Roadmap item ID (not an activity/issue ID)."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{itemId, changeRequests[] (full change request records: id, status, changeType, ...), auditEvents[] (eventType such as roadmap_item_created/updated/archived/restored, actorId, origin, before, after, changedFields, timestamp)}.",
+    "pairsWith": [
+      "list_workspace_roadmap_items",
+      "get_workspace_roadmap_change_request"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Use a workspaceId from list_workspaces; the caller must be the owner or an active member of that workspace."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "An unknown itemId returns empty arrays, not an error.",
+        "verifiedFrom": "server.ts:12857-12866"
+      },
+      {
+        "text": "Only change requests whose single itemId is this item are included; multi-item requests (itemIds) are missing, so also check list_workspace_roadmap_change_requests.",
+        "verifiedFrom": "server.ts:12860"
+      },
+      {
+        "text": "Dependency and allocation changes are audited under the link/allocation id and do not appear.",
+        "verifiedFrom": "server.ts:12861"
+      },
+      {
+        "text": "Lists are not sorted, and audit events carry full before/after snapshots (can be large).",
+        "verifiedFrom": "server.ts:12860-12866"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceRoadmapItemHistoryCommand"
+  },
+  {
+    "name": "get_workspace_roadmap_overview",
+    "purpose": "Returns the whole workspace roadmap read model in one call: roadmaps, capabilities, items, capability links, item dependencies, project allocations, materializations, counts and governance counters.",
+    "useWhen": [
+      "Start of any roadmap task, to collect IDs and current state in one call",
+      "Need items together with their dependencies, allocations, capability links and materializations",
+      "Check how many governed change requests are pending (governance.pendingReviewCount)",
+      "Find archived/rejected dependency links (includeArchived:true)"
+    ],
+    "avoidWhen": [
+      "Only roadmap headers -> list_workspace_roadmaps",
+      "Only items -> list_workspace_roadmap_items",
+      "Only active dependency links -> list_workspace_roadmap_item_links",
+      "Lineage of one item -> get_workspace_roadmap_traceability",
+      "Narrative analysis or advice -> analyze_workspace_roadmap"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID. A connector (OAuth) grant bound to a single workspace may omit it."
+      },
+      {
+        "param": "roadmapId",
+        "required": false,
+        "source": "list_workspace_roadmaps -> id",
+        "notes": "Scopes roadmaps, items, links, allocations and materializations to one roadmap. Capabilities stay workspace-wide."
+      },
+      {
+        "param": "includeArchived",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean, default false. true adds archived roadmaps, capabilities and items plus rejected/archived links and allocations."
+      },
+      {
+        "param": "compact",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean, default false. true drops item and capability descriptions and source.raw. Use on large workspaces."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspaceId, generatedAt, roadmaps[], capabilities[], items[] (id, roadmapId, title, lifecycle, priority, isArchived, updatedAt...), capabilityLinks[], itemLinks[] (id, sourceItemId, targetItemId, type, status), allocations[] (id, itemId, projectId, role, status), materializations[], counts{byLifecycle, byCapabilityId, byProjectId, materialized}, governance{enabled, pendingReviewCount, staleCount}, compact?}",
+    "pairsWith": [
+      "list_workspaces",
+      "get_workspace",
+      "preview_workspace_roadmap_change",
+      "get_workspace_roadmap_traceability"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Use a workspaceId from list_workspaces; the caller must be the owner or an active member of that workspace."
+      },
+      {
+        "when": "Connector: JSON-RPC -32003 insufficient_scope, or the tool is missing from the tool list",
+        "fix": "Call get_mcp_connection_info; the connection needs the workspace:read scope."
+      },
+      {
+        "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
+        "fix": "Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry."
+      },
+      {
+        "when": "Connector call fails or is cut off because the response is too large",
+        "fix": "Retry with compact:true and a roadmapId."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": "lpm roadmap status --workspace <workspaceId> [--roadmap <roadmapId>] [--include-archived] [--json]",
+    "gotchas": [
+      {
+        "text": "Unpaginated and can be large: prefer compact:true plus roadmapId.",
+        "verifiedFrom": "server.ts:37154-37161"
+      },
+      {
+        "text": "compact here removes descriptions entirely (list_workspace_roadmap_items compact only truncates to 280 chars).",
+        "verifiedFrom": "server.ts:12106-12118"
+      },
+      {
+        "text": "governance.enabled does not distinguish shadow from enforce: read get_workspace -> roadmapGovernanceMode.",
+        "verifiedFrom": "server.ts:12145-12146"
+      },
+      {
+        "text": "Items of an archived roadmap still appear unless the item itself is archived.",
+        "verifiedFrom": "server.ts:12086-12089"
+      },
+      {
+        "text": "An item's updatedAt is the expectedUpdatedAt that governed change tools require.",
+        "verifiedFrom": "src/lib/workspaceRoadmapGovernance.ts:145-151"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceRoadmapOverviewCommand, readWorkspaceRoadmapData, buildWorkspaceRoadmapOverview, compactWorkspaceRoadmapOverview"
+  },
+  {
+    "name": "get_workspace_roadmap_traceability",
+    "purpose": "Returns the full lineage of one roadmap item: capability links, dependencies, project allocations, materializations into requirements, activities that reference it, graph edges and completeness flags.",
+    "useWhen": [
+      "Answer where a roadmap item is being executed (projects, requirements, activities)",
+      "Audit that an approved item reached projects and activities"
+    ],
+    "avoidWhen": [
+      "Only which gaps exist and the next step -> explain_workspace_roadmap_traceability_gap",
+      "Whole roadmap -> get_workspace_roadmap_overview",
+      "Project-side view of roadmap work -> get_project_roadmap_drilldown"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "itemId",
+        "required": true,
+        "source": "list_workspace_roadmap_items -> id",
+        "notes": "Archived items are accepted."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member",
+      "Item exists (archived allowed)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{workspaceId, item, capabilityLinks[], dependencies[], allocations[], materializations[], linkedIssues[] (activities whose roadmapLineageRefs point at this item, each with projectId), edges[] {sourceType, sourceId, targetType, targetId, relationship}, completeness{allocated, materialized, executionLinked}}.",
+    "pairsWith": [
+      "list_workspace_roadmap_items",
+      "explain_workspace_roadmap_traceability_gap",
+      "get_issue"
+    ],
+    "errors": [
+      {
+        "when": "Roadmap item not found",
+        "fix": "Re-read list_workspace_roadmap_items with includeArchived:true and use an existing id."
+      },
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Use a workspaceId from list_workspaces; the caller must be the owner or an active member of that workspace."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Heavy read: loads every activity of every project in the workspace; do not call it in a loop over many items.",
+        "verifiedFrom": "server.ts:12870-12876"
+      },
+      {
+        "text": "dependencies and allocations include rejected/archived records, so check each status.",
+        "verifiedFrom": "server.ts:12888-12890"
+      },
+      {
+        "text": "completeness.materialized is true for any materialization record, even method deferred or conflict. Persists nothing.",
+        "verifiedFrom": "server.ts:12920"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceRoadmapTraceabilityCommand, listWorkspaceIssuesForRoadmapTraceability, getWorkspaceRoadmapOverviewCommand"
+  },
+  {
+    "name": "list_portfolio_work_item_links",
+    "purpose": "Lists cross-workspace links (blocks, depends_on, relates_to, enables_future_use, shared_capability) where the given workspace is the source or the target.",
+    "useWhen": [
+      "Find which activities in other workspaces block or depend on work in this workspace",
+      "Get a linkId before update_portfolio_work_item_link",
+      "Review active cross-workspace dependencies of one project (pass projectId)"
+    ],
+    "avoidWhen": [
+      "Links between projects of the SAME workspace -> list_workspace_issue_links",
+      "Links between activities of one project -> list_issue_links",
+      "Dependencies between roadmap items -> list_workspace_roadmap_item_links"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "projectId",
+        "required": false,
+        "source": "list_workspace_projects -> id",
+        "notes": "Keeps links whose source.projectId or target.projectId equals it."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "active | resolved | archived. Omitted = all statuses."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON array sorted by updatedAt (newest first): {id, type, status, rationale, source{workspaceId, projectId, issueId, intakeEntryId, visibleSummary, inaccessible?}, target{same}, createdBy, createdAt, updatedAt, resolvedAt, archivedAt}. If the caller cannot read the other workspace, that side shows only workspaceId + visibleSummary with inaccessible:true.",
+    "pairsWith": [
+      "list_workspaces",
+      "get_issue",
+      "update_portfolio_work_item_link"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace",
+        "fix": "Use a workspaceId from list_workspaces; the caller must be the owner or an active member of that workspace."
+      },
+      {
+        "when": "Invalid portfolio work item link status",
+        "fix": "Use active, resolved or archived, or omit status."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm portfolio-links list --workspace <workspaceId> [--project <projectId>] [--status <active|resolved|archived>] [--json]",
+    "gotchas": [
+      {
+        "text": "Not paginated.",
+        "verifiedFrom": "server.ts:32481-32515"
+      },
+      {
+        "text": "Without status it also returns resolved and archived links; pass status:'active' for current blockers.",
+        "verifiedFrom": "server.ts:32498"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "listPortfolioWorkItemLinksCommand, buildPortfolioWorkItemLinkFromData, sanitizePortfolioWorkItemLinkForUser"
+  },
+  {
+    "name": "list_workspace_roadmap_item_links",
+    "purpose": "Lists the active dependency/relationship links between roadmap items.",
+    "useWhen": [
+      "See what a roadmap item blocks or depends on",
+      "Get a linkId before update_workspace_roadmap_dependency or archive_workspace_roadmap_dependency",
+      "Check that a link does not already exist before proposing or creating one"
+    ],
+    "avoidWhen": [
+      "Need archived or rejected links -> get_workspace_roadmap_overview with includeArchived:true (itemLinks)",
+      "Cross-workspace activity links -> list_portfolio_work_item_links",
+      "Activity-to-activity links -> list_workspace_issue_links or list_issue_links"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID. A connector (OAuth) grant bound to a single workspace may omit it."
+      },
+      {
+        "param": "roadmapId",
+        "required": false,
+        "source": "list_workspace_roadmaps -> id",
+        "notes": "Only links stored under this roadmap."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON array of {id (linkId), roadmapId, sourceItemId, targetItemId, type (blocks|depends_on|relates_to|shared_capability|enables_future_use), status, rationale, changeRequestId?, createdAt, createdBy, updatedAt}. Read as: sourceItemId <type> targetItemId.",
+    "pairsWith": [
+      "list_workspace_roadmap_items",
+      "preview_workspace_roadmap_change",
+      "update_workspace_roadmap_dependency"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Use a workspaceId from list_workspaces; the caller must be the owner or an active member of that workspace."
+      },
+      {
+        "when": "Connector: JSON-RPC -32003 insufficient_scope, or the tool is missing from the tool list",
+        "fix": "Call get_mcp_connection_info; the connection needs the workspace:read scope."
+      },
+      {
+        "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
+        "fix": "Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": "lpm roadmap status --workspace <workspaceId> [--roadmap <roadmapId>] --json (read the itemLinks field)",
+    "gotchas": [
+      {
+        "text": "No includeArchived option: rejected and archived links, and links touching an archived item, are always hidden.",
+        "verifiedFrom": "server.ts:12091-12100"
+      },
+      {
+        "text": "Builds the full overview internally (same cost as get_workspace_roadmap_overview).",
+        "verifiedFrom": "server.ts:12122-12131"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceRoadmapOverviewCommand (itemLinks field), readWorkspaceRoadmapData"
+  },
+  {
+    "name": "list_workspace_roadmap_items",
+    "purpose": "Lists the roadmap items of a workspace, optionally only those of one roadmap.",
+    "useWhen": [
+      "Need itemIds, titles, lifecycle, priority or updatedAt (the expectedUpdatedAt of governed changes)",
+      "Find items to edit, archive, link, allocate or analyze",
+      "Check for an item with the same title before creating one"
+    ],
+    "avoidWhen": [
+      "Need dependencies/allocations/capability links too -> get_workspace_roadmap_overview",
+      "Change history of one item -> get_workspace_roadmap_item_history",
+      "Lineage of one item -> get_workspace_roadmap_traceability"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID. A connector (OAuth) grant bound to a single workspace may omit it."
+      },
+      {
+        "param": "roadmapId",
+        "required": false,
+        "source": "list_workspace_roadmaps -> id",
+        "notes": "Only items of this roadmap."
+      },
+      {
+        "param": "includeArchived",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean, default false. true includes archived items."
+      },
+      {
+        "param": "compact",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean. true drops source.raw and cuts descriptions to 280 chars (cut rows carry descriptionTruncated:true)."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON array of items {id (itemId), roadmapId, title, description, category, lifecycle, governanceLifecycle, priority, isArchived, archiveReason, materializationSummary, source?, createdAt, updatedAt, updatedBy}.",
+    "pairsWith": [
+      "list_workspace_roadmaps",
+      "preview_workspace_roadmap_change",
+      "get_workspace_roadmap_traceability",
+      "update_workspace_roadmap_item"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Use a workspaceId from list_workspaces; the caller must be the owner or an active member of that workspace."
+      },
+      {
+        "when": "Connector: JSON-RPC -32003 insufficient_scope, or the tool is missing from the tool list",
+        "fix": "Call get_mcp_connection_info; the connection needs the workspace:read scope."
+      },
+      {
+        "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
+        "fix": "Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry."
+      },
+      {
+        "when": "Connector call fails or is cut off because the response is too large",
+        "fix": "Retry with compact:true and a roadmapId."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": "lpm roadmap status --workspace <workspaceId> [--roadmap <roadmapId>] [--include-archived] --json (read the items field)",
+    "gotchas": [
+      {
+        "text": "The tool description says connectors get compact rows by default, but the server compacts ONLY when compact:true is passed; pass it explicitly on big workspaces. Not paginated.",
+        "verifiedFrom": "server.ts:37260-37264"
+      },
+      {
+        "text": "Without roadmapId it also returns items whose roadmap header is archived.",
+        "verifiedFrom": "server.ts:12086-12089"
+      },
+      {
+        "text": "Lifecycle values: draft, imported, reviewed, approved, deferred, rejected, materialized, delivered, closed.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:50-60"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceRoadmapOverviewCommand (items field), readWorkspaceRoadmapData, compactRoadmapItem"
+  },
+  {
+    "name": "list_workspace_roadmaps",
+    "purpose": "Lists the roadmap headers (the containers that hold roadmap items) of a workspace.",
+    "useWhen": [
+      "Need a roadmapId before listing or creating items or dependencies",
+      "Check which roadmap is active and which is draft",
+      "Check whether a roadmap with the wanted title already exists before create_workspace_roadmap"
+    ],
+    "avoidWhen": [
+      "Need items or links too -> get_workspace_roadmap_overview (same server cost, more data)",
+      "Create a roadmap -> create_workspace_roadmap"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID. A connector (OAuth) grant bound to a single workspace may omit it."
+      },
+      {
+        "param": "includeArchived",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean, default false. true also returns archived headers."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "JSON array of {id (roadmapId), workspaceId, title, description, status (draft|active|archived), ownerUserId, sourceRef, archivedAt, archiveReason, createdAt, updatedAt}.",
+    "pairsWith": [
+      "list_workspaces",
+      "list_workspace_roadmap_items",
+      "create_workspace_roadmap_item"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Use a workspaceId from list_workspaces; the caller must be the owner or an active member of that workspace."
+      },
+      {
+        "when": "Connector: JSON-RPC -32003 insufficient_scope, or the tool is missing from the tool list",
+        "fix": "Call get_mcp_connection_info; the connection needs the workspace:read scope."
+      },
+      {
+        "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
+        "fix": "Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry."
+      }
+    ],
+    "oauthScope": "workspace:read",
+    "cli": "lpm roadmap status --workspace <workspaceId> [--include-archived] --json (read the roadmaps field)",
+    "gotchas": [
+      {
+        "text": "Internally builds the full roadmap overview, so it costs as much as get_workspace_roadmap_overview.",
+        "verifiedFrom": "server.ts:37172-37177"
+      },
+      {
+        "text": "Several roadmaps can be active at once (the server does not enforce a single active roadmap).",
+        "verifiedFrom": "server.ts:13128-13146"
+      },
+      {
+        "text": "Connectors reject extra fields such as compact.",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:185"
+      }
+    ],
+    "verifiedFrom": "getWorkspaceRoadmapOverviewCommand (roadmaps field), readWorkspaceRoadmapData"
+  },
+  {
+    "name": "preview_workspace_roadmap_item_bulk",
+    "purpose": "Read-only check of up to 100 roadmap item IDs before a bulk update/archive/restore: reports which exist and returns their current data.",
+    "useWhen": [
+      "Always right before commit_workspace_roadmap_item_bulk",
+      "Verify a list of itemIds and show the user exactly which items would change"
+    ],
+    "avoidWhen": [
+      "Governed multi-item change (default path, required in enforce mode) -> preview_workspace_roadmap_change with itemIds",
+      "Single item lookup -> list_workspace_roadmap_items"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "itemIds",
+        "required": true,
+        "source": "list_workspace_roadmap_items -> id",
+        "notes": "Array of 1 to 100 IDs; remove duplicates. Split bigger sets into batches of 100."
+      },
+      {
+        "param": "operation",
+        "required": false,
+        "source": "constant",
+        "notes": "update (default) | archive | restore. Only echoed back; not validated."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active workspace member"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{operation, requestedCount, foundCount, missingItemIds[], items[] (full item records incl. isArchived, lifecycle, updatedAt)}.",
+    "pairsWith": [
+      "list_workspace_roadmap_items",
+      "commit_workspace_roadmap_item_bulk"
+    ],
+    "errors": [
+      {
+        "when": "Roadmap bulk operation requires at least one item id.",
+        "fix": "Pass a non-empty itemIds array."
+      },
+      {
+        "when": "Roadmap bulk operation supports at most 100 items.",
+        "fix": "Split into batches of at most 100."
+      },
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Use a workspaceId from list_workspaces; the caller must be the owner or an active member of that workspace."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap item-bulk-preview --workspace <workspaceId> --item-ids <id; id> [--operation <update|archive|restore>] [--json]",
+    "gotchas": [
+      {
+        "text": "Does not check permissions, governance mode, or item state, and stores no preview token: a clean preview does not guarantee the commit.",
+        "verifiedFrom": "server.ts:13533-13551"
+      },
+      {
+        "text": "For operation update, any archived item (isArchived:true) or materialized item (lifecycle materialized) makes the whole commit fail; check items[] yourself and drop them.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:349-354"
+      },
+      {
+        "text": "Missing ids are reported, not an error.",
+        "verifiedFrom": "server.ts:13579"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "previewWorkspaceRoadmapItemBulkCommand, assertRoadmapBulkItemLimit"
+  },
+  {
+    "name": "restore_workspace_roadmap_item",
+    "purpose": "Directly un-archives one roadmap item with a reason (no review).",
+    "useWhen": [
+      "Governance mode is shadow or off AND the workspace owner explicitly asked to restore this archived item"
+    ],
+    "avoidWhen": [
+      "Default path (GOV-MAX) and the only path in enforce mode -> preview_workspace_roadmap_change then submit_workspace_roadmap_change with changeType restore",
+      "Many items -> preview_workspace_roadmap_item_bulk then commit_workspace_roadmap_item_bulk with operation restore"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "itemId",
+        "required": true,
+        "source": "list_workspace_roadmap_items with includeArchived:true -> id (rows with isArchived:true)",
+        "notes": ""
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty; kept only in the audit event."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap governance mode is not 'enforce' (get_workspace -> roadmapGovernanceMode; missing means 'shadow', 'off' if roadmapGovernanceEnabled is false)",
+      "Item exists and is archived",
+      "The workspace owner explicitly instructed this direct change (GOV-MAX: roadmap changes are otherwise proposed via change requests)"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Item JSON with isArchived:false, archivedAt/archivedBy/archiveReason null, new updatedAt.",
+    "pairsWith": [
+      "list_workspace_roadmap_items",
+      "get_workspace_roadmap_item_history"
+    ],
+    "errors": [
+      {
+        "when": "GOVERNANCE_REVIEW_REQUIRED: this workspace roadmap runs in enforce mode...",
+        "fix": "Do not retry. Propose the change with preview_workspace_roadmap_change then submit_workspace_roadmap_change (changeType edit, prioritize, archive, restore, link...) and let a reviewer approve it."
+      },
+      {
+        "when": "Roadmap item not found",
+        "fix": "Re-read list_workspace_roadmap_items with includeArchived:true."
+      },
+      {
+        "when": "Roadmap item restore requires a reason.",
+        "fix": "Pass a non-empty reason."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap item-restore --workspace <workspaceId> --item <itemId> --reason <text> --confirm [--json]",
+    "gotchas": [
+      {
+        "text": "Does not check that the item was archived: restoring an active item only bumps updatedAt. Lifecycle is unchanged.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:410-424"
+      },
+      {
+        "text": "The previous archiveReason is cleared (visible only in history).",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:420-423"
+      },
+      {
+        "text": "If the item's roadmap header is archived, the item comes back inside an archived roadmap.",
+        "verifiedFrom": "server.ts:13499-13529"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "restoreWorkspaceRoadmapItemCommand, assertLegacyRoadmapMutationAllowed, buildRoadmapItemRestorePatch"
+  },
+  {
+    "name": "update_portfolio_work_item_link",
+    "purpose": "Sets the status of a cross-workspace work item link to active, resolved or archived, optionally replacing its rationale.",
+    "useWhen": [
+      "The blocking work is done: set status resolved",
+      "The link is wrong or obsolete and the user confirmed: set status archived",
+      "Reopen a resolved or archived link: set status active"
+    ],
+    "avoidWhen": [
+      "Changing source, target or type: not supported; archive it and create a new one with create_portfolio_work_item_link",
+      "Same-workspace issue links -> delete_workspace_issue_link"
+    ],
+    "inputs": [
+      {
+        "param": "linkId",
+        "required": true,
+        "source": "list_portfolio_work_item_links -> id (or the ID in create_portfolio_work_item_link's text)",
+        "notes": ""
+      },
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_portfolio_work_item_links -> source.workspaceId or target.workspaceId",
+        "notes": "Must be one of the link's two workspaces."
+      },
+      {
+        "param": "status",
+        "required": true,
+        "source": "constant",
+        "notes": "active | resolved | archived."
+      },
+      {
+        "param": "rationale",
+        "required": false,
+        "source": "user",
+        "notes": "When the key is present it REPLACES the stored rationale (empty string clears it). Omit to keep it."
+      }
+    ],
+    "preconditions": [
+      "Caller manages BOTH the source and the target workspace (owner or member with role owner/admin in each)",
+      "workspaceId is the link's source or target workspace"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Updated link JSON {id, type, status, rationale, source, target, resolvedBy, resolvedAt, archivedBy, archivedAt, updatedBy, updatedAt}, sanitized like list_portfolio_work_item_links.",
+    "pairsWith": [
+      "list_portfolio_work_item_links",
+      "get_issue"
+    ],
+    "errors": [
+      {
+        "when": "You do not have permission to manage this workspace",
+        "fix": "Caller needs owner/admin in workspaceId; ask the workspace owner to do it."
+      },
+      {
+        "when": "Portfolio work item link not found",
+        "fix": "Re-list with list_portfolio_work_item_links and use an existing id."
+      },
+      {
+        "when": "Portfolio work item link is not associated with this workspace",
+        "fix": "Pass the link's source.workspaceId or target.workspaceId."
+      },
+      {
+        "when": "You need manage access to both workspaces to update a portfolio work item link",
+        "fix": "Ask an owner/admin of the other workspace to make the change."
+      },
+      {
+        "when": "Invalid portfolio work item link status",
+        "fix": "Use active, resolved or archived."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm portfolio-links update --workspace <workspaceId> --link <linkId> --status <active|resolved|archived> [--rationale <text>] [--json]",
+    "gotchas": [
+      {
+        "text": "Creating needs only read access, but updating needs manage access to BOTH workspaces.",
+        "verifiedFrom": "server.ts:32522-32538"
+      },
+      {
+        "text": "status active clears resolvedAt/archivedAt and does not re-run the cycle check.",
+        "verifiedFrom": "server.ts:32560-32564"
+      },
+      {
+        "text": "Before resolving, confirm the blocking activity is really done (get_issue).",
+        "verifiedFrom": "help:boas-praticas-para-agentes"
+      },
+      {
+        "text": "No audit event beyond updatedBy/resolvedBy/archivedBy fields.",
+        "verifiedFrom": "server.ts:32547-32564"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "updatePortfolioWorkItemLinkCommand, sanitizePortfolioWorkItemLinkForUser"
+  },
+  {
+    "name": "update_workspace_roadmap",
+    "purpose": "Edits a roadmap header's title, description, status (draft/active), owner or sourceRef.",
+    "useWhen": [
+      "Rename a roadmap or fix its description",
+      "Promote a draft roadmap to active, or demote to draft, after the owner decided",
+      "Change the roadmap owner on the owner's instruction"
+    ],
+    "avoidWhen": [
+      "Archive the roadmap -> archive_workspace_roadmap",
+      "Edit roadmap items -> preview_workspace_roadmap_change (governed) or update_workspace_roadmap_item"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID. A connector (OAuth) grant bound to a single workspace may omit it."
+      },
+      {
+        "param": "roadmapId",
+        "required": true,
+        "source": "list_workspace_roadmaps -> id",
+        "notes": "Use includeArchived:true to find archived headers."
+      },
+      {
+        "param": "title",
+        "required": false,
+        "source": "user",
+        "notes": "Cannot be empty. Connectors: max 500 chars."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Empty string clears it."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "draft | active. 'archived' is rejected."
+      },
+      {
+        "param": "ownerUserId",
+        "required": false,
+        "source": "list_workspace_members -> userId",
+        "notes": "Empty string clears it (API key only)."
+      },
+      {
+        "param": "sourceRef",
+        "required": false,
+        "source": "user",
+        "notes": "Empty string clears it."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap header exists",
+      "At least one field to change is passed"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Merged header JSON (previous fields + patch) with new updatedAt/updatedBy.",
+    "pairsWith": [
+      "list_workspace_roadmaps",
+      "get_workspace_roadmap_overview"
+    ],
+    "errors": [
+      {
+        "when": "Workspace roadmap not found",
+        "fix": "Re-read list_workspace_roadmaps (includeArchived:true) and use an existing id."
+      },
+      {
+        "when": "Workspace roadmap update has no changes.",
+        "fix": "Pass at least one of title, description, status, ownerUserId, sourceRef."
+      },
+      {
+        "when": "Workspace roadmap title cannot be empty.",
+        "fix": "Pass a non-empty title or omit it."
+      },
+      {
+        "when": "Invalid workspace roadmap status: <value>. / Use the archive command to archive a workspace roadmap.",
+        "fix": "Use draft or active; archive with archive_workspace_roadmap."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Connector: JSON-RPC -32003 'The OAuth scope \"roadmap:manage\" is required for ...'",
+        "fix": "Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes."
+      },
+      {
+        "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
+        "fix": "Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry."
+      }
+    ],
+    "oauthScope": "roadmap:manage",
+    "cli": "lpm roadmap update --workspace <workspaceId> --roadmap <roadmapId> [--title <text>] [--description <text>] [--status <draft|active>] [--owner <userId>] [--source-ref <text>] [--json]",
+    "gotchas": [
+      {
+        "text": "Also works on archived headers: setting status draft or active on an archived roadmap un-archives it (archivedAt/archiveReason stay set).",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:736-743"
+      },
+      {
+        "text": "Status and owner changes are planning decisions for the workspace owner.",
+        "verifiedFrom": "docs/governance/workspace-governance.md:11"
+      },
+      {
+        "text": "Not blocked by enforce mode. Writes an audit event.",
+        "verifiedFrom": "server.ts:13197-13201"
+      }
+    ],
+    "verifiedFrom": "updateWorkspaceRoadmapCommand, buildWorkspaceRoadmapHeaderPatch"
+  },
+  {
+    "name": "update_workspace_roadmap_dependency",
+    "purpose": "Directly changes a roadmap dependency link's type, rationale or status (active, rejected, archived), without review.",
+    "useWhen": [
+      "Governance mode is shadow or off AND the workspace owner explicitly asked to reject a dependency (status rejected) or fix its type/rationale"
+    ],
+    "avoidWhen": [
+      "Archive with a recorded reason -> archive_workspace_roadmap_dependency",
+      "Create a new link -> preview_workspace_roadmap_change (changeType link) or create_workspace_roadmap_dependency",
+      "Enforce mode -> blocked and there is no governed unlink change type; report to the owner (changing the mode is the owner's decision)"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID of the workspace."
+      },
+      {
+        "param": "linkId",
+        "required": true,
+        "source": "list_workspace_roadmap_item_links -> id (or create_workspace_roadmap_dependency -> id; archived/rejected links only via get_workspace_roadmap_overview includeArchived:true -> itemLinks[].id)",
+        "notes": "Roadmap dependency link ID."
+      },
+      {
+        "param": "type",
+        "required": false,
+        "source": "constant",
+        "notes": "blocks | depends_on | relates_to | shared_capability | enables_future_use. Not validated by the server."
+      },
+      {
+        "param": "rationale",
+        "required": false,
+        "source": "user",
+        "notes": "Replaces the rationale; empty string clears it."
+      },
+      {
+        "param": "status",
+        "required": false,
+        "source": "constant",
+        "notes": "active | rejected | archived. Not validated by the server."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap governance mode is not 'enforce' (get_workspace -> roadmapGovernanceMode; missing means 'shadow', 'off' if roadmapGovernanceEnabled is false)",
+      "Link exists",
+      "At least one of type, rationale, status is passed",
+      "The workspace owner explicitly instructed this direct change (GOV-MAX: roadmap changes are otherwise proposed via change requests)"
+    ],
+    "effect": "destructive",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Merged link JSON (previous fields + patch) with updatedAt and updatedBy.",
+    "pairsWith": [
+      "list_workspace_roadmap_item_links",
+      "get_workspace_roadmap_overview"
+    ],
+    "errors": [
+      {
+        "when": "GOVERNANCE_REVIEW_REQUIRED: this workspace roadmap runs in enforce mode...",
+        "fix": "Do not retry. Propose the change with preview_workspace_roadmap_change then submit_workspace_roadmap_change (changeType edit, prioritize, archive, restore, link...) and let a reviewer approve it."
+      },
+      {
+        "when": "Roadmap dependency not found",
+        "fix": "Re-read list_workspace_roadmap_item_links (or the overview with includeArchived:true) and use an existing id."
+      },
+      {
+        "when": "Roadmap dependency update has no changes.",
+        "fix": "Pass at least one of type, rationale, status."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Tool not listed / JSON-RPC -32003 on a ChatGPT or Claude connector",
+        "fix": "This tool has no OAuth scope; it only works over an API-key MCP connection. Tell the user; call get_mcp_connection_info to confirm."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm roadmap dependency-update --workspace <workspaceId> --link <linkId> [--type <depends_on|blocks|relates_to>] [--rationale <text>] [--status <active|rejected|archived>] [--json]",
+    "gotchas": [
+      {
+        "text": "Reactivating (status active) skips the duplicate and cycle checks, so it can create a cycle or a duplicate: check list_workspace_roadmap_item_links first.",
+        "verifiedFrom": "server.ts:14742-14768"
+      },
+      {
+        "text": "status archived here records no reason; prefer archive_workspace_roadmap_dependency. Writes an audit event.",
+        "verifiedFrom": "server.ts:14761-14768"
+      },
+      {
+        "text": "API-key MCP only (no OAuth scope, so ChatGPT/Claude connectors never see it).",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:13-108"
+      }
+    ],
+    "verifiedFrom": "updateWorkspaceRoadmapDependencyCommand, assertLegacyRoadmapMutationAllowed"
+  },
+  {
+    "name": "update_workspace_roadmap_item",
+    "purpose": "Directly edits title, description, category, priority or roadmap of one roadmap item, without review (legacy direct path).",
+    "useWhen": [
+      "Governance mode is shadow or off AND the workspace owner explicitly asked for this direct edit"
+    ],
+    "avoidWhen": [
+      "Default path for any item change (GOV-MAX), and the only path in enforce mode -> preview_workspace_roadmap_change then submit_workspace_roadmap_change with changeType edit or prioritize",
+      "Change lifecycle -> review_workspace_roadmap_item",
+      "Archive or restore -> archive_workspace_roadmap_item / restore_workspace_roadmap_item",
+      "Same change on many items -> preview_workspace_roadmap_item_bulk then commit_workspace_roadmap_item_bulk"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": "Firestore document ID. A connector (OAuth) grant bound to a single workspace may omit it."
+      },
+      {
+        "param": "itemId",
+        "required": true,
+        "source": "list_workspace_roadmap_items -> id",
+        "notes": "Roadmap item ID (not an activity/issue ID)."
+      },
+      {
+        "param": "roadmapId",
+        "required": false,
+        "source": "list_workspace_roadmaps -> id",
+        "notes": "Moves the item to another non-archived roadmap."
+      },
+      {
+        "param": "title",
+        "required": false,
+        "source": "user",
+        "notes": "Cannot be empty. Connectors: max 500 chars."
+      },
+      {
+        "param": "description",
+        "required": false,
+        "source": "user",
+        "notes": "Empty string clears it. Connectors: max 20,000 chars."
+      },
+      {
+        "param": "category",
+        "required": false,
+        "source": "user",
+        "notes": "Empty string clears it."
+      },
+      {
+        "param": "priority",
+        "required": false,
+        "source": "constant",
+        "notes": "urgent | high | medium | low | none."
+      }
+    ],
+    "preconditions": [
+      "Caller is the workspace owner or an active member with role owner/admin (check get_workspace -> ownerId and list_workspace_members -> role)",
+      "Roadmap governance mode is not 'enforce' (get_workspace -> roadmapGovernanceMode; missing means 'shadow', 'off' if roadmapGovernanceEnabled is false)",
+      "Item exists, is not archived and its lifecycle is not materialized",
+      "At least one field to change is passed",
+      "The workspace owner explicitly instructed this direct change (GOV-MAX: roadmap changes are otherwise proposed via change requests)"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "naturally idempotent",
+    "returns": "Merged item JSON (previous fields + patch) with the new updatedAt.",
+    "pairsWith": [
+      "get_workspace",
+      "list_workspace_roadmap_items",
+      "get_workspace_roadmap_item_history"
+    ],
+    "errors": [
+      {
+        "when": "GOVERNANCE_REVIEW_REQUIRED: this workspace roadmap runs in enforce mode...",
+        "fix": "Do not retry. Propose the change with preview_workspace_roadmap_change then submit_workspace_roadmap_change (changeType edit, prioritize, archive, restore, link...) and let a reviewer approve it."
+      },
+      {
+        "when": "Roadmap item not found",
+        "fix": "Re-read list_workspace_roadmap_items and use an existing id."
+      },
+      {
+        "when": "Active workspace roadmap not found",
+        "fix": "The target roadmapId is missing or archived; pick one from list_workspace_roadmaps."
+      },
+      {
+        "when": "Archived roadmap items cannot be edited. Restore the item first.",
+        "fix": "Ask the owner whether to restore it (governed changeType restore or restore_workspace_roadmap_item)."
+      },
+      {
+        "when": "Materialized roadmap items cannot be edited; archive or create follow-up scope instead.",
+        "fix": "Create a follow-up item with create_workspace_roadmap_item, or propose an archive."
+      },
+      {
+        "when": "Roadmap item update has no changes.",
+        "fix": "Pass at least one of roadmapId, title, description, category, priority."
+      },
+      {
+        "when": "Roadmap item title cannot be empty. / Invalid roadmap item priority: <value>.",
+        "fix": "Pass a non-empty title; use urgent, high, medium, low or none."
+      },
+      {
+        "when": "You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.')",
+        "fix": "Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry."
+      },
+      {
+        "when": "Connector: JSON-RPC -32003 'The OAuth scope \"roadmap:manage\" is required for ...'",
+        "fix": "Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes."
+      },
+      {
+        "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
+        "fix": "Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry."
+      }
+    ],
+    "oauthScope": "roadmap:manage",
+    "cli": "lpm roadmap item-update --workspace <workspaceId> --item <itemId> [--roadmap <roadmapId>] [--title <text>] [--description <text>] [--category <text>] [--priority <urgent|high|medium|low|none>] [--json]",
+    "gotchas": [
+      {
+        "text": "Bypasses change-request review even though it is exposed to connectors under roadmap:manage; under GOV-MAX use it only on explicit owner instruction.",
+        "verifiedFrom": "server.ts:12224-12230"
+      },
+      {
+        "text": "Moving an item (roadmapId) does not move its dependency links or allocations, which keep the old roadmapId.",
+        "verifiedFrom": "server.ts:13430-13441"
+      },
+      {
+        "text": "Only materialized items are locked; delivered/closed items are still editable.",
+        "verifiedFrom": "src/lib/workspaceRoadmap.ts:349-354"
+      },
+      {
+        "text": "Lifecycle cannot be changed here. Writes an audit event.",
+        "verifiedFrom": "server.ts:13412-13464"
+      }
+    ],
+    "verifiedFrom": "updateWorkspaceRoadmapItemCommand, assertLegacyRoadmapMutationAllowed, buildRoadmapItemPatch"
+  }
+]

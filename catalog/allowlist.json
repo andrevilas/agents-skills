@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "source": "design §3.1 and §5.6 V2; digests/infra.md (non-catalog tokens)",
+  "rule": "V2 fails on a backticked snake_case token that matches the tool-verb pattern and is neither a snapshot tool nor listed here. Entries of kind nonexistent-tool must never appear as a call in a step (`{{tool:x}}`); prose may name them only to forbid them.",
+  "tokens": [
+    {
+      "token": "audit_events",
+      "kind": "data-name",
+      "reason": "Firestore collection read by the analytics bridge (entity `audit_events`); not a tool.",
+      "context": "lpm-integrations"
+    },
+    {
+      "token": "audit_events_raw",
+      "kind": "data-name",
+      "reason": "BigQuery table written by the analytics bridge for `audit_events`; not a tool.",
+      "context": "lpm-integrations"
+    },
+    {
+      "token": "comment_added",
+      "kind": "enum-value",
+      "reason": "Activity-feed entry type and webhook event emitted by `create_comment`; not a tool.",
+      "context": "lpm-deliver-activity"
+    },
+    {
+      "token": "consolidate_duplicate",
+      "kind": "enum-value",
+      "reason": "`decision.decisionType` value of operational-entry curation; not a tool.",
+      "context": "lpm-intake-triage"
+    },
+    {
+      "token": "create_allocation",
+      "kind": "enum-value",
+      "reason": "`operations[].type` value of `preview_owner_roadmap_change`; not a tool.",
+      "context": "lpm-roadmap-owner-ops"
+    },
+    {
+      "token": "create_dependency",
+      "kind": "enum-value",
+      "reason": "`operations[].type` value of `preview_owner_roadmap_change`; not a tool.",
+      "context": "lpm-roadmap-owner-ops"
+    },
+    {
+      "token": "create_item",
+      "kind": "enum-value",
+      "reason": "`operations[].type` value of `preview_owner_roadmap_change`; not a tool.",
+      "context": "lpm-roadmap-owner-ops"
+    },
+    {
+      "token": "create_task",
+      "kind": "enum-value",
+      "reason": "`decision.decisionType` value of operational-entry curation and conversion; not a tool.",
+      "context": "lpm-intake-triage"
+    },
+    {
+      "token": "draft_created",
+      "kind": "enum-value",
+      "reason": "`status` returned by `create_project_change_set_from_resolution`; not a tool.",
+      "context": "lpm-requirements-scope"
+    },
+    {
+      "token": "list_users",
+      "kind": "nonexistent-tool",
+      "reason": "Not an LPM tool: there is no global user listing, by design. Never call it. Resolve people through workspace, project or team membership (`list_workspace_members`, `list_team_members`, `list_project_assignable_members`) or `get_user` with a known uid.",
+      "context": "lpm-workspace-admin"
+    },
+    {
+      "token": "request_more_information",
+      "kind": "enum-value",
+      "reason": "`decision.decisionType` value of operational-entry curation; not a tool.",
+      "context": "lpm-intake-triage"
+    },
+    {
+      "token": "update_capability",
+      "kind": "enum-value",
+      "reason": "`operations[].type` value of `preview_owner_roadmap_change`; not a tool.",
+      "context": "lpm-roadmap-owner-ops"
+    },
+    {
+      "token": "update_item",
+      "kind": "enum-value",
+      "reason": "`operations[].type` value of `preview_owner_roadmap_change`; not a tool.",
+      "context": "lpm-roadmap-owner-ops"
+    },
+    {
+      "token": "update_roadmap",
+      "kind": "enum-value",
+      "reason": "`operations[].type` value of `preview_owner_roadmap_change`; not a tool.",
+      "context": "lpm-roadmap-owner-ops"
+    }
+  ]
+}

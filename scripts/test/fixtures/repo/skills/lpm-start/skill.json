@@ -1,0 +1,11 @@
+{
+  "id": "lpm-start", "title": "LPM start: connection, IDs and routing", "version": "2.0.0", "pack": "core", "kind": "tools", "invocation": "implicit",
+  "description": "Use first for an LPM request when no other skill fits or a tool is missing (ferramenta ausente).",
+  "doneWhen": "Exactly one skill was chosen.", "authorityCeiling": "Reads only.",
+  "jobs": ["a", "b", "c", "d", "e"],
+  "routing": [ { "order": 1, "all": [["tool missing", "ferramenta ausente", "-32003"]], "unless": ["budget"], "firstCall": "get_mcp_connection_info" } ],
+  "notFor": [], "owns": ["get_mcp_connection_info"], "uses": [], "cli": ["auth status"],
+  "sharedRefs": [],
+  "references": [ { "file": "references/route.md", "loadWhen": "no description matches or two match" }, { "file": "references/agent-setup.md", "loadWhen": "asked to connect an agent" } ],
+  "codex": { "shortDescription": "Check the LPM connection and pick one skill", "defaultPrompt": "Use $lpm-start to route this LPM request." }
+}

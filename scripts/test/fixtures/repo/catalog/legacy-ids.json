@@ -1,0 +1,1 @@
+{ "schemaVersion": 1, "legacy": [ { "id": "software-project-orchestrator", "primary": "lpm-deliver-activity", "skills": ["lpm-deliver-activity", "lpm-start"] } ] }

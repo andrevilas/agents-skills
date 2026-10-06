@@ -12,5 +12,8 @@
   "synced_at": "<set-me>",
   "synced_by": "<set-me>",
   "local_patch_policy": "patch-in-fork",
-  "notes": "Replace placeholders after the first real sync."
+  "notes": "Replace placeholders after the first real sync.",
+  "files_sha256": {
+    "README.md": "3f01b030691bb10f4f02afec6b9744c66fb5189b998497e2bcff65a8a1c760e7"
+  }
 }

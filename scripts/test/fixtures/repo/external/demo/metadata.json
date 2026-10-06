@@ -1,0 +1,1 @@
+{ "id": "demo", "status": "active", "source_type": "external-upstream", "upstream_repo": "https://example.invalid/demo.git", "upstream_ref": "abc123" }

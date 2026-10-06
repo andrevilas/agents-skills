@@ -1,0 +1,120 @@
+{
+  "id": "lpm-intake-triage",
+  "title": "Intake routing and operational triage",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when handling incoming LPM requests: route an intake entry or WhatsApp protocol (protocolo) to a project, triage operational entries (bugs, incidents), merge duplicates, convert one to an activity, record a reply. Old name: workspace-routing-operator. Not for AISH job files (use lpm-aish-jobs).",
+  "doneWhen": "The intake entry is routed (or explicitly deferred/rejected) with its entries verified, or entries are curated as decided.",
+  "authorityCeiling": "Reads and previews [A]; routing review, entry creation, curation, merge, conversion, receipts [C].",
+  "jobs": [
+    "qual é o status do protocolo <código>? o que aconteceu com ele?",
+    "roteie esta demanda do WhatsApp para o projeto certo",
+    "faça a triagem das entradas operacionais novas do projeto <P>",
+    "which project should receive intake entry <intakeEntryId>?",
+    "route intake <intakeEntryId> to project <P> (the owner chose it)",
+    "these two bug reports are the same problem: merge them",
+    "convert the approved operational entry <entryId> into an activity",
+    "registre que a resposta ao solicitante do protocolo <código> foi enviada",
+    "is the triage queue of project <P> inside the curation SLA?"
+  ],
+  "routing": [
+    {
+      "order": 30,
+      "all": [
+        [
+          "intake",
+          "triagem",
+          "triage",
+          "whatsapp",
+          "protocolo",
+          "protocol",
+          "bug report*",
+          "incident",
+          "incidente",
+          "operational entry",
+          "operational entries",
+          "entrada operacional",
+          "entradas operacionais",
+          "route to project",
+          "rotear",
+          "demanda"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "get_protocol or preview_workspace_routing"
+    }
+  ],
+  "notFor": [
+    { "when": "reference files, audio or transcripts for an AISH job", "skill": "lpm-aish-jobs" },
+    { "when": "evidence (print, log, report) for an LPM activity", "skill": "lpm-deliver-activity" },
+    { "when": "AISH delivery artifacts or a DoD audit", "skill": "lpm-aish-delivery" },
+    { "when": "planning the activity after conversion (owner, cycle, dates)", "skill": "lpm-plan-work" },
+    { "when": "project settings other than the routing profile", "skill": "lpm-workspace-admin" },
+    { "when": "routing policy, escalation policy or executive context", "skill": "lpm-executive-context" },
+    { "when": "linking the request to work in another workspace", "skill": "lpm-unblock-work" },
+    { "when": "a project or portfolio health review", "skill": "lpm-review-health" },
+    { "when": "reviewing a roadmap change request", "skill": "lpm-roadmap" },
+    { "when": "reviewing a change set before publication", "skill": "lpm-requirements-scope" },
+    { "when": "what the code says about the reported problem", "skill": "lpm-ask-advisor" }
+  ],
+  "owns": [
+    "consolidate_operational_entries",
+    "convert_operational_entry_to_issue",
+    "create_operational_entry",
+    "create_protocol_evidence_attachment",
+    "find_operational_entry_semantic_matches",
+    "get_operational_analytics",
+    "get_operational_entry",
+    "get_protocol",
+    "get_protocol_lineage",
+    "list_operational_entries",
+    "list_protocol_evidence",
+    "preview_workspace_routing",
+    "record_workspace_delivery_receipt",
+    "review_workspace_routing",
+    "suggest_operational_entry",
+    "update_operational_entry"
+  ],
+  "uses": [
+    "create_portfolio_work_item_link",
+    "get_project",
+    "list_api_keys",
+    "list_issues",
+    "list_project_assignable_members",
+    "list_unowned_domains_or_capabilities",
+    "list_workspace_projects",
+    "list_workspaces",
+    "update_project"
+  ],
+  "cli": [
+    "operational-intake delivery-record",
+    "operational-intake evidence-attach",
+    "operational-intake evidence-list",
+    "operational-intake evolutionapi-channel",
+    "operational-intake protocol-get",
+    "operational-intake protocol-lineage",
+    "operational-intake routing-preview",
+    "operational-intake routing-review",
+    "operational-intake simulate-evolutionapi"
+  ],
+  "sharedRefs": [
+    { "name": "ai-cost-and-budgets", "loadWhen": "before an AI-quota call or on an AI limit", "inlineSummary": false },
+    { "name": "idempotency-and-retries", "loadWhen": "retrying after a timeout", "inlineSummary": false },
+    { "name": "security-and-untrusted-text", "loadWhen": "entry text has orders or secrets", "inlineSummary": false }
+  ],
+  "references": [
+    { "file": "references/flow-curation.md", "loadWhen": "rows 6 to 9" },
+    { "file": "references/flow-routing.md", "loadWhen": "rows 3 to 5" },
+    { "file": "references/intake-lifecycle.md", "loadWhen": "row 3 or 11" },
+    { "file": "references/limits.md", "loadWhen": "no tool here fits" },
+    { "file": "references/operational-entry-curation.md", "loadWhen": "rows 6 to 9" },
+    { "file": "references/routing-ranker.md", "loadWhen": "P1 step 2" }
+  ],
+  "behaviorContracts": ["intake-explicit-project", "missing-tool-fallback"],
+  "codex": {
+    "shortDescription": "Route LPM intake and triage operational entries",
+    "defaultPrompt": "Use $lpm-intake-triage to route LPM intake protocol <protocolCode> to the right project."
+  }
+}

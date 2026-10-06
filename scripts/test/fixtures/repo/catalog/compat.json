@@ -1,0 +1,5 @@
+{ "schemaVersion": 1, "see": "lpm-deliver-activity", "files": [
+  { "path": "docs/lpm-coverage-matrix.md", "kind": "coverage-matrix", "tools": ["list_workspace_activities", "upload_activity_attachment"], "phrases": [] },
+  { "path": "skills/legacy-orchestrator/targets/codex/legacy-orchestrator/SKILL.md", "kind": "legacy-compat", "tools": ["list_workspace_activities", "upload_activity_attachment", "delete_activity_attachment"], "phrases": ["Deprecated: see lpm-deliver-activity"] },
+  { "path": "skills/legacy-orchestrator/targets/antigravity/legacy-orchestrator/PLAYBOOK.md", "kind": "legacy-compat", "tools": ["list_activity_attachments"], "phrases": ["Deprecated: see lpm-deliver-activity"] }
+] }

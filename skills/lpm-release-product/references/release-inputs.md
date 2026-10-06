@@ -1,0 +1,30 @@
+# Release inputs in a new session
+Load when: a §3 input is missing (new session)
+Applies to: lpm-release-product    Source: lpm `scripts/deploy-production.sh` (candidate-URL lookup and promotion wait, both JSON + jq), `scripts/evaluate-advisor-golden-set.ts` (report `baseUrl`, `generatedAt`), `server.ts` `createIssueCommentCommand` (comment id, feed `metadata.commentId`, `commentPreview` = first 120 characters)
+## Summary
+- Every value comes from a command or a tool result of this run; nothing is copied from memory.
+- The rollback target is the revision that served 100 % BEFORE promotion, never the current `<live>` output after a promotion.
+- Nothing found → STOP and ask; never fill a value with a guess.
+
+## Facts
+| Field / value | Get it from | Consequence for the agent |
+|---|---|---|
+| revision (new session) | `gcloud run services describe <svc> --format=json \| jq -r '.status.traffic[] \| select(.tag=="lpm-candidate") \| .revisionName'` | empty → no candidate: run P2 |
+| candidateUrl (new session) | the same command with `.url` instead of `.revisionName` (lpm-repo-rules Facts) | the tag URL, never the plain service URL |
+| promoteCmd (new session) | `gcloud run services update-traffic <svc> --to-revisions=<revision>=100` | `<revision>` from the row above |
+| P3 result (rows 5, 6) | reportFile of this conversation, a report the user names, or the newest `docs/evaluation/reports/advisor-*.json` with `baseUrl` == candidateUrl and `generatedAt` after `gcloud run revisions describe <revision> --project=gen-lang-client-0962999154 --region=us-west1 --format='value(metadata.creationTimestamp)'` | none → run P3 first |
+| rollback target (new session) | {{tool:list_comments}}(projectId, issueId) → newest `content` starting "Release <promoted revision>: rollback target " (promoted revision = current `<live>` output) → the next word; or {{tool:list_workspace_activities}}(workspaceId, projectId, limit=50) → `metadata.commentPreview` with the same text | none → SKILL.md §6 row "rollback target not found"; never use `<live>` after a promotion |
+| rollback guard | rollback target == `<live>` output | STOP and ask which revision takes the traffic |
+
+## Rules
+1. Run these lookups only when the value is not in this conversation; a value from this run wins.
+2. The rollback target guard runs before every rollback (flow-rollback-evidence precondition 2).
+3. Never print `LPM_API_KEY` or put it in a command line that is echoed.
+
+## Examples
+```text
+example: new session, row 6
+revision   = little-project-manager-00651-abc (tag lpm-candidate)
+P3 result  = docs/evaluation/reports/advisor-2026-10-06T14-02-11-000Z.json (baseUrl = candidateUrl, after the revision's creation)
+promoteCmd = gcloud run services update-traffic little-project-manager --project=gen-lang-client-0962999154 --region=us-west1 --to-revisions=little-project-manager-00651-abc=100
+```

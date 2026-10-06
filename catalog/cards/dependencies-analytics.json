@@ -1,0 +1,1724 @@
+[
+  {
+    "name": "assign_project_issue_owner",
+    "purpose": "Assigns one issue to an eligible project member, or clears the assignee with null.",
+    "useWhen": [
+      "User names who should own an activity",
+      "Fixing one issue from list_unassigned_project_issues"
+    ],
+    "avoidWhen": [
+      "Several issues: use bulk_assign_project_issue_owners",
+      "You need to change governance roles (project/product owner, delivery lead): assignment is not governance authority; use update_project"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id or list_unassigned_project_issues -> items[].id",
+        "notes": ""
+      },
+      {
+        "param": "assigneeId",
+        "required": true,
+        "source": "list_project_assignable_members -> uid",
+        "notes": "User ID string, or null to clear. Must be eligible in the project directory."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it",
+      "Issue exists in that project",
+      "assigneeId is an eligible member of the project directory"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, issueId, operation, status:'updated', result:{id, updatedFields:{assigneeId}}}",
+    "pairsWith": [
+      "list_unassigned_project_issues",
+      "list_project_assignable_members"
+    ],
+    "errors": [
+      {
+        "when": "Assignee is not eligible for this project",
+        "fix": "Pick a uid returned by list_project_assignable_members."
+      },
+      {
+        "when": "Assignee is invalid",
+        "fix": "Send a non-empty user ID string or null."
+      },
+      {
+        "when": "Issue not found",
+        "fix": "Re-check issueId with list_issues for the same projectId."
+      },
+      {
+        "when": "Issue changed during update; reload and retry.",
+        "fix": "Retry once."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm issues assign --project <projectId> --issue <issueId> (--assignee <userId> | --clear-assignee) (calls update_issue)",
+    "gotchas": [
+      {
+        "text": "Assigning work records an issue_assignee_changed activity visible to the team and fires an issue_updated webhook; confirm the person with the user unless the user named them.",
+        "verifiedFrom": "server.ts:28370-28393"
+      },
+      {
+        "text": "Never guess a user ID from a name: resolve it with list_project_assignable_members.",
+        "verifiedFrom": "server.ts:5407-5412"
+      }
+    ],
+    "verifiedFrom": "assignProjectIssueOwnerCommand -> updateIssueCommand (normalizeAssignableProjectUserId, listProjectUserDirectoryCommand)"
+  },
+  {
+    "name": "bulk_assign_project_issue_owners",
+    "purpose": "Assigns or clears the assignee on many issues of one project in one call and reports success or failure per issue.",
+    "useWhen": [
+      "User approved an assignment plan for several issues",
+      "Resolving the delivery:ownership-gaps risk after list_unassigned_project_issues"
+    ],
+    "avoidWhen": [
+      "Only one issue: use assign_project_issue_owner",
+      "Issues belong to different projects: one call per project"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "updates",
+        "required": true,
+        "source": "list_unassigned_project_issues -> items[].id and list_project_assignable_members -> uid",
+        "notes": "Non-empty array of {issueId, assigneeId} where assigneeId is a uid or null."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it",
+      "Each assigneeId is eligible in the project directory"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, requestedCount, updatedCount, failedCount, results:[{issueId, status:'updated'|'failed', assigneeId, error?}]}",
+    "pairsWith": [
+      "list_unassigned_project_issues",
+      "list_project_assignable_members"
+    ],
+    "errors": [
+      {
+        "when": "At least one issue owner update is required",
+        "fix": "Send a non-empty updates array."
+      },
+      {
+        "when": "results[].status = 'failed' (e.g. 'Assignee is not eligible for this project', 'Issue not found')",
+        "fix": "Fix those items and resend only the failed ones."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Not atomic: partial success is normal; check failedCount.",
+        "verifiedFrom": "server.ts:9781"
+      },
+      {
+        "text": "Every assignment records an issue_assignee_changed activity visible to the team: show the assignment plan to the user before sending.",
+        "verifiedFrom": "server.ts:28370-28393"
+      }
+    ],
+    "verifiedFrom": "bulkAssignProjectIssueOwnersCommand -> updateIssueCommand"
+  },
+  {
+    "name": "bulk_set_project_issue_due_dates",
+    "purpose": "Sets or clears due dates on many issues of one project in one call and reports success or failure per issue.",
+    "useWhen": [
+      "User approved new deadlines for several issues",
+      "Re-planning after list_overdue_project_issues (resolution action 'Replanejar prazos')"
+    ],
+    "avoidWhen": [
+      "Only one issue: use set_project_issue_due_date",
+      "bulk_update_project_issue_due_dates is an identical alias: prefer this tool"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "updates",
+        "required": true,
+        "source": "list_overdue_project_issues -> items[].id plus user-provided dates",
+        "notes": "Non-empty array of {issueId, dueDate} where dueDate is 'YYYY-MM-DD' (ISO 8601) or null. Format is not validated."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it",
+      "Each issueId exists in that project"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, requestedCount, updatedCount, failedCount, results:[{issueId, status:'updated'|'failed', dueDate, error?}]}",
+    "pairsWith": [
+      "list_overdue_project_issues"
+    ],
+    "errors": [
+      {
+        "when": "At least one issue due date update is required",
+        "fix": "Send a non-empty updates array."
+      },
+      {
+        "when": "results[].status = 'failed' (e.g. 'Issue not found')",
+        "fix": "Fix those items and resend only the failed ones."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Not atomic; partial success is normal.",
+        "verifiedFrom": "server.ts:9711-9741"
+      },
+      {
+        "text": "Invalid date strings are stored and silently break overdue detection.",
+        "verifiedFrom": "src/lib/projectResolution.ts:115-122"
+      },
+      {
+        "text": "Moving deadlines is a delivery commitment: show the plan to the user first.",
+        "verifiedFrom": "server.ts:28349-28368"
+      }
+    ],
+    "verifiedFrom": "bulkSetProjectIssueDueDatesCommand -> updateIssueCommand"
+  },
+  {
+    "name": "bulk_set_project_issue_estimates",
+    "purpose": "Sets or clears estimates on many issues of one project in one call and reports success or failure per issue.",
+    "useWhen": [
+      "User approved a list of estimates for several issues",
+      "Resolving the delivery:unestimated risk after list_unestimated_project_issues"
+    ],
+    "avoidWhen": [
+      "Only one issue: use set_project_issue_estimate",
+      "Issues belong to different projects: make one call per project"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "All updates must be issues of this project."
+      },
+      {
+        "param": "updates",
+        "required": true,
+        "source": "list_unestimated_project_issues -> items[].id plus user-provided values",
+        "notes": "Non-empty array of {issueId, estimate} where estimate is number >= 0 or null."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it",
+      "Each issueId exists in that project"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, requestedCount, updatedCount, failedCount, results:[{issueId, status:'updated'|'failed', estimate, error?}]}",
+    "pairsWith": [
+      "list_unestimated_project_issues"
+    ],
+    "errors": [
+      {
+        "when": "At least one issue estimate update is required",
+        "fix": "Send a non-empty updates array."
+      },
+      {
+        "when": "results[].status = 'failed' with error text",
+        "fix": "Read error per item (e.g. 'Issue not found', 'Issue estimate must be a non-negative number'); fix and resend only the failed items."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Not atomic: items run one by one and partial success is normal; always check failedCount.",
+        "verifiedFrom": "server.ts:9670-9698"
+      },
+      {
+        "text": "Estimates drive forecast cost (estimate x hourly rate), so show the list to the user before sending.",
+        "verifiedFrom": "src/lib/financialAudit.ts:580-583"
+      },
+      {
+        "text": "Keep batches modest (sequential processing; large arrays are slow).",
+        "verifiedFrom": "server.ts:9670-9691"
+      }
+    ],
+    "verifiedFrom": "bulkSetProjectIssueEstimatesCommand -> updateIssueCommand"
+  },
+  {
+    "name": "bulk_update_project_issue_due_dates",
+    "purpose": "Alias of bulk_set_project_issue_due_dates: sets or clears due dates on many issues of one project with per-item status.",
+    "useWhen": [
+      "Only when bulk_set_project_issue_due_dates is not available in your tool list"
+    ],
+    "avoidWhen": [
+      "bulk_set_project_issue_due_dates is available: use it (same server function)",
+      "Only one issue: use set_project_issue_due_date"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "updates",
+        "required": true,
+        "source": "list_overdue_project_issues -> items[].id plus user-provided dates",
+        "notes": "Non-empty array of {issueId, dueDate ('YYYY-MM-DD' or null)}."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, requestedCount, updatedCount, failedCount, results:[{issueId, status, dueDate, error?}]}",
+    "pairsWith": [
+      "list_overdue_project_issues"
+    ],
+    "errors": [
+      {
+        "when": "At least one issue due date update is required",
+        "fix": "Send a non-empty updates array."
+      },
+      {
+        "when": "results[].status = 'failed'",
+        "fix": "Resend only the failed items after fixing them."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Pure alias: identical behavior and response to bulk_set_project_issue_due_dates.",
+        "verifiedFrom": "server.ts:38514-38521"
+      }
+    ],
+    "verifiedFrom": "bulkSetProjectIssueDueDatesCommand -> updateIssueCommand"
+  },
+  {
+    "name": "create_analytics_bridge_run",
+    "purpose": "Queues a new analytics export run (status 'queued') for a workspace or project; it does not execute it.",
+    "useWhen": [
+      "The user explicitly asks to export/refresh analytics data to Storage/BigQuery"
+    ],
+    "avoidWhen": [
+      "A queued run already exists in list_analytics_bridge_runs: process it with process_analytics_bridge_run instead",
+      "User only wants to read metrics: use get_project_analytics"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "Send workspaceId or projectId (at least one)."
+      },
+      {
+        "param": "projectId",
+        "required": false,
+        "source": "list_projects -> id",
+        "notes": "If given, workspace is derived from the project."
+      },
+      {
+        "param": "entityTypes",
+        "required": false,
+        "source": "constant",
+        "notes": "Array from audit_events|issues|requirements|projects|delivery_health_daily|team_delivery_health_daily. Omit for all six. Send only these values."
+      },
+      {
+        "param": "mode",
+        "required": false,
+        "source": "constant",
+        "notes": "incremental (default) | backfill."
+      },
+      {
+        "param": "resetEntities",
+        "required": false,
+        "source": "constant",
+        "notes": "Subset of entityTypes to re-export from scratch; others are dropped."
+      },
+      {
+        "param": "requestedReason",
+        "required": false,
+        "source": "user",
+        "notes": "Free text explaining why."
+      }
+    ],
+    "preconditions": [
+      "At least one of workspaceId/projectId is given",
+      "Caller can read that workspace or project (only read access is checked)",
+      "User asked for the export"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "not idempotent",
+    "returns": "Run object {id, status:'queued', mode, entityTypes, resetEntities, storagePrefix, workspaceId, projectId, createdAt}; use id as runId in process_analytics_bridge_run.",
+    "pairsWith": [
+      "get_analytics_bridge_observability",
+      "process_analytics_bridge_run",
+      "list_analytics_bridge_runs"
+    ],
+    "errors": [
+      {
+        "when": "Analytics bridge run requires workspaceId or projectId",
+        "fix": "Send one of them."
+      },
+      {
+        "when": "You do not have access to this project / workspace",
+        "fix": "Stop and ask the user for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "No background worker processes queued runs (runAnalyticsBridgeWorkerCycle exists but nothing calls it): the run stays 'queued' until process_analytics_bridge_run is called.",
+        "verifiedFrom": "server.ts:4800"
+      },
+      {
+        "text": "Creating a run resets the watermark cursor of each selected entity to null, so the next processing re-exports everything even in 'incremental' mode, and BigQuery loads append rows (duplicates).",
+        "verifiedFrom": "server.ts:4288-4305"
+      }
+    ],
+    "verifiedFrom": "createAnalyticsBridgeRunCommand (createAnalyticsBridgeRun, createInitialAnalyticsBridgeWatermarks); runAnalyticsBridgeWorkerCycle has no caller"
+  },
+  {
+    "name": "get_analytics_bridge_observability",
+    "purpose": "Shows the state of the analytics export pipeline (Firestore -> Cloud Storage NDJSON -> BigQuery) for a workspace or project: runtime config, run counts, recent runs and per-entity watermarks.",
+    "useWhen": [
+      "User asks whether analytics exports/BigQuery loads are healthy",
+      "Before creating a new analytics bridge run, to see if one is already queued or failed"
+    ],
+    "avoidWhen": [
+      "You only need the list of runs: use list_analytics_bridge_runs",
+      "You need delivery metrics: use get_project_analytics"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "Send workspaceId or projectId (at least one)."
+      },
+      {
+        "param": "projectId",
+        "required": false,
+        "source": "list_projects -> id",
+        "notes": "If given, it wins and the workspace is derived from the project."
+      }
+    ],
+    "preconditions": [
+      "At least one of workspaceId/projectId is given",
+      "Caller can read that workspace or project"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{scope{workspaceId, projectId}, generatedAt, runtime{datasetId, bucketName, bigQueryLoadEnabled, bigQueryProjectId}, stats{queued, running, completed, failed, lastCompletedAt, lastFailedAt}, watermarks:[{entityType, cursorField, cursorValue, lastSuccessfulRunId, lastSuccessfulAt}], recentRuns:[run objects, max 15]}",
+    "pairsWith": [
+      "list_analytics_bridge_runs",
+      "create_analytics_bridge_run"
+    ],
+    "errors": [
+      {
+        "when": "Analytics bridge observability requires workspaceId or projectId",
+        "fix": "Send one of them."
+      },
+      {
+        "when": "You do not have access to this project / workspace",
+        "fix": "Stop and ask the user for access."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "stats and recentRuns include ONLY runs created by the calling user.",
+        "verifiedFrom": "server.ts:4231"
+      },
+      {
+        "text": "Watermarks are per exact scope (workspace scope and project scope are separate).",
+        "verifiedFrom": "server.ts:4352-4357"
+      },
+      {
+        "text": "bigQueryLoadEnabled=false means runs only write NDJSON files.",
+        "verifiedFrom": "src/lib/analyticsBigQueryLoadJob.ts:74-86"
+      },
+      {
+        "text": "Output contains infrastructure names (bucket, dataset): do not share outside the team.",
+        "verifiedFrom": "server.ts:4362-4368"
+      }
+    ],
+    "verifiedFrom": "getAnalyticsBridgeObservabilityCommand, listAnalyticsBridgeRunsCommand, buildAnalyticsBridgeObservabilitySnapshot"
+  },
+  {
+    "name": "get_operational_analytics",
+    "purpose": "Returns metrics on a project's operational entries (intake bugs, incidents, requests, improvements): counts by status, curation state, priority and type, curation SLA breaches, average ages and health status.",
+    "useWhen": [
+      "User asks about the intake/support queue health of a project",
+      "Checking curation SLA breaches or entries approved without a task"
+    ],
+    "avoidWhen": [
+      "You need issue delivery metrics: use get_project_analytics",
+      "You need the entries themselves: use list_operational_entries"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, generatedAt, settings{curationSlaHours (default 48), curationWarningHours}, metrics{totalEntries, activeEntries, awaitingCurationCount, breachedCurationSlaCount, warningCurationSlaCount, avgOpenAgeHours, avgTimeToFirstCurationHours, avgTimeToDecisionHours, taskLinkedCount, approvedWithoutTaskCount, duplicateClusterCount, attachmentCoverageRate, healthStatus healthy|watch|critical}, buckets{byStatus, byCurationState, byPriority, byType}, recentCriticalEvents[]}",
+    "pairsWith": [
+      "list_operational_entries",
+      "convert_operational_entry_to_issue"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found",
+        "fix": "Re-check projectId with list_projects."
+      },
+      {
+        "when": "You do not have access to this project",
+        "fix": "Stop and ask the user for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Timing metrics use at most 500 operational-entry audit events per project (unordered), so they are approximate on busy projects.",
+        "verifiedFrom": "server.ts:25368-25375"
+      }
+    ],
+    "verifiedFrom": "getOperationalAnalyticsCommand (buildOperationalAnalyticsSnapshot)"
+  },
+  {
+    "name": "get_project_analytics",
+    "purpose": "Returns delivery-health metrics for one project: 30-day throughput, lead/cycle/blocked times, open blocked issues with what blocks them, completion rate, health status and data-integrity signals.",
+    "useWhen": [
+      "User asks how a project is performing, its delivery health, throughput or lead time",
+      "You need the currently blocked issues of a project together with the issues that block them (projects[0].blockedIssues)",
+      "You need data-integrity signals (orphan AISH jobs, stale active cycles, invalid statuses)"
+    ],
+    "avoidWhen": [
+      "You need metrics for one cycle: cycleId is ignored; use get_cycle and list_issues for that cycle instead",
+      "You need the executive view with risks, finance and decisions: use get_project_owner_surface",
+      "You need intake/operational-entry metrics: use get_operational_analytics",
+      "You need dependency chains: use get_project_dependency_summary"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id (or list_workspace_projects -> id)",
+        "notes": "Project must not be archived."
+      },
+      {
+        "param": "cycleId",
+        "required": false,
+        "source": "list_cycles -> id",
+        "notes": "Declared but IGNORED by the server; do not rely on it."
+      }
+    ],
+    "preconditions": [
+      "Project exists and is not archived",
+      "Caller can read the project"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{scope, generatedAt, metrics:{issuesCount, completedIssues, throughput30d, avgLeadTimeDays, avgCycleTimeDays, avgRequirementLeadTimeDays, avgBlockedTimeDays, blockedIssuesOpen, completionRate (percent 0-100), healthStatus healthy|watch|critical, integrity{status healthy|watch|critical, signals[], invalidIssueStatuses, staleActiveCycles, orphanAishJobs, orphanAutopilotIssues, terminalIssueJobMismatches, requirementsUpdatedAfterCurrentBaseline, details{orphanAishJobs[], terminalIssueJobMismatches[]} ({jobId, category missing-linked-issue|unclassified-standalone-job|completed-job-open-issue|done-issue-nonterminal-job, reason})}}, projects:[{projectId, projectName, throughput30d, blockedIssuesOpen, blockedIssues:[{issueId, title, status, blockedSince, blockedBy:[{issueId, title}], reason}], completedIssues, totalIssues, integrity}]}",
+    "pairsWith": [
+      "list_projects",
+      "list_blocked_project_issues",
+      "get_project_dependency_summary"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this project",
+        "fix": "Project is archived or not visible to the caller. Check list_projects (with archived included) and ask the owner for access; do not retry."
+      },
+      {
+        "when": "-32003 or OAuth access denied",
+        "fix": "Tool is API-key only (no OAuth scope). Call get_mcp_connection_info and tell the user."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Catalog description promises velocity/burndown/status distribution but the server returns delivery-health metrics.",
+        "verifiedFrom": "server.ts:32748"
+      },
+      {
+        "text": "cycleId is ignored: the handler passes only projectId.",
+        "verifiedFrom": "server.ts:37754-37758"
+      },
+      {
+        "text": "Archived projects return an access error.",
+        "verifiedFrom": "server.ts:11769-11781"
+      },
+      {
+        "text": "Result is cached about 10 s per server instance.",
+        "verifiedFrom": "server.ts:1255-1262"
+      }
+    ],
+    "verifiedFrom": "listDeliveryHealthAnalyticsCommand (buildDeliveryHealthAnalytics)"
+  },
+  {
+    "name": "get_project_dependency_graph",
+    "purpose": "Returns the dependency graph around a project (workspace, project and task nodes plus link edges), the critical-path IDs, summary counts and size metadata.",
+    "useWhen": [
+      "You need the critical path of a project or its confidence (meta.criticalPathConfidence)",
+      "You need cross-project edges or a structural/visual analysis of dependencies",
+      "You need to check for dependency cycles (meta.hasDependencyCycle)"
+    ],
+    "avoidWhen": [
+      "A list of chains is enough: use get_project_dependency_summary (smaller payload)",
+      "You only need the next activity: use recommend_next_activity",
+      "You need project-to-project coupling counts: use get_project_dependency_heatmap"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "Omit; resolved from the project. Must match the project's workspace if given."
+      },
+      {
+        "param": "includeResolved",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean, default false (done/canceled tasks hidden)."
+      },
+      {
+        "param": "criticalOnly",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean. Keeps tasks on the critical path or with criticalityScore >= 8."
+      },
+      {
+        "param": "blockedOnly",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean. Keeps only chains around tasks whose derived status is 'blocked'."
+      },
+      {
+        "param": "teamId",
+        "required": false,
+        "source": "list_teams -> id",
+        "notes": "Restricts to a team's projects."
+      },
+      {
+        "param": "maxTaskNodes",
+        "required": false,
+        "source": "constant",
+        "notes": "Number > 0. Caps task nodes, keeping critical-path, blocked and cross-project tasks first. Use e.g. 50 on big workspaces."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project and its workspace",
+      "Project is linked to a workspace"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{nodes:[{id ('task:<issueId>' | 'project:<projectId>' | workspace node), kind task|project|workspace, label, projectId, taskId, status, blockedCount, impactCount, criticalityScore, isOnCriticalPath, metadata{priority, assigneeId, estimate, dueDate, blockerContext}}], edges:[{id, source, target, relation blocks|related|duplicates, isCrossProject}], summary{blockedTasks, criticalTasks, crossProjectDependencies}, criticalPathNodeIds, criticalPathEdgeIds, meta{taskCount, criticalPathStrategy, hasDependencyCycle, criticalPathConfidence high|low, criticalPathMissingEstimateCount, criticalPathMissingDateCount, criticalPathLowConfidenceReasons}, density{limited, visibleTaskCount, omittedTaskCount}}",
+    "pairsWith": [
+      "get_project_dependency_summary",
+      "list_unestimated_project_issues",
+      "create_issue_link"
+    ],
+    "errors": [
+      {
+        "when": "Project is not linked to a workspace.",
+        "fix": "Use list_issue_links for that project instead."
+      },
+      {
+        "when": "Workspace scope does not match the selected project.",
+        "fix": "Call again without workspaceId."
+      },
+      {
+        "when": "You do not have access to this project / workspace",
+        "fix": "Stop and ask the user for access."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Node ids are prefixed: use node.taskId (not node.id) as issueId in other tools.",
+        "verifiedFrom": "src/services/dependencyIntelligence.ts:628-633"
+      },
+      {
+        "text": "meta is workspace-wide, not filtered.",
+        "verifiedFrom": "src/services/dependencyIntelligence.ts:1155"
+      },
+      {
+        "text": "Low criticalPathConfidence usually means missing estimates/due dates: fix with list_unestimated_project_issues.",
+        "verifiedFrom": "src/services/dependencyIntelligence.ts:414-431"
+      },
+      {
+        "text": "Loads all workspace issues; set maxTaskNodes to keep the payload small.",
+        "verifiedFrom": "server.ts:24513-24516"
+      }
+    ],
+    "verifiedFrom": "getProjectDependencyGraphForMcpCommand, getWorkspaceProjectDependencyGraphCommand, buildProjectDependencyGraphResult, buildProjectDependencyGraphView"
+  },
+  {
+    "name": "get_project_dependency_heatmap",
+    "purpose": "Returns a project-by-project matrix of issue-link counts (blocks, related, duplicates) for all projects in the project's workspace, and the strongest coupling pair.",
+    "useWhen": [
+      "User asks which projects in a workspace are most coupled or depend most on each other",
+      "Cross-project risk review for a workspace"
+    ],
+    "avoidWhen": [
+      "You need issue-level chains: use get_project_dependency_summary",
+      "You need nodes/edges or critical path: use get_project_dependency_graph",
+      "You need the requirements coverage heatmap: that is a web UI view, not this tool"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "Marks the 'current' project in the matrix."
+      },
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "Omit; resolved from the project. Must match if given."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project and its workspace",
+      "Project is linked to a workspace"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projects:[{id, label, isCurrentProject}], cells:[{key 'sourceId:targetId', sourceProjectId, targetProjectId, blocksCount, relatedCount, duplicateCount, totalCount, intensity 0-1, involvesCurrentProject, isCrossProject}], cellByKey (same cells keyed by key), strongestCoupling (cell + shortLabel 'A -> B') or null}",
+    "pairsWith": [
+      "list_projects",
+      "get_project_dependency_graph"
+    ],
+    "errors": [
+      {
+        "when": "Project is not linked to a workspace.",
+        "fix": "No workspace matrix exists; use list_issue_links."
+      },
+      {
+        "when": "Workspace scope does not match the selected project.",
+        "fix": "Call again without workspaceId."
+      },
+      {
+        "when": "-32003 or OAuth access denied",
+        "fix": "Tool is API-key only (no OAuth scope). Use get_project_dependency_summary, which is available on OAuth."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Payload grows with N x N projects and every cell appears twice (cells and cellByKey): read only cells with totalCount > 0 and strongestCoupling.",
+        "verifiedFrom": "src/services/dependencyIntelligence.ts:1495-1511"
+      },
+      {
+        "text": "Includes archived projects of the workspace.",
+        "verifiedFrom": "server.ts:24498"
+      },
+      {
+        "text": "Not available to ChatGPT/Claude OAuth connectors although summary/graph are.",
+        "verifiedFrom": "src/server/oauthToolPolicy.ts:42-43"
+      }
+    ],
+    "verifiedFrom": "getProjectDependencyHeatmapForMcpCommand, getWorkspaceProjectDependencyHeatmapCommand, buildDependencyHeatmapView"
+  },
+  {
+    "name": "get_project_dependency_summary",
+    "purpose": "Lists the project's dependency chains (issues that block or are blocked by other issues, including cross-project links) and the subset that still has an open blocker.",
+    "useWhen": [
+      "User asks what is blocking a project or which issues depend on others",
+      "Before deciding the order of work in a project",
+      "To find cross-project dependencies of a project"
+    ],
+    "avoidWhen": [
+      "You need nodes, edges and the critical path: use get_project_dependency_graph",
+      "You need the single next activity to execute: use recommend_next_activity",
+      "You need the project-to-project coupling matrix: use get_project_dependency_heatmap",
+      "You need a paginated list of blocked issues with blocker text: use list_blocked_project_issues"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "Omit it; it is resolved from the project. If given it must equal the project's workspace."
+      },
+      {
+        "param": "includeResolved",
+        "required": false,
+        "source": "constant",
+        "notes": "Boolean, default false. true also includes done/canceled issues."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the project and its workspace",
+      "Project is linked to a workspace"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{activeChains:[{issueId, title, status, projectId, projectLabel, isCrossProject, blockedCount, impactCount, criticalityScore, isOnCriticalPath, blockers:[same summary shape], blocked:[same summary shape], hasCrossProjectDependency}], criticalBlockers:[chains that have at least one open blocker]}; both sorted by criticality.",
+    "pairsWith": [
+      "list_projects",
+      "get_project_dependency_graph",
+      "recommend_next_activity",
+      "set_project_issue_blocker_context"
+    ],
+    "errors": [
+      {
+        "when": "Project is not linked to a workspace.",
+        "fix": "Dependency intelligence needs a workspace; use list_blocked_project_issues or list_issue_links instead."
+      },
+      {
+        "when": "Workspace scope does not match the selected project.",
+        "fix": "Call again without workspaceId."
+      },
+      {
+        "when": "You do not have access to this project / workspace",
+        "fix": "Stop and ask the user for access; check get_mcp_connection_info."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Only 'blocks'/'is-blocked-by' links form chains (related/duplicates are ignored).",
+        "verifiedFrom": "src/services/dependencyIntelligence.ts:1183"
+      },
+      {
+        "text": "A chain status 'blocked' is derived: open blocker link OR active blocker context.",
+        "verifiedFrom": "src/services/dependencyIntelligence.ts:620-625"
+      },
+      {
+        "text": "Loads every issue of every project in the workspace, so it can be slow on large workspaces.",
+        "verifiedFrom": "server.ts:24498-24516"
+      }
+    ],
+    "verifiedFrom": "getProjectDependencySummaryForMcpCommand, resolveProjectDependencyScopeCommand, getWorkspaceDependencyIntelligenceCommand, buildProjectDependencyExplorerSummary"
+  },
+  {
+    "name": "get_project_owner_surface",
+    "purpose": "Returns the project owner's executive view: governance roles, scope/baseline state, delivery counters, finance, dependency counts, pending decisions, risk list and a copilot brief.",
+    "useWhen": [
+      "A project owner, product owner or delivery lead asks for an executive status of the project",
+      "You need the project's risk IDs (e.g. delivery:overdue, delivery:blocked) before using resolution tools",
+      "You need to check missing governance roles (ownerView.governance.missingRoleCount)"
+    ],
+    "avoidWhen": [
+      "Caller has no governance role on the project: use get_project_analytics",
+      "You only need the risk catalog: use list_project_resolution_risks",
+      "You need the workspace-level view: use get_workspace_owner_surface",
+      "You need raw issues/requirements: use get_project_read_model"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Caller holds a governance role on the project: project-owner, product-owner or delivery-lead (the project ownerId counts as project-owner)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{project, ownerView:{generatedAt, governance{projectOwnerId, productOwnerId, deliveryLeadId, missingRoleCount}, scope{currentBaseline, workingScope, delta}, delivery{totalIssues, completedIssues, completionRate, overdueIssues, blockedIssuesOpen, unassignedIssues, unestimatedIssues, activeCycle, healthStatus}, finance{forecastCost, actualCost, remainingForecastCost, currency, ...}, dependencies{activeChainCount, criticalBlockerCount, nextRecommendedActivity}, decisions{pendingCount, actionRequiredCount, items}, copilot{executiveBrief, readyQuestions, facts}, risks:[{id, severity, title, detail}]}}",
+    "pairsWith": [
+      "list_projects",
+      "list_project_resolution_risks",
+      "get_project_resolution_action_catalog",
+      "list_overdue_project_issues"
+    ],
+    "errors": [
+      {
+        "when": "access_denied: You do not have access to this owner surface",
+        "fix": "Caller lacks a governance role. Do not retry; use get_project_analytics or ask the project owner."
+      },
+      {
+        "when": "Project <id> not found",
+        "fix": "Re-check projectId with list_projects."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Contains finance figures: share them only with the owner.",
+        "verifiedFrom": "src/lib/projectOwnerReadModel.ts:660-668"
+      },
+      {
+        "text": "Risk titles/details are in Portuguese and only non-zero risks appear.",
+        "verifiedFrom": "src/lib/projectOwnerReadModel.ts:374-392"
+      },
+      {
+        "text": "With an API key and grounding enabled the call may run a document search that consumes a daily quota (copilot.groundingSources).",
+        "verifiedFrom": "server.ts:9072-9099"
+      },
+      {
+        "text": "Built on get_project_read_model: with an API key the read re-points orphan requirements to the current baseline (a write side effect).",
+        "verifiedFrom": "server.ts:9065-9066"
+      }
+    ],
+    "verifiedFrom": "getProjectOwnerSurfaceCommand (getProjectReadModelCommand, canAccessProjectOwnerSurface, buildProjectOwnerExecutiveSummary)"
+  },
+  {
+    "name": "list_analytics_bridge_runs",
+    "purpose": "Lists the caller's own recent analytics bridge runs, newest first, optionally filtered by workspace or project.",
+    "useWhen": [
+      "You need a runId to process or inspect",
+      "Checking the status/error of runs you created"
+    ],
+    "avoidWhen": [
+      "You need pipeline health and watermarks: use get_analytics_bridge_observability"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": false,
+        "source": "list_workspaces -> id",
+        "notes": "Exact-match filter on the run's workspaceId (also matches project-scope runs of that workspace)."
+      },
+      {
+        "param": "projectId",
+        "required": false,
+        "source": "list_projects -> id",
+        "notes": "Exact-match filter on the run's projectId."
+      }
+    ],
+    "preconditions": [
+      "Authenticated caller"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Array (max 20) of {id, workspaceId, projectId, status queued|running|completed|failed|canceled, mode, entityTypes, resetEntities, requestedReason, exportedRows, storagePrefix, loadJobs, createdAt, startedAt, completedAt, failedAt, errorMessage}",
+    "pairsWith": [
+      "process_analytics_bridge_run",
+      "get_analytics_bridge_observability"
+    ],
+    "errors": [
+      {
+        "when": "Empty array",
+        "fix": "The caller has created no runs in that scope; runs of other users are never shown."
+      }
+    ],
+    "oauthScope": "portfolio:read",
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Only runs requested by the caller; no pagination (max 20).",
+        "verifiedFrom": "server.ts:4231-4238"
+      }
+    ],
+    "verifiedFrom": "listAnalyticsBridgeRunsCommand"
+  },
+  {
+    "name": "list_blocked_project_issues",
+    "purpose": "Lists open issues of a project that are blocked (a legacy 'blocked' status, an open blocking issue link, or an active blocker context), with who blocks them and any active blocker text.",
+    "useWhen": [
+      "User asks what is blocked in a project",
+      "Owner view or risk catalog shows delivery:blocked",
+      "Before recording or resolving blocker context"
+    ],
+    "avoidWhen": [
+      "Caller has no governance role: use get_project_analytics (projects[0].blockedIssues) or get_project_dependency_summary",
+      "You need full dependency chains: use get_project_dependency_summary"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "list_blocked_project_issues -> nextCursor",
+        "notes": "Numeric offset as string."
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "Default 25, max 100."
+      }
+    ],
+    "preconditions": [
+      "Caller holds a governance role on the project (project-owner, product-owner or delivery-lead, or is the project owner)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, count, items:[{id (issueId), type:'issue', title, status, changedAt, details:[{label, value}] incl. 'Bloqueadores' (count or 'Status bloqueado'), 'Bloqueado por' (blocking issues), 'Contexto do bloqueio' (active blocker text)}], nextCursor}",
+    "pairsWith": [
+      "get_issue",
+      "set_project_issue_blocker_context",
+      "prepare_governance_thread_from_blocker",
+      "resolve_project_issue_blocker_context"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this owner surface",
+        "fix": "Caller lacks a governance role. Use get_project_analytics or get_project_dependency_summary."
+      },
+      {
+        "when": "Project <id> not found",
+        "fix": "Re-check projectId with list_projects."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "An issue with an active blocker context (set_project_issue_blocker_context) IS listed here even without a blocking link; the same rule drives the dependency graph and summary.",
+        "verifiedFrom": "src/lib/projectResolution.ts:474-476"
+      },
+      {
+        "text": "'blocked' is not a status accepted by update_issue (backlog|todo|in-progress|done|canceled): to mark a dependency, create a 'blocks' or 'is-blocked-by' link with create_issue_link; for an external blocker use set_project_issue_blocker_context.",
+        "verifiedFrom": "server.ts:33968"
+      }
+    ],
+    "verifiedFrom": "listBlockedProjectIssuesCommand, listProjectResolutionEntitiesCommand, buildProjectResolutionContext (delivery:blocked)"
+  },
+  {
+    "name": "list_overdue_project_issues",
+    "purpose": "Lists open issues of a project whose due date is already past, earliest due date first, with offset pagination.",
+    "useWhen": [
+      "User asks which work is late",
+      "Owner view or risk catalog shows delivery:overdue",
+      "Before re-planning due dates"
+    ],
+    "avoidWhen": [
+      "Caller has no governance role on the project: use list_issues and compare dueDate with today yourself",
+      "You need blocked work: use list_blocked_project_issues"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "list_overdue_project_issues -> nextCursor",
+        "notes": "Numeric offset as string. Omit on first page."
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "Default 25, max 100."
+      }
+    ],
+    "preconditions": [
+      "Caller holds a governance role on the project (project-owner, product-owner or delivery-lead, or is the project owner)"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, count (total), items:[{id (issueId), type:'issue', title, subtitle (description), status, changedAt, details:[{label, value}] with Portuguese labels Prioridade, Responsável, Estimativa, Prazo, Atraso ('N dia(s)')}], nextCursor (null on last page)}",
+    "pairsWith": [
+      "get_project_owner_surface",
+      "bulk_set_project_issue_due_dates"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this owner surface",
+        "fix": "Caller lacks a governance role. Use list_issues and filter dueDate < today yourself."
+      },
+      {
+        "when": "Project <id> not found",
+        "fix": "Re-check projectId with list_projects."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Items are summaries, not full issues: call get_issue for full fields.",
+        "verifiedFrom": "src/lib/projectResolution.ts:586-590"
+      },
+      {
+        "text": "A due date that cannot be parsed never counts as overdue.",
+        "verifiedFrom": "src/lib/projectResolution.ts:581-584"
+      },
+      {
+        "text": "Date-only values ('YYYY-MM-DD') are compared at 00:00 UTC.",
+        "verifiedFrom": "src/lib/projectResolution.ts:115-122"
+      },
+      {
+        "text": "Loop with nextCursor until null.",
+        "verifiedFrom": "src/lib/projectResolution.ts:124-133"
+      }
+    ],
+    "verifiedFrom": "listOverdueProjectIssuesCommand, listProjectResolutionEntitiesCommand, getProjectResolutionContextCommand, buildProjectResolutionContext"
+  },
+  {
+    "name": "list_unassigned_project_issues",
+    "purpose": "Lists open issues (not done, canceled or deleted) of a project that have no assignee.",
+    "useWhen": [
+      "Before distributing work to people",
+      "Owner view shows unassignedIssues > 0 (risk delivery:ownership-gaps)"
+    ],
+    "avoidWhen": [
+      "You need issues without an estimate: use list_unestimated_project_issues",
+      "You need the people who can receive work: use list_project_assignable_members"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "Positive number; truncates items. No cursor/pagination."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, count (total before limit), items:[full issue objects: id, title, status, priority, estimate, dueDate, assigneeId empty, ...]} ordered by updatedAt desc.",
+    "pairsWith": [
+      "list_project_assignable_members",
+      "bulk_assign_project_issue_owners"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found",
+        "fix": "Re-check projectId with list_projects."
+      },
+      {
+        "when": "You do not have access to this project",
+        "fix": "Stop and ask the user for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "count is the full total even when limitCount truncates items.",
+        "verifiedFrom": "server.ts:9289-9298"
+      }
+    ],
+    "verifiedFrom": "listUnassignedProjectIssuesCommand, listOpenProjectIssuesCommand"
+  },
+  {
+    "name": "list_unestimated_project_issues",
+    "purpose": "Lists open issues (not done, canceled or deleted) of a project that have no estimate.",
+    "useWhen": [
+      "Before estimating backlog work",
+      "Critical path confidence is low because estimates are missing",
+      "Owner view shows unestimatedIssues > 0"
+    ],
+    "avoidWhen": [
+      "You need issues without an assignee: use list_unassigned_project_issues",
+      "You need a general filtered issue list: use list_issues"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "constant",
+        "notes": "Positive number; truncates items. No cursor/pagination."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, count (total before limit), items:[full issue objects: id, title, description, status, priority, assigneeId, dueDate, estimate:null, ...]} ordered by updatedAt desc.",
+    "pairsWith": [
+      "list_projects",
+      "bulk_set_project_issue_estimates"
+    ],
+    "errors": [
+      {
+        "when": "Project <id> not found",
+        "fix": "Re-check projectId with list_projects."
+      },
+      {
+        "when": "You do not have access to this project",
+        "fix": "Stop and ask the user for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "estimate 0 counts as estimated.",
+        "verifiedFrom": "server.ts:9272"
+      },
+      {
+        "text": "count is the full total even when limitCount truncates items.",
+        "verifiedFrom": "server.ts:9272-9281"
+      }
+    ],
+    "verifiedFrom": "listUnestimatedProjectIssuesCommand, listOpenProjectIssuesCommand"
+  },
+  {
+    "name": "list_unlinked_project_work",
+    "purpose": "Lists every non-deleted issue of a workspace (optionally one project) that carries no roadmap lineage, i.e. work not traceable to any roadmap item.",
+    "useWhen": [
+      "Auditing roadmap-to-execution traceability",
+      "Finding work that was started outside the governed roadmap"
+    ],
+    "avoidWhen": [
+      "You need traceability of one roadmap item: use get_workspace_roadmap_traceability",
+      "You need why one item is not traced: use explain_workspace_roadmap_traceability_gap",
+      "You only need coverage numbers: use get_workspace_roadmap_governance_observability"
+    ],
+    "inputs": [
+      {
+        "param": "workspaceId",
+        "required": true,
+        "source": "list_workspaces -> id",
+        "notes": ""
+      },
+      {
+        "param": "projectId",
+        "required": false,
+        "source": "list_workspace_projects -> id",
+        "notes": "Recommended: limits the result to one project."
+      }
+    ],
+    "preconditions": [
+      "Caller can read the workspace"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "Plain array of full issue objects {id, projectId, title, status, workOrigin, assigneeId, ...}; no count, no pagination.",
+    "pairsWith": [
+      "list_workspaces",
+      "get_workspace_roadmap_traceability",
+      "explain_workspace_roadmap_traceability_gap"
+    ],
+    "errors": [
+      {
+        "when": "You do not have access to this workspace roadmap",
+        "fix": "Stop and ask the user for workspace access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Includes done and canceled issues (no status filter): filter by status yourself.",
+        "verifiedFrom": "server.ts:12873-12876"
+      },
+      {
+        "text": "Loads all issues of the workspace; pass projectId on large workspaces.",
+        "verifiedFrom": "server.ts:12942-12945"
+      },
+      {
+        "text": "Lineage is normally attached when work is created from a materialized roadmap item (createIssueCommand reads workOrigin and roadmapLineageRefs, undeclared in the MCP schema); relinking is a governed roadmap change, so propose it to the owner instead of applying it (GOV-MAX).",
+        "verifiedFrom": "server.ts:28034-28041"
+      }
+    ],
+    "verifiedFrom": "listUnlinkedProjectWorkCommand, listWorkspaceIssuesForRoadmapTraceability"
+  },
+  {
+    "name": "process_analytics_bridge_run",
+    "purpose": "Synchronously executes a queued analytics run: collects scope data, writes NDJSON files to Cloud Storage, upserts daily delivery-health records, loads BigQuery when enabled, advances watermarks and marks the run completed or failed.",
+    "useWhen": [
+      "Right after create_analytics_bridge_run, when the user wants the export executed",
+      "A run created by the same user is stuck in 'queued'"
+    ],
+    "avoidWhen": [
+      "The run was created by another user: never process it (ask them)",
+      "The run status is completed/failed: processing is a no-op; create a new run only if the user asks",
+      "You only need status: use list_analytics_bridge_runs"
+    ],
+    "inputs": [
+      {
+        "param": "runId",
+        "required": true,
+        "source": "create_analytics_bridge_run -> id or list_analytics_bridge_runs -> [].id",
+        "notes": ""
+      }
+    ],
+    "preconditions": [
+      "Run exists with status 'queued'",
+      "Run was created by the caller (enforced by the web route but NOT by the MCP handler)",
+      "User asked for the export"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "Run object {id, status completed|failed (or unchanged if it was not queued), exportedRows, loadJobs{<entity>:{status loaded|skipped|failed, errorMessage}}, watermarks, completedAt, failedAt, errorMessage}",
+    "pairsWith": [
+      "create_analytics_bridge_run",
+      "get_analytics_bridge_observability"
+    ],
+    "errors": [
+      {
+        "when": "-32602 Analytics bridge run not found",
+        "fix": "Re-check runId with list_analytics_bridge_runs."
+      },
+      {
+        "when": "Returned run has status 'failed' and errorMessage",
+        "fix": "Report errorMessage to the user; do not loop or create new runs automatically."
+      },
+      {
+        "when": "Returned status still 'queued' or 'running'",
+        "fix": "Another process holds it or it was not queued; wait and check list_analytics_bridge_runs."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Long synchronous call: reads every issue/requirement in scope and the whole audit_events collection; may exceed connector timeouts (~60 s).",
+        "verifiedFrom": "server.ts:4440-4446"
+      },
+      {
+        "text": "Exported files and appended BigQuery rows cannot be undone from LPM.",
+        "verifiedFrom": "src/lib/analyticsBigQueryLoadJob.ts:139"
+      },
+      {
+        "text": "Returns normally (no error) when the run was not queued; check status and startedAt.",
+        "verifiedFrom": "server.ts:4603-4611"
+      }
+    ],
+    "verifiedFrom": "processAnalyticsBridgeRunCommand, collectAnalyticsBridgeEntityRows, runAnalyticsBigQueryLoadJobs, buildAnalyticsBridgeRunResponse"
+  },
+  {
+    "name": "resolve_project_issue_blocker_context",
+    "purpose": "Marks the issue's active blocker context as resolved with a resolution text and posts that resolution as a comment.",
+    "useWhen": [
+      "The cause recorded with set_project_issue_blocker_context no longer blocks the activity"
+    ],
+    "avoidWhen": [
+      "The blocker is an issue link: close the blocking issue or remove the link with delete_issue_link (this tool does not touch links)",
+      "There is no active blocker context (check get_issue first)"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_blocked_project_issues -> items[].id or get_issue -> id",
+        "notes": ""
+      },
+      {
+        "param": "resolution",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty text: what unblocked it."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it",
+      "Issue exists, is not deleted and has blockerContext.status = 'active'"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "{projectId, issueId, operation, status:'updated', result:{id, commentId, updatedFields:{blockerContext:{status:'resolved', resolution, resolvedAt, resolvedBy, resolutionCommentId, ...}}}}",
+    "pairsWith": [
+      "get_issue",
+      "list_blocked_project_issues"
+    ],
+    "errors": [
+      {
+        "when": "Issue does not have an active blocker context.",
+        "fix": "Nothing to resolve (already resolved or never set). Do not retry."
+      },
+      {
+        "when": "Blocker resolution is required",
+        "fix": "Send non-empty resolution text."
+      },
+      {
+        "when": "Issue not found",
+        "fix": "Re-check issueId with list_issues."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "A second call fails because the context is no longer active.",
+        "verifiedFrom": "server.ts:9463-9466"
+      },
+      {
+        "text": "Does not change issue status or remove blocking links.",
+        "verifiedFrom": "server.ts:9479-9488"
+      },
+      {
+        "text": "Fires comment_added and issue_updated webhooks.",
+        "verifiedFrom": "server.ts:9526-9542"
+      }
+    ],
+    "verifiedFrom": "resolveProjectIssueBlockerContextCommand (normalizeIssueBlockerContext, resolveIssueBlockerContext)"
+  },
+  {
+    "name": "set_project_issue_blocker_context",
+    "purpose": "Records a free-text explanation of what blocks an issue as its active blocker context and posts it as a comment on the issue.",
+    "useWhen": [
+      "An activity cannot progress and you must record why, who can unblock it and since when",
+      "list_blocked_project_issues shows a blocked issue without 'Contexto do bloqueio'"
+    ],
+    "avoidWhen": [
+      "The blocker is another issue: create a 'blocks'/'is-blocked-by' link with create_issue_link (this tool creates no link)",
+      "The blocker needs an owner/governance decision: also use prepare_governance_thread_from_blocker",
+      "You only want to comment: use create_comment"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_blocked_project_issues -> items[].id or list_issues -> id",
+        "notes": ""
+      },
+      {
+        "param": "blockerContext",
+        "required": true,
+        "source": "user",
+        "notes": "Non-empty text (trimmed). Write: what blocks, who can unblock, since when."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it",
+      "Issue exists and is not deleted"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "not idempotent",
+    "returns": "{projectId, issueId, operation, status:'updated', result:{id, commentId, updatedFields:{blockerContext:{status:'active', content, capturedAt, capturedBy, source, commentId}}}}",
+    "pairsWith": [
+      "list_blocked_project_issues",
+      "get_issue",
+      "prepare_governance_thread_from_blocker",
+      "resolve_project_issue_blocker_context"
+    ],
+    "errors": [
+      {
+        "when": "Blocker context is required",
+        "fix": "Send non-empty text."
+      },
+      {
+        "when": "Issue not found",
+        "fix": "Re-check issueId with list_issues for the same projectId."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "Each call adds a new comment and silently REPLACES any existing active context (no resolution recorded): read get_issue blockerContext first. Does not change status.",
+        "verifiedFrom": "server.ts:9356-9375"
+      },
+      {
+        "text": "The issue then counts as blocked everywhere: dependency graph/summary, recommend_next_activity and list_blocked_project_issues (with or without a blocking link).",
+        "verifiedFrom": "src/lib/projectResolution.ts:474-476"
+      },
+      {
+        "text": "Fires comment_added and issue_updated webhooks.",
+        "verifiedFrom": "server.ts:9413-9429"
+      }
+    ],
+    "verifiedFrom": "setProjectIssueBlockerContextCommand (createIssueBlockerContext)"
+  },
+  {
+    "name": "set_project_issue_due_date",
+    "purpose": "Sets the due date of one issue, or clears it with null.",
+    "useWhen": [
+      "User gives a deadline for an activity",
+      "Re-planning one late issue from list_overdue_project_issues"
+    ],
+    "avoidWhen": [
+      "Several issues: use bulk_set_project_issue_due_dates",
+      "update_project_issue_due_date is an identical alias: prefer this tool"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id or list_overdue_project_issues -> items[].id",
+        "notes": ""
+      },
+      {
+        "param": "dueDate",
+        "required": true,
+        "source": "user",
+        "notes": "ISO 8601 string ('YYYY-MM-DD' or full timestamp) or null to clear. The server does NOT validate the format."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it",
+      "Issue exists in that project"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, issueId, operation:'set_project_issue_due_date', status:'updated', result:{id, updatedFields:{dueDate}}}",
+    "pairsWith": [
+      "list_overdue_project_issues"
+    ],
+    "errors": [
+      {
+        "when": "Issue not found",
+        "fix": "Re-check issueId with list_issues for the same projectId."
+      },
+      {
+        "when": "Issue changed during update; reload and retry.",
+        "fix": "Retry once."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId; ask for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm issues update --project <projectId> --issue <issueId> (--due-date <iso> | --clear-due-date) (calls update_issue)",
+    "gotchas": [
+      {
+        "text": "Any string is stored; an invalid date silently breaks overdue detection, so always send 'YYYY-MM-DD'.",
+        "verifiedFrom": "src/lib/projectResolution.ts:115-122"
+      },
+      {
+        "text": "A deadline is a commitment for the assignee: confirm unless the user gave the date.",
+        "verifiedFrom": "server.ts:28349-28368"
+      },
+      {
+        "text": "Records an issue_due_date_changed activity.",
+        "verifiedFrom": "server.ts:28349-28368"
+      }
+    ],
+    "verifiedFrom": "setProjectIssueDueDateCommand -> updateIssueCommand"
+  },
+  {
+    "name": "set_project_issue_estimate",
+    "purpose": "Sets a non-negative estimate on one issue, or clears it with null.",
+    "useWhen": [
+      "User gives an estimate for an activity",
+      "You are estimating an activity you will execute",
+      "Fixing one issue from list_unestimated_project_issues"
+    ],
+    "avoidWhen": [
+      "Several issues need estimates: use bulk_set_project_issue_estimates",
+      "You also change title/status/other fields: use update_issue"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id or list_unestimated_project_issues -> items[].id",
+        "notes": ""
+      },
+      {
+        "param": "estimate",
+        "required": true,
+        "source": "user",
+        "notes": "Number >= 0, or null to clear. Numeric strings are accepted; \"\" also clears."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it (server checks read access only)",
+      "Issue exists in that project"
+    ],
+    "effect": "write",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, issueId, operation, status:'updated', allowed:true, requiresHumanReview:false, auditContext{...}, result:{id, updatedFields:{estimate}}}",
+    "pairsWith": [
+      "list_unestimated_project_issues",
+      "get_issue"
+    ],
+    "errors": [
+      {
+        "when": "Issue estimate must be a non-negative number",
+        "fix": "Send a number >= 0 or null."
+      },
+      {
+        "when": "Issue not found",
+        "fix": "Re-check issueId with list_issues for the same projectId."
+      },
+      {
+        "when": "Issue changed during update; reload and retry.",
+        "fix": "Retry once with the same values."
+      },
+      {
+        "when": "Project <id> not found / You do not have access to this project",
+        "fix": "Re-check projectId; ask for access."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm issues update --project <projectId> --issue <issueId> --estimate <n> (calls update_issue; cannot clear)",
+    "gotchas": [
+      {
+        "text": "LPM computes forecast cost as estimate x project hourly rate, so treat estimate as hours; changing it moves the owner's forecastCost and the critical path.",
+        "verifiedFrom": "src/lib/financialAudit.ts:580-583"
+      },
+      {
+        "text": "Every call writes an audit event and issue_updated webhook even if the value is unchanged.",
+        "verifiedFrom": "server.ts:28453-28530"
+      },
+      {
+        "text": "Soft-deleted issues are not rejected.",
+        "verifiedFrom": "server.ts:28219-28224"
+      }
+    ],
+    "verifiedFrom": "setProjectIssueEstimateCommand -> updateIssueCommand (normalizeIssueEstimateInput), buildMcpOperationalMutationSuccessPayload"
+  },
+  {
+    "name": "update_project_issue_due_date",
+    "purpose": "Alias of set_project_issue_due_date: sets or clears the due date of one issue.",
+    "useWhen": [
+      "Only when set_project_issue_due_date is not available in your tool list"
+    ],
+    "avoidWhen": [
+      "set_project_issue_due_date is available: use it (same server function, same effect)",
+      "Several issues: use bulk_set_project_issue_due_dates"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": ""
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "list_issues -> id or list_overdue_project_issues -> items[].id",
+        "notes": ""
+      },
+      {
+        "param": "dueDate",
+        "required": true,
+        "source": "user",
+        "notes": "ISO 8601 string ('YYYY-MM-DD') or null to clear. Not validated by the server."
+      }
+    ],
+    "preconditions": [
+      "Project exists and caller can read it",
+      "Issue exists in that project"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId, issueId, operation:'update_project_issue_due_date', status:'updated', result:{id, updatedFields:{dueDate}}}",
+    "pairsWith": [
+      "list_overdue_project_issues"
+    ],
+    "errors": [
+      {
+        "when": "Issue not found",
+        "fix": "Re-check issueId with list_issues for the same projectId."
+      },
+      {
+        "when": "Issue changed during update; reload and retry.",
+        "fix": "Retry once."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "lpm issues update --project <projectId> --issue <issueId> (--due-date <iso> | --clear-due-date) (calls update_issue)",
+    "gotchas": [
+      {
+        "text": "Redundant alias kept for recovery workflows; only the operation name in the response differs.",
+        "verifiedFrom": "server.ts:33642"
+      }
+    ],
+    "verifiedFrom": "setProjectIssueDueDateCommand -> updateIssueCommand"
+  }
+]

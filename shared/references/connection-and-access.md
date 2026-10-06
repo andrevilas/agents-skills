@@ -1,0 +1,55 @@
+# Connection and access
+Load when: a tool is missing or denied (-32003), or you set up or check a connection
+Applies to: every skill    Source: lpm `src/lib/oauthScopeContract.ts`, `src/server/oauthToolPolicy.ts`, `src/lib/mcpToolCatalog.ts`, `src/cli/lpm.ts`, `src/cli/config.ts`; help `integracao-oauth-e-mcp-chatgpt-claude-gemini`; card `get_mcp_connection_info`
+Owner skill: lpm-start
+
+## Summary
+- Endpoint: `https://lpm.rocks/mcp` (Streamable HTTP). Never use a `*.run.app` URL.
+- API key (header `x-api-key`): the {{catalog:tools}}-tool catalog filtered by the key's profile. ChatGPT/Claude connector (OAuth): {{catalog:oauth-tools}} tools in {{catalog:oauth-scopes}} scopes.
+- Tool missing or denied → `get_mcp_connection_info` → give the user `howToEnable` as written → STOP.
+- ChatGPT disconnect/connect neither re-runs OAuth nor refreshes the tool list: remove the connector, reinstall it, tick the box.
+- Sensitive admin tools ({{catalog:sensitive}}) exist only in `full` and `custom` API keys.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| OAuth `workspace:read` ({{catalog:scope:workspace:read}} tools) | default scope "Leitura do workspace e roadmap" | workspaces, members, roadmap reads, executive context |
+| OAuth `portfolio:read` ({{catalog:scope:portfolio:read}}) | default scope "Leitura dos projetos" | projects, activities, cycles, milestones, threads, risks |
+| OAuth `roadmap:manage` ({{catalog:scope:roadmap:manage}}) | default scope "Edição de roadmap" | roadmap writes and change requests |
+| OAuth `mcp:advisor` ({{catalog:scope:mcp:advisor}}) | default scope "Análise e respostas sobre roadmap" | Advisor answers and code search |
+| OAuth `portfolio:manage` ({{catalog:scope:portfolio:manage}}) | opt-in box "Gestão de atividades dos projetos" under "Permissões adicionais (opcional)" on the page "Autorizar uma conexão"; the box shows after logging in to LPM there | `create_issue`, `update_issue`, `create_comment`, `batch_issue_operations`, thread create/reply |
+| a scope missing on an old connector | the grant and tool list were fixed at install time | remove + reinstall the connector; reconnecting is not enough |
+| API-key profile `read-only` ({{catalog:profile:read-only}}) | read tools minus sensitive ones; also the default when a key has no profile | no writes |
+| `portfolio` ({{catalog:profile:portfolio}}), `planning` ({{catalog:profile:planning}}), `requirements` ({{catalog:profile:requirements}}) | category presets, sensitive tools excluded | mixed flows need `custom` |
+| `roadmap-owner-advisor` ({{catalog:profile:roadmap-owner-advisor}}), `roadmap-owner-operator` ({{catalog:profile:roadmap-owner-operator}}) | profiles of scoped `lpm_mcp_` owner-agent credentials only; LPM rejects them on an API key | operator adds `commit_owner_roadmap_change`; never tell a user to create an API key with them |
+| `full` ({{catalog:profile:full}}), `custom` (explicit `allowedTools`) | the only profiles with sensitive admin tools | ask the key owner (`lpm-access`); never widen your own key |
+| `get_mcp_connection_info` (OAuth) | `scopes`, `workspaceAccess` single/all, `availableToolCount`, `unavailableToolGroups[{scope, title, optional, tools, howToEnable}]` | `howToEnable` is Portuguese text for the end user |
+| `get_mcp_connection_info` (API key) | `credential: "api_key"`, `allowedToolCount`, `howToChange` | describes only YOUR connection, never another user's |
+| `lpm_mcp_…` owner-agent credential | cannot call `get_mcp_connection_info` | run `lpm mcp status` (endpoint + tool count) |
+| -32003 | access denied (scope, key profile or origin) | core rule 2 |
+| -32602 | invalid OAuth arguments; `data` has `field`, `problem`, `limit`, `hint` | fix that field; see `error-codes.md` |
+| CLI config | `~/.lpm/config.json`, or `$LPM_CLI_CONFIG_DIR/config.json`; env `LPM_API_KEY` and `LPM_API_URL` win over the file | one config dir per agent |
+| CLI default base URL | `http://localhost:4173` | always set `LPM_API_URL=https://lpm.rocks` or pass `--base-url https://lpm.rocks` |
+| `lpm mcp cursor-config` | prints a Cursor config that CONTAINS the key | write it into the config file; never paste it in chat |
+| server names | Codex `[mcp_servers.LPM]` (`~/.codex/config.toml`); Claude Code `lpm` or `claude_ai_LPM`; Antigravity `~/.gemini/config/mcp_config.json`; Cursor `lpm` | tool names inside skills stay bare |
+
+## Rules
+1. Call `get_mcp_connection_info` once per conversation, and again whenever a tool is missing or denied.
+2. Relay `howToEnable` verbatim, then STOP. Do not try other tools to work around the denial.
+3. ChatGPT: remove the connector, install it again, log in on "Autorizar uma conexão", tick the box, click "Autorizar acesso".
+4. API key: the key owner changes the profile (`update_api_key`, `lpm-access`). Suggest the smallest profile that covers the job.
+5. A config or doc that points at `*.run.app` → replace it with `https://lpm.rocks/mcp`.
+6. A skill marked KEY on an OAuth connection → say it needs an LPM API key before you start it.
+7. CLI agents check with `lpm auth status` or `lpm mcp status`; never print `LPM_API_KEY`.
+8. Log in without typing the key: `lpm auth login --api-key "$LPM_API_KEY" --base-url https://lpm.rocks`, or only export `LPM_API_KEY` and `LPM_API_URL`.
+
+## Examples
+```text
+example: create_comment fails with -32003 on ChatGPT
+-> get_mcp_connection_info -> unavailableToolGroups[0].scope = "portfolio:manage", optional = true
+-> tell the user the howToEnable text: remove the connector, reinstall, tick
+   "Gestão de atividades dos projetos" -> STOP
+example: list_api_keys denied with an API key
+-> "This API key is not allowed to call MCP tool: list_api_keys" -> sensitive tool
+-> ask the key owner for a full or custom key -> STOP
+```

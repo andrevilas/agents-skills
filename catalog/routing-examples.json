@@ -1,0 +1,3702 @@
+{
+  "schemaVersion": 1,
+  "source": "design §5.7 E1, §2.2 rows, §2.3 collision table, §6.1 legacy ids",
+  "matcher": "design §5.2 deterministic matcher over skill.json routing[] rows (ascending order, first match wins) plus the legacy rows (37) generated from legacy-ids.json",
+  "gate": "100 %",
+  "fields": {
+    "prompt": "a string, or for a collision row [EN, PT-BR]; every prompt must land on `expected` through a row listed in `decidedBy`",
+    "decidedBy": "the router row (`order`) that must win, or a list of rows (\"7 or 8\") when the variants are decided by different rows",
+    "collision": "true for a §2.3 row; build renders the §2.3 table from these entries in id order (says, about, expected, decidedBy, decidedByNote)",
+    "seed": "true for a §5.7 seed case that broke revision 1"
+  },
+  "entries": [
+    {
+      "id": "collision/c01",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "route this intake entry to the right project",
+        "rotear a demanda que chegou na entrada"
+      ],
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30,
+      "collision": true,
+      "says": "intake / entrada / demanda",
+      "about": "an incoming request to route or triage"
+    },
+    {
+      "id": "collision/c02",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "upload the reference file to the job intake",
+        "enviar o anexo e a transcrição para o job"
+      ],
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 10,
+      "collision": true,
+      "says": "intake / anexo / transcrição + job",
+      "about": "reference files or audio for an AISH job"
+    },
+    {
+      "id": "collision/c03",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "review the project health",
+        "revisar a saúde do portfólio"
+      ],
+      "expected": "lpm-review-health",
+      "decidedBy": 34,
+      "collision": true,
+      "says": "review / revisão",
+      "about": "project or portfolio health"
+    },
+    {
+      "id": "collision/c04",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "review the roadmap change request",
+        "revisar o pedido de mudança do roadmap"
+      ],
+      "expected": "lpm-roadmap",
+      "decidedBy": 29,
+      "collision": true,
+      "says": "review",
+      "about": "a roadmap change request (CR)"
+    },
+    {
+      "id": "collision/c05",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "review the routing of this intake entry",
+        "revisar o roteamento da entrada de intake"
+      ],
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30,
+      "collision": true,
+      "says": "review",
+      "about": "routing of an intake entry"
+    },
+    {
+      "id": "collision/c06",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "review the change set before publication",
+        "revisar o change set antes de publicar"
+      ],
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22,
+      "collision": true,
+      "says": "review / revisar + change set",
+      "about": "a change set (scope, requirements) before publication, not a roadmap change request"
+    },
+    {
+      "id": "collision/c07",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "publish the new baseline",
+        "publicar a baseline do escopo"
+      ],
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22,
+      "collision": true,
+      "says": "publish / publicar",
+      "about": "a baseline or change set"
+    },
+    {
+      "id": "collision/c08",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "publish the roadmap knowledge note as a help article",
+        "publicar a nota de conhecimento do roadmap como artigo de ajuda"
+      ],
+      "expected": "lpm-knowledge",
+      "decidedBy": 32,
+      "collision": true,
+      "says": "publish",
+      "about": "a help/knowledge article from a roadmap note",
+      "decidedByNote": "row 29 has `unless` knowledge"
+    },
+    {
+      "id": "collision/c09",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "approve the roadmap item",
+        "aprovar o item do roadmap"
+      ],
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 28,
+      "collision": true,
+      "says": "approve / aprovar",
+      "about": "a roadmap item lifecycle gate"
+    },
+    {
+      "id": "collision/c10",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "approve the change request for the roadmap item",
+        "aprovar o pedido de mudança do item do roadmap"
+      ],
+      "expected": "lpm-roadmap",
+      "decidedBy": 29,
+      "collision": true,
+      "says": "approve",
+      "about": "a roadmap change request",
+      "decidedByNote": "row 28 has `unless` change request"
+    },
+    {
+      "id": "collision/c11",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "approve the AISH job and close the checkpoint",
+        "aprovar o plano de execução do AISH"
+      ],
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9,
+      "collision": true,
+      "says": "approve",
+      "about": "an AISH job, plan or checkpoint",
+      "decidedByNote": "row 8 has `unless` approve"
+    },
+    {
+      "id": "collision/c12",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "approve the AISH release package",
+        "aprovar o pacote de release do AISH"
+      ],
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7,
+      "collision": true,
+      "says": "approve",
+      "about": "an AISH release package"
+    },
+    {
+      "id": "collision/c13",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "close the AISH job",
+        "encerrar o job do AISH"
+      ],
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 8,
+      "collision": true,
+      "says": "close / fechar / encerrar",
+      "about": "an AISH job (`aish jobs close`)",
+      "seed": true
+    },
+    {
+      "id": "collision/c14",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "close the sprint and its last task",
+        "fechar o ciclo atual"
+      ],
+      "expected": "lpm-plan-work",
+      "decidedBy": 36,
+      "collision": true,
+      "says": "close / fechar",
+      "about": "a cycle or sprint",
+      "decidedByNote": "row 17 has `unless` cycle/sprint"
+    },
+    {
+      "id": "collision/c15",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "close the activity LPM-42",
+        "concluir a atividade 123"
+      ],
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17,
+      "collision": true,
+      "says": "close / concluir",
+      "about": "one activity"
+    },
+    {
+      "id": "collision/c16",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "commit the code for this activity",
+        "fazer o commit do código da atividade"
+      ],
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 15,
+      "collision": true,
+      "says": "commit",
+      "about": "code for an activity"
+    },
+    {
+      "id": "collision/c17",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "compare commits",
+        "comparar commits entre duas versões"
+      ],
+      "expected": "lpm-code-index",
+      "decidedBy": 23,
+      "collision": true,
+      "says": "commit / compare commits",
+      "about": "two repository commits",
+      "seed": true
+    },
+    {
+      "id": "collision/c18",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "commit the roadmap import",
+        "fazer o commit da importação do roadmap"
+      ],
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27,
+      "collision": true,
+      "says": "commit",
+      "about": "a roadmap import, owner change or materialization",
+      "seed": true
+    },
+    {
+      "id": "collision/c19",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "attach the screenshot as evidence to the activity",
+        "anexar o print como evidência na atividade"
+      ],
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 16,
+      "collision": true,
+      "says": "evidence / evidência / print",
+      "about": "proof of work on an activity"
+    },
+    {
+      "id": "collision/c20",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "save the evidence from the WhatsApp protocol",
+        "registrar a evidência do protocolo do WhatsApp"
+      ],
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30,
+      "collision": true,
+      "says": "evidence",
+      "about": "WhatsApp / protocol media",
+      "seed": true
+    },
+    {
+      "id": "collision/c21",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "register the delivery artifact as DoD evidence",
+        "anexar evidência ao job do AISH"
+      ],
+      "expected": "lpm-aish-delivery",
+      "decidedBy": [
+        7,
+        8
+      ],
+      "collision": true,
+      "says": "evidence / evidência + AISH job",
+      "about": "proof for an AISH job: delivery artifact / DoD"
+    },
+    {
+      "id": "collision/c22",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "what evidence does the code have for this feature",
+        "qual evidência o código tem dessa funcionalidade"
+      ],
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25,
+      "collision": true,
+      "says": "evidence",
+      "about": "\"what does the code say\"",
+      "seed": true
+    },
+    {
+      "id": "collision/c23",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "deploy the fix to lpm.rocks",
+        "rollback da revisão do LPM em produção"
+      ],
+      "expected": "lpm-release-product",
+      "decidedBy": [
+        11,
+        12
+      ],
+      "collision": true,
+      "says": "deploy / release / rollback",
+      "about": "the LPM product (lpm repo, lpm.rocks, Cloud Run revision)"
+    },
+    {
+      "id": "collision/c24",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "deploy the AISH job release",
+        "fazer o deploy do pacote de release"
+      ],
+      "expected": "lpm-aish-delivery",
+      "decidedBy": [
+        7,
+        8
+      ],
+      "collision": true,
+      "says": "deploy / release + pacote de release / AISH job",
+      "about": "an AISH release package for a project, not the LPM product"
+    },
+    {
+      "id": "collision/c25",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "rollback the code index to the previous version",
+        "fazer rollback do índice de código"
+      ],
+      "expected": "lpm-code-index",
+      "decidedBy": 23,
+      "collision": true,
+      "says": "rollback",
+      "about": "a code-index version"
+    },
+    {
+      "id": "collision/c26",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "rollback the roadmap governance migration",
+        "fazer rollback da migração de governança"
+      ],
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 26,
+      "collision": true,
+      "says": "rollback",
+      "about": "a roadmap governance migration"
+    },
+    {
+      "id": "collision/c27",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "rollback the legacy runner migration",
+        "fazer rollback da migração legada do runner"
+      ],
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6,
+      "collision": true,
+      "says": "rollback",
+      "about": "a legacy runner migration"
+    },
+    {
+      "id": "collision/c28",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "what is our AI token budget this month",
+        "qual o custo de IA deste mês"
+      ],
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5,
+      "collision": true,
+      "says": "budget / custo / limite / quota / spend",
+      "about": "any AI or AISH money/limit question"
+    },
+    {
+      "id": "collision/c29",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "create an API key for the CI agent",
+        "criar uma chave de API para o agente"
+      ],
+      "expected": "lpm-access",
+      "decidedBy": 4,
+      "collision": true,
+      "says": "token / chave / credential",
+      "about": "API keys, agent credentials, provider keys, GitHub token"
+    },
+    {
+      "id": "collision/c30",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "enrollment token for the runner host",
+        "token de enrollment para o host do runner"
+      ],
+      "expected": "lpm-aish-runners",
+      "decidedBy": 3,
+      "collision": true,
+      "says": "token / credential + runner/host",
+      "about": "runner host enrollment token",
+      "seed": true
+    },
+    {
+      "id": "collision/c31",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "add a member to the workspace",
+        "adicionar um membro ao workspace"
+      ],
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35,
+      "collision": true,
+      "says": "member / membro",
+      "about": "workspace or team membership"
+    },
+    {
+      "id": "collision/c32",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "assign a team member to the activity",
+        "atribuir um membro da equipe como responsável pela tarefa"
+      ],
+      "expected": "lpm-plan-work",
+      "decidedBy": 36,
+      "collision": true,
+      "says": "member + assign",
+      "about": "assignee of an activity",
+      "decidedByNote": "row 35 has `unless` assign"
+    },
+    {
+      "id": "collision/c33",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "this activity depends on another one",
+        "registrar a dependência entre as atividades"
+      ],
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18,
+      "collision": true,
+      "says": "dependency / dependência",
+      "about": "between activities"
+    },
+    {
+      "id": "collision/c34",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "add a dependency between two roadmap items",
+        "criar dependência entre itens do roadmap"
+      ],
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27,
+      "collision": true,
+      "says": "dependency + roadmap",
+      "about": "between roadmap items",
+      "decidedByNote": "row 18 has `unless` roadmap",
+      "seed": true
+    },
+    {
+      "id": "collision/c35",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "record the decision for this requirement",
+        "abrir uma thread de governança para a decisão"
+      ],
+      "expected": "lpm-governance-decisions",
+      "decidedBy": [
+        20,
+        21
+      ],
+      "collision": true,
+      "says": "decision / decisão",
+      "about": "a governance thread or the decision inbox"
+    },
+    {
+      "id": "collision/c36",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "record the reviewer decision on the change request",
+        "registrar a decisão no pedido de mudança"
+      ],
+      "expected": "lpm-roadmap",
+      "decidedBy": 29,
+      "collision": true,
+      "says": "decision / decisão + change request / pedido de mudança",
+      "about": "a reviewer decision on a roadmap CR (not a governance thread)",
+      "decidedByNote": "row 21 has `unless` CR",
+      "seed": true
+    },
+    {
+      "id": "collision/c37",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "materialize the roadmap item into requirements",
+        "materializar item em requisitos"
+      ],
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27,
+      "collision": true,
+      "says": "requisito + materializar",
+      "about": "turn a roadmap item into requirements",
+      "decidedByNote": "row 22 has `unless` materializ*",
+      "seed": true
+    },
+    {
+      "id": "collision/c38",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "change the priority and due date of the activity",
+        "alterar a prioridade e o prazo da atividade"
+      ],
+      "expected": "lpm-plan-work",
+      "decidedBy": 36,
+      "collision": true,
+      "says": "edit an activity",
+      "about": "fields (title, priority, dates, owner, labels)"
+    },
+    {
+      "id": "collision/c39",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "mark the issue as done",
+        "marcar a tarefa como pronta"
+      ],
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17,
+      "collision": true,
+      "says": "edit an activity",
+      "about": "progress, status in-progress/done, closure"
+    },
+    {
+      "id": "collision/c40",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "create a new capability in the registry",
+        "criar uma capability no registro"
+      ],
+      "expected": "lpm-roadmap",
+      "decidedBy": 29,
+      "collision": true,
+      "says": "create + capability",
+      "about": "roadmap capability registry (create/edit), even on owner order"
+    },
+    {
+      "id": "collision/c41",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "unowned capability",
+        "capability sem dono"
+      ],
+      "expected": "lpm-executive-context",
+      "decidedBy": 33,
+      "collision": true,
+      "says": "capability + unowned / sem dono",
+      "about": "unowned executive domain/capability (not a health review)",
+      "decidedByNote": "row 29 has `unless` unowned",
+      "seed": true
+    },
+    {
+      "id": "collision/c42",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "kick off a new project for the checkout team",
+        "quero fazer o kickoff de um novo projeto"
+      ],
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 14,
+      "collision": true,
+      "says": "kickoff / novo projeto / start a project",
+      "about": "creating and kicking off a project (`flow-kickoff.md`)"
+    },
+    {
+      "id": "collision/c43",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "the pilot reported a bug",
+        "o piloto relatou um erro no LPM"
+      ],
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13,
+      "collision": true,
+      "says": "pilot / piloto + report",
+      "about": "a pilot or tester reported an LPM problem"
+    },
+    {
+      "id": "collision/c44",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "attach the Cloud Run revision, tests and smoke output as evidence on the activity",
+        "anexa a revisão do Cloud Run, os testes e o smoke como evidência na atividade"
+      ],
+      "expected": "lpm-release-product",
+      "decidedBy": 11,
+      "collision": true,
+      "says": "evidence / evidência + Cloud Run revision / smoke",
+      "about": "deploy evidence of the LPM product on its activity"
+    },
+    {
+      "id": "collision/c45",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "add a new roadmap item Offline mode to roadmap rm_1",
+        "criar o item Checkout v2 no roadmap rm_1"
+      ],
+      "expected": "lpm-roadmap",
+      "decidedBy": 29,
+      "collision": true,
+      "says": "create + roadmap item",
+      "about": "one new roadmap item (owner order or not), not an owner direct commit"
+    },
+    {
+      "id": "legacy/access-and-credentials-admin/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the access-and-credentials-admin skill",
+      "expected": "lpm-access",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/access-and-credentials-admin/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill access-and-credentials-admin",
+      "expected": "lpm-access",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/aish-governed-development-operator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the aish-governed-development-operator skill",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/aish-governed-development-operator/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill aish-governed-development-operator",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/analytics-bridge-operator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the analytics-bridge-operator skill",
+      "expected": "lpm-integrations",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/analytics-bridge-operator/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill analytics-bridge-operator",
+      "expected": "lpm-integrations",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/dependency-resolution-operator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the dependency-resolution-operator skill",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/dependency-resolution-operator/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill dependency-resolution-operator",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/governance-decision-operator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the governance-decision-operator skill",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/governance-decision-operator/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill governance-decision-operator",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/governed-project-integrity-review/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the governed-project-integrity-review skill",
+      "expected": "lpm-review-health",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/governed-project-integrity-review/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill governed-project-integrity-review",
+      "expected": "lpm-review-health",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/knowledge-and-publication-operator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the knowledge-and-publication-operator skill",
+      "expected": "lpm-knowledge",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/knowledge-and-publication-operator/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill knowledge-and-publication-operator",
+      "expected": "lpm-knowledge",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/lpm-workspace-admin/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the lpm-workspace-admin skill",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/lpm-workspace-admin/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill lpm-workspace-admin",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/portfolio-health-review/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the portfolio-health-review skill",
+      "expected": "lpm-review-health",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/portfolio-health-review/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill portfolio-health-review",
+      "expected": "lpm-review-health",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/requirements-lifecycle-manager/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the requirements-lifecycle-manager skill",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22,
+      "note": "prefix term of row 22 matches the old id first; same skill as row 37"
+    },
+    {
+      "id": "legacy/requirements-lifecycle-manager/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill requirements-lifecycle-manager",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22,
+      "note": "prefix term of row 22 matches the old id first; same skill as row 37"
+    },
+    {
+      "id": "legacy/scope-baseline-publisher/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the scope-baseline-publisher skill",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/scope-baseline-publisher/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill scope-baseline-publisher",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/software-project-orchestrator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the software-project-orchestrator skill",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/software-project-orchestrator/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill software-project-orchestrator",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/webhook-integration-operator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the webhook-integration-operator skill",
+      "expected": "lpm-integrations",
+      "decidedBy": 31,
+      "note": "prefix term of row 31 matches the old id first; same skill as row 37"
+    },
+    {
+      "id": "legacy/webhook-integration-operator/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill webhook-integration-operator",
+      "expected": "lpm-integrations",
+      "decidedBy": 31,
+      "note": "prefix term of row 31 matches the old id first; same skill as row 37"
+    },
+    {
+      "id": "legacy/workspace-executive-context-operator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the workspace-executive-context-operator skill",
+      "expected": "lpm-executive-context",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/workspace-executive-context-operator/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill workspace-executive-context-operator",
+      "expected": "lpm-executive-context",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/workspace-routing-operator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the workspace-routing-operator skill",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 37
+    },
+    {
+      "id": "legacy/workspace-routing-operator/pt-BR",
+      "kind": "legacy",
+      "lang": "pt-BR",
+      "prompt": "usar a skill workspace-routing-operator",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 37
+    },
+    {
+      "id": "skill/lpm-access/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "rotate the agent credential",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "skill/lpm-access/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "list my API keys",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "skill/lpm-access/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "set the GitHub token for the workspace",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "skill/lpm-access/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "rotacionar a credencial do agente",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "skill/lpm-access/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "criar uma chave de API",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "skill/lpm-access/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "revogar o token do GitHub",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "skill/lpm-ai-cost/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "how much did we spend on AISH",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "skill/lpm-ai-cost/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "change model to Flash",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "skill/lpm-ai-cost/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "fund the job pool",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "skill/lpm-ai-cost/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "quanto gastamos com IA",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "skill/lpm-ai-cost/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "trocar o modelo para o Pro",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "skill/lpm-ai-cost/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "qual o limite de uso do advisor",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "skill/lpm-aish-delivery/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "run the definition of done audit",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "skill/lpm-aish-delivery/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "reconcile the AISH jobs",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 8
+    },
+    {
+      "id": "skill/lpm-aish-delivery/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "fix the job lineage",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "skill/lpm-aish-delivery/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "auditar a entrega do job",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 8
+    },
+    {
+      "id": "skill/lpm-aish-delivery/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "ler o pacote de execução da sessão",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "skill/lpm-aish-delivery/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "corrigir a disposição do job concluído",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "skill/lpm-aish-jobs/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create an AISH job for this activity",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "skill/lpm-aish-jobs/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "run a cockpit execution session",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "skill/lpm-aish-jobs/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "request a checkpoint",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "skill/lpm-aish-jobs/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "criar um job no AISH",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "skill/lpm-aish-jobs/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "abrir uma sessão de execução",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "skill/lpm-aish-jobs/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "propor uma ação do copilot",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "skill/lpm-aish-runners/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "drain the runner host",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "skill/lpm-aish-runners/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "start an AISH runner",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "skill/lpm-aish-runners/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "show the fleet overview",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "skill/lpm-aish-runners/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "drenar o host",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "skill/lpm-aish-runners/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "iniciar o runner do AISH",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "skill/lpm-aish-runners/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "visão geral da frota",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "skill/lpm-ask-advisor/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "does the code already validate the CPF",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "skill/lpm-ask-advisor/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "where is the checkout implemented",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "skill/lpm-ask-advisor/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "technical impact of this roadmap item",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "skill/lpm-ask-advisor/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o código já faz validação de CPF?",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "skill/lpm-ask-advisor/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "onde está implementado o login",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "skill/lpm-ask-advisor/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "pergunte ao advisor sobre o pagamento",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "skill/lpm-code-index/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "reindex the repository",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "skill/lpm-code-index/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "the scan is stale",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "skill/lpm-code-index/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "link a repository to the project",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "skill/lpm-code-index/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "reindexar o repositório",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "skill/lpm-code-index/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "vincular repositório ao projeto",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "skill/lpm-code-index/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o índice está desatualizado",
+      "expected": "lpm-code-index",
+      "decidedBy": 24
+    },
+    {
+      "id": "skill/lpm-deliver-activity/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "implement activity LPM-12",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17
+    },
+    {
+      "id": "skill/lpm-deliver-activity/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "add the LPM-Activity trailer to my commit",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 15
+    },
+    {
+      "id": "skill/lpm-deliver-activity/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "attach the test report screenshot",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 16
+    },
+    {
+      "id": "skill/lpm-deliver-activity/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "implementar a atividade 42",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17
+    },
+    {
+      "id": "skill/lpm-deliver-activity/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "corrija o bug da tarefa de login",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17
+    },
+    {
+      "id": "skill/lpm-deliver-activity/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "anexe o print do teste",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 16
+    },
+    {
+      "id": "skill/lpm-executive-context/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "generate the workspace readiness report",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "skill/lpm-executive-context/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "draft the operating model",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "skill/lpm-executive-context/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "check project alignment",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "skill/lpm-executive-context/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "relatório de prontidão do workspace",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "skill/lpm-executive-context/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "definir a política de roteamento",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "skill/lpm-executive-context/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "listar os domínios sem dono",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "skill/lpm-governance-decisions/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "open a governance thread about the baseline",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 20
+    },
+    {
+      "id": "skill/lpm-governance-decisions/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "what decisions are pending",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 21
+    },
+    {
+      "id": "skill/lpm-governance-decisions/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "reply to the thread",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 20
+    },
+    {
+      "id": "skill/lpm-governance-decisions/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "quais decisões estão pendentes",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 21
+    },
+    {
+      "id": "skill/lpm-governance-decisions/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "responder a thread de governança",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 20
+    },
+    {
+      "id": "skill/lpm-governance-decisions/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "decidir sobre o requisito de login",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 21
+    },
+    {
+      "id": "skill/lpm-intake-triage/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "triage the operational entries",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "skill/lpm-intake-triage/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "route the WhatsApp protocol 123 to a project",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "skill/lpm-intake-triage/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "merge the duplicate incident",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "skill/lpm-intake-triage/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "triagem das entradas operacionais",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "skill/lpm-intake-triage/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "rotear o protocolo do WhatsApp",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "skill/lpm-intake-triage/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "registrar o incidente de ontem",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "skill/lpm-integrations/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create a webhook for issue events",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "skill/lpm-integrations/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "export the workspace data",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "skill/lpm-integrations/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "run the analytics bridge to BigQuery",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "skill/lpm-integrations/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "criar um webhook",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "skill/lpm-integrations/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "exportar os dados do projeto",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "skill/lpm-integrations/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "processar a ponte de analytics para o BigQuery",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "skill/lpm-knowledge/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "search the help article about closure",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "skill/lpm-knowledge/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "update the project skills context",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "skill/lpm-knowledge/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "register a knowledge item",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "skill/lpm-knowledge/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "procurar na ajuda a regra de fechamento",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "skill/lpm-knowledge/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "registrar um link nos arquivos do projeto",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "skill/lpm-knowledge/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "aceitar a nota de conhecimento",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "skill/lpm-pilot-feedback/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "check the tester feedback",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "skill/lpm-pilot-feedback/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "verify the pilot reports from today",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "skill/lpm-pilot-feedback/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "a pilot found a problem in the advisor",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "skill/lpm-pilot-feedback/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o piloto reclamou do advisor",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "skill/lpm-pilot-feedback/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "feedback do testador",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "skill/lpm-pilot-feedback/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "erro relatado na homologação",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "skill/lpm-plan-work/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create five activities in the backlog",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "skill/lpm-plan-work/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "plan the next sprint",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "skill/lpm-plan-work/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "list the overdue issues",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "skill/lpm-plan-work/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "planejar o próximo ciclo",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "skill/lpm-plan-work/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "criar um marco de entrega",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "skill/lpm-plan-work/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "atribuir responsável às tarefas atrasadas",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "skill/lpm-release-product/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "deploy the fix to production",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "skill/lpm-release-product/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "promote the candidate revision",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "skill/lpm-release-product/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "run the golden set before shipping",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "skill/lpm-release-product/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "fazer o deploy em produção",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "skill/lpm-release-product/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "promover o candidato",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "skill/lpm-release-product/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "rollback da revisão de produção",
+      "expected": "lpm-release-product",
+      "decidedBy": 12
+    },
+    {
+      "id": "skill/lpm-requirements-scope/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create a requirement for the login",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "skill/lpm-requirements-scope/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "check working scope drift against the baseline",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "skill/lpm-requirements-scope/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "move the change set to in-review",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "skill/lpm-requirements-scope/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "criar um requisito de login",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "skill/lpm-requirements-scope/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "publicar a baseline",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "skill/lpm-requirements-scope/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "qual é o escopo atual",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "skill/lpm-review-health/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "weekly review of the portfolio",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "skill/lpm-review-health/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "what needs my attention",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "skill/lpm-review-health/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "project health report",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "skill/lpm-review-health/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "como está a saúde do projeto",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "skill/lpm-review-health/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "quais são os riscos do portfólio",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "skill/lpm-review-health/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "relatório de status semanal",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "skill/lpm-roadmap-owner-ops/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "import the roadmap from this TSV",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "skill/lpm-roadmap-owner-ops/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "archive the roadmap item directly",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "skill/lpm-roadmap-owner-ops/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "switch the governance mode to enforce",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 26
+    },
+    {
+      "id": "skill/lpm-roadmap-owner-ops/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "importar o roadmap do TSV",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "skill/lpm-roadmap-owner-ops/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "arquivar itens do roadmap em massa",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "skill/lpm-roadmap-owner-ops/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "mudar o modo de governança para shadow",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 26
+    },
+    {
+      "id": "skill/lpm-roadmap/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "show the roadmap overview",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "skill/lpm-roadmap/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "submit a change request to rename the item",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "skill/lpm-roadmap/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "traceability of the checkout item",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "skill/lpm-roadmap/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "mostrar o roadmap do workspace",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "skill/lpm-roadmap/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "criar um pedido de mudança",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "skill/lpm-roadmap/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "rastreabilidade do item de checkout",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "skill/lpm-start/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "I get error -32003 when calling create_comment",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "skill/lpm-start/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "set up the LPM MCP server in Codex",
+      "expected": "lpm-start",
+      "decidedBy": 2
+    },
+    {
+      "id": "skill/lpm-start/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "show my notifications",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "skill/lpm-start/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "a ferramenta não aparece no ChatGPT",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "skill/lpm-start/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "configurar o LPM no Claude Code",
+      "expected": "lpm-start",
+      "decidedBy": 2
+    },
+    {
+      "id": "skill/lpm-start/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "ler minhas notificações do LPM",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "skill/lpm-unblock-work/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "which activities are blocked",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "skill/lpm-unblock-work/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "show the critical path of the project",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "skill/lpm-unblock-work/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "link issue A to issue B",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 19
+    },
+    {
+      "id": "skill/lpm-unblock-work/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "por que a atividade está bloqueada",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "skill/lpm-unblock-work/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "vincular a atividade 10 à atividade 11",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 19
+    },
+    {
+      "id": "skill/lpm-unblock-work/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "qual é o caminho crítico",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "skill/lpm-workspace-admin/en-1",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create a new workspace",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "skill/lpm-workspace-admin/en-2",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "archive the project",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "skill/lpm-workspace-admin/en-3",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "start a project for the mobile app",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 14
+    },
+    {
+      "id": "skill/lpm-workspace-admin/pt-BR-1",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "arquivar o projeto",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "skill/lpm-workspace-admin/pt-BR-2",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "criar uma equipe",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "skill/lpm-workspace-admin/pt-BR-3",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "editar o perfil de roteamento do projeto",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "extra/lpm-review-health/weekly-pt",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "revisão semanal do portfólio",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "extra/lpm-roadmap/item-create-en",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create a roadmap item Checkout v2 in roadmap rm_1",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "extra/lpm-roadmap/item-create-pt",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "cria o item Checkout v2 no roadmap",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "job/lpm-access/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "list my API keys and when each was last used",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "job/lpm-access/02",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "which API key profile does a read-only reporting agent need?",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "job/lpm-access/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "rotate the API key our CI uses",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "job/lpm-access/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "cria uma credencial lpm_mcp_ para o copiloto do workspace, válida por 30 dias",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "job/lpm-access/05",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "suspende a credencial do agente agora",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "job/lpm-access/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "set the workspace GitHub token from the env var I exported",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "job/lpm-access/07",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "remove a chave do provedor de IA OpenAI do workspace",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "job/lpm-access/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "assign the security-reviewer agent to project <name>",
+      "expected": "lpm-access",
+      "decidedBy": 4
+    },
+    {
+      "id": "job/lpm-ai-cost/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "quanto gastamos com IA neste mês?",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "job/lpm-ai-cost/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "troque o modelo do Advisor para o Pro",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "job/lpm-ai-cost/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "desligue a análise de documentos para economizar",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "job/lpm-ai-cost/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "qual o limite de uso do Advisor e da busca de código hoje?",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "job/lpm-ai-cost/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "why did the Advisor answer with ai_usage_limit_reached?",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "job/lpm-ai-cost/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "how much of the AISH budget of project <projectId> is left?",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "job/lpm-ai-cost/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "fund AISH job <jobId> as the owner ordered",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "job/lpm-ai-cost/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "reconcile the AISH accounting of activity <issueId>",
+      "expected": "lpm-ai-cost",
+      "decidedBy": 5
+    },
+    {
+      "id": "job/lpm-aish-delivery/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "register the Playwright screenshot and video as delivery artifacts of AISH job <jobId>",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "job/lpm-aish-delivery/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "rode a auditoria de Definition of Done da atividade <issueId> e diga o que falta",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "job/lpm-aish-delivery/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "open a blocking finding: the test report of job <jobId> is missing assertions",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 8
+    },
+    {
+      "id": "job/lpm-aish-delivery/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "posso fechar a atividade do AISH? feche com a evidência do job",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 8
+    },
+    {
+      "id": "job/lpm-aish-delivery/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "export the execution pack of job <jobId> and attach it to the activity",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "job/lpm-aish-delivery/06",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "crie o pacote de release de staging do job <jobId> e peça a aprovação do dono",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "job/lpm-aish-delivery/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "claim the approved release <releaseId>, deploy it and record the receipt",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "job/lpm-aish-delivery/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "requeue the dead-lettered automation delivery of job <jobId>",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "job/lpm-aish-delivery/09",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "marque o job concluído como superseded e repare a linhagem do job órfão",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "job/lpm-aish-delivery/10",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "encerrar os jobs do AISH que sobraram na fila",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 8
+    },
+    {
+      "id": "job/lpm-aish-jobs/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create an AISH analysis job for activity <issueId>",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "job/lpm-aish-jobs/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "cria um job AISH de teste para a atividade <id> no repositório <repo>",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "job/lpm-aish-jobs/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "aprova o job AISH <jobId> (sou o dono)",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "job/lpm-aish-jobs/04",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "run this objective through the AISH cockpit: plan, readiness, owner approval, dispatch",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "job/lpm-aish-jobs/05",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "pausa a sessão de execução <sessionId> e retoma depois do checkpoint",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "job/lpm-aish-jobs/06",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "anexa este áudio como referência do job e registra a transcrição",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 10
+    },
+    {
+      "id": "job/lpm-aish-jobs/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "retry the failed nodes of AISH session <sessionId>",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "job/lpm-aish-jobs/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "propose a Copilot action to summarize the project's AISH jobs",
+      "expected": "lpm-aish-jobs",
+      "decidedBy": 9
+    },
+    {
+      "id": "job/lpm-aish-runners/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "start an AISH runner for project <projectId> and run one approved job",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "job/lpm-aish-runners/02",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "onboard a new runner host: enrollment token, wizard, doctor, start",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 3
+    },
+    {
+      "id": "job/lpm-aish-runners/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "which runners of account <accountId> are online, busy or stale, and how many hours did they work?",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "job/lpm-aish-runners/04",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "drain the runner host <name> before maintenance, then suspend it",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "job/lpm-aish-runners/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "migrate the legacy project runner host into the runner account",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "job/lpm-aish-runners/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "build a non-CLI runner: session, lease, trace, consumption and evidence over MCP",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "job/lpm-aish-runners/07",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "iniciar o runner do AISH para o projeto e executar um job",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "job/lpm-aish-runners/08",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "drenar o host do runner antes da manutenção",
+      "expected": "lpm-aish-runners",
+      "decidedBy": 6
+    },
+    {
+      "id": "job/lpm-ask-advisor/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o código já faz <X>? responda com evidência do código",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "job/lpm-ask-advisor/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "onde está implementado <feature> no projeto <P>?",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "job/lpm-ask-advisor/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "where is <identifier> defined in the project's code?",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "job/lpm-ask-advisor/04",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "what is the technical impact of roadmap item <ABC-12>?",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "job/lpm-ask-advisor/05",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "analise o roadmap e diga quais itens ainda não têm código",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": 25
+    },
+    {
+      "id": "job/lpm-ask-advisor/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "show me the exact lines of <path> at the indexed commit",
+      "expected": "lpm-ask-advisor",
+      "decidedBy": -3
+    },
+    {
+      "id": "job/lpm-code-index/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "the Advisor says no_active_index for repository <url>: fix it",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "job/lpm-code-index/02",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "is the code index current for the workspace repositories?",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "job/lpm-code-index/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "link a repository to project <name>: https://github.com/<owner>/<repo>",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "job/lpm-code-index/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "reindexa o repositório do workspace",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "job/lpm-code-index/05",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o índice de código está desatualizado? escaneie o repositório do projeto",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "job/lpm-code-index/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "roll back the code index to the previous version",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "job/lpm-code-index/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "rollback a code-index version",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "job/lpm-code-index/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "compare commits <base> and <head> of the repository",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "job/lpm-code-index/09",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "purge the old code index version <versionId>",
+      "expected": "lpm-code-index",
+      "decidedBy": 23
+    },
+    {
+      "id": "job/lpm-deliver-activity/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "implementa a atividade X",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17
+    },
+    {
+      "id": "job/lpm-deliver-activity/02",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "fix bug ISSUE-ID and commit with the LPM-Activity trailer",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 15
+    },
+    {
+      "id": "job/lpm-deliver-activity/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "pick the next activity and do it",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17
+    },
+    {
+      "id": "job/lpm-deliver-activity/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "registre o progresso na atividade com os testes",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17
+    },
+    {
+      "id": "job/lpm-deliver-activity/05",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "anexa o print na atividade",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 16
+    },
+    {
+      "id": "job/lpm-deliver-activity/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "attach the test report to the activity",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 16
+    },
+    {
+      "id": "job/lpm-deliver-activity/07",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "posso fechar esta atividade? conclua com evidência",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 16
+    },
+    {
+      "id": "job/lpm-deliver-activity/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "close the activity with evidence",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 16
+    },
+    {
+      "id": "job/lpm-deliver-activity/09",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "remove the wrong screenshot from the activity",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 16
+    },
+    {
+      "id": "job/lpm-deliver-activity/10",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "comenta na atividade que os testes passaram",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17
+    },
+    {
+      "id": "job/lpm-deliver-activity/11",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "apaga o comentário duplicado na atividade",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 17
+    },
+    {
+      "id": "job/lpm-executive-context/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o workspace está pronto para operação assistida? gere o relatório de prontidão",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "job/lpm-executive-context/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o domínio <nome> está sem dono: qual projeto assume?",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "job/lpm-executive-context/04",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "list the executive context gaps of workspace <workspaceId> by gap id",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "job/lpm-executive-context/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "draft an operating model and a routing policy for the owner to review",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "job/lpm-executive-context/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "set the executive context mission to the text the owner gave",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "job/lpm-executive-context/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "check project alignment and fix the misaligned routing profile",
+      "expected": "lpm-executive-context",
+      "decidedBy": 33
+    },
+    {
+      "id": "job/lpm-governance-decisions/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "quais decisões estão pendentes no projeto <P>?",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 21
+    },
+    {
+      "id": "job/lpm-governance-decisions/02",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "what governance decisions are waiting across workspace <W>?",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 21
+    },
+    {
+      "id": "job/lpm-governance-decisions/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "abra uma thread de governança sobre o requisito <R> com opções e recomendação",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 20
+    },
+    {
+      "id": "job/lpm-governance-decisions/05",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o dono decidiu criar a atividade; registre a decisão na thread <T>",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 20
+    },
+    {
+      "id": "job/lpm-governance-decisions/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "turn the decision of thread <T> into a requirement and link it back",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 20
+    },
+    {
+      "id": "job/lpm-governance-decisions/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "who has to decide this, and which governance roles are uncovered?",
+      "expected": "lpm-governance-decisions",
+      "decidedBy": 20
+    },
+    {
+      "id": "job/lpm-intake-triage/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "qual é o status do protocolo <código>? o que aconteceu com ele?",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "job/lpm-intake-triage/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "roteie esta demanda do WhatsApp para o projeto certo",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "job/lpm-intake-triage/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "faça a triagem das entradas operacionais novas do projeto <P>",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "job/lpm-intake-triage/04",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "which project should receive intake entry <intakeEntryId>?",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "job/lpm-intake-triage/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "route intake <intakeEntryId> to project <P> (the owner chose it)",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "job/lpm-intake-triage/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "these two bug reports are the same problem: merge them",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "job/lpm-intake-triage/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "convert the approved operational entry <entryId> into an activity",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "job/lpm-intake-triage/08",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "registre que a resposta ao solicitante do protocolo <código> foi enviada",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "job/lpm-intake-triage/09",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "is the triage queue of project <P> inside the curation SLA?",
+      "expected": "lpm-intake-triage",
+      "decidedBy": 30
+    },
+    {
+      "id": "job/lpm-integrations/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create a webhook for issue events to our CI endpoint and test it",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "criar um webhook para o projeto e testar a entrega",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "why did our endpoint stop receiving LPM events?",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/04",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "pause the chat webhook / rotate the webhook secret",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "remove the old webhook subscription",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/06",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "exportar os dados do projeto para backup",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "is the analytics bridge to BigQuery healthy?",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/09",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "processar a ponte de analytics para o BigQuery só para issues",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/10",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "backup completo do workspace",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/11",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "envie os eventos de issue para o nosso Slack",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-integrations/12",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "notify our CI when an activity is completed",
+      "expected": "lpm-integrations",
+      "decidedBy": 31
+    },
+    {
+      "id": "job/lpm-knowledge/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "procure na ajuda do projeto a regra de fechamento de atividade e cite o slug",
+      "expected": "lpm-knowledge",
+      "decidedBy": 0
+    },
+    {
+      "id": "job/lpm-knowledge/02",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "what does the project help say about baseline approval?",
+      "expected": "lpm-knowledge",
+      "decidedBy": 0
+    },
+    {
+      "id": "job/lpm-knowledge/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "registre este PDF já publicado na base de conhecimento do projeto",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "job/lpm-knowledge/04",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "register the uploaded file link in the project files",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "job/lpm-knowledge/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "remove the duplicate knowledge item <name> from project <projectId>",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "job/lpm-knowledge/06",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "atualize as instruções de agente (skills context) do projeto",
+      "expected": "lpm-knowledge",
+      "decidedBy": 0
+    },
+    {
+      "id": "job/lpm-knowledge/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "save the analysis of roadmap item <itemId> as a knowledge note for the owner to review",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "job/lpm-knowledge/08",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "aceite a nota de conhecimento do roadmap como rascunho no projeto <projectId>",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "job/lpm-knowledge/09",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "reject the roadmap knowledge draft <artifactId>: it is outdated",
+      "expected": "lpm-knowledge",
+      "decidedBy": 32
+    },
+    {
+      "id": "job/lpm-pilot-feedback/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "verify the pilot's new reports and register only the confirmed defects",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "job/lpm-pilot-feedback/02",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "the tester reports the ChatGPT connector lost create_comment: check the request logs and the active OAuth grant",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "job/lpm-pilot-feedback/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "the pilot reported the same bug again: comment on the existing activity instead of creating a new one",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "job/lpm-pilot-feedback/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "verifique os relatos novos do piloto e registre só os defeitos confirmados no marco do piloto",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "job/lpm-pilot-feedback/05",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o piloto reclamou do Advisor: classifique e transforme a falha confirmada em fixture do golden set",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "job/lpm-pilot-feedback/06",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o piloto relatou uma demanda da plataforma do cliente: registre no workspace gerenciado, não no repositório lpm",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "job/lpm-pilot-feedback/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "report the processed pilot items to the owner in the pilot pattern",
+      "expected": "lpm-pilot-feedback",
+      "decidedBy": 13
+    },
+    {
+      "id": "job/lpm-plan-work/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "planeje o próximo sprint e feche o ciclo atual",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "job/lpm-plan-work/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "atribua as atividades sem responsável e defina os prazos",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "job/lpm-plan-work/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create these 12 issues in one batch",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "job/lpm-plan-work/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "close the sprint and move the unfinished work to the next cycle",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "job/lpm-plan-work/09",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "merge the duplicated labels",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "job/lpm-plan-work/10",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "notify the assignee that the milestone date moved",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "job/lpm-release-product/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "deploy the fix to production (lpm.rocks) with a candidate revision first",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "job/lpm-release-product/02",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "run the golden-set subset on the candidate and compare it with the last report",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "job/lpm-release-product/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "promote the candidate revision and run the MCP smoke",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "job/lpm-release-product/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "faz o deploy em produção com CANDIDATE_ONLY e golden set",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "job/lpm-release-product/05",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "promover o candidato para 100% do tráfego e rodar o smoke",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "job/lpm-release-product/06",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "rollback da revisão do LPM em produção para o rollback target",
+      "expected": "lpm-release-product",
+      "decidedBy": 12
+    },
+    {
+      "id": "job/lpm-release-product/07",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "anexa a revisão do Cloud Run, os testes e o smoke como evidência na atividade",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "job/lpm-release-product/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "add a golden-set regression for the confirmed pilot failure (fixture or vitest)",
+      "expected": "lpm-release-product",
+      "decidedBy": 11
+    },
+    {
+      "id": "job/lpm-requirements-scope/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o escopo do projeto <P> mudou desde a baseline? já dá para publicar?",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "job/lpm-requirements-scope/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "crie o requisito <título> e vincule à atividade <id>",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "job/lpm-requirements-scope/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "mark requirement <R> as obsolete instead of deleting it",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "job/lpm-requirements-scope/04",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "there are requirements without a baseline: attach them to the current one",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": -4
+    },
+    {
+      "id": "job/lpm-requirements-scope/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "prepare a change set with the unpublished scope changes and send it to review",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "job/lpm-requirements-scope/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "propose a rewrite of the description of requirement <R> for the owner to review",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "job/lpm-requirements-scope/07",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o dono aprovou: publique a baseline v2.0 do projeto <P>",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "job/lpm-requirements-scope/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "requirement <R> is done: can I mark it met?",
+      "expected": "lpm-requirements-scope",
+      "decidedBy": 22
+    },
+    {
+      "id": "job/lpm-review-health/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "revisão de saúde do projeto <nome>",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "job/lpm-review-health/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o que precisa da minha atenção no portfólio?",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "job/lpm-review-health/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "relatório de status semanal do workspace",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "job/lpm-review-health/04",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "weekly review of project <projectId>",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "job/lpm-review-health/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "list the risks of this project and the skill that fixes each one",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "job/lpm-review-health/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "is this project really healthy? check the integrity signals",
+      "expected": "lpm-review-health",
+      "decidedBy": 34
+    },
+    {
+      "id": "job/lpm-roadmap-owner-ops/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "I am the workspace owner: commit these roadmap edits directly, without review",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "job/lpm-roadmap-owner-ops/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "importa esta planilha TSV no roadmap do workspace",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "job/lpm-roadmap-owner-ops/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "aprova o item <title> do roadmap e materializa em requisitos do projeto <name>",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "job/lpm-roadmap-owner-ops/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "arquivar em massa os itens do roadmap <roadmap> (sou o dono)",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "job/lpm-roadmap-owner-ops/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "allocate project <name> as primary on roadmap item <title>",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "job/lpm-roadmap-owner-ops/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "add a dependency: roadmap item A depends on item B",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "job/lpm-roadmap-owner-ops/07",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o item do roadmap A depende do item B: cria a dependência (sou o dono)",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 27
+    },
+    {
+      "id": "job/lpm-roadmap-owner-ops/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "switch the roadmap governance mode to enforce",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 26
+    },
+    {
+      "id": "job/lpm-roadmap-owner-ops/09",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "preview and apply the roadmap governance migration, then roll it back if needed",
+      "expected": "lpm-roadmap-owner-ops",
+      "decidedBy": 26
+    },
+    {
+      "id": "job/lpm-roadmap/01",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "show the LPM roadmap overview of this workspace",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "job/lpm-roadmap/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "qual a rastreabilidade do item <título>? onde ele está sendo executado?",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "job/lpm-roadmap/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "propose raising the priority of roadmap item <title> (change request)",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "job/lpm-roadmap/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o que tenho para revisar no roadmap? aprove o pedido de mudança <id>",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "job/lpm-roadmap/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "apply the approved roadmap change request <id>",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "job/lpm-roadmap/06",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "retire o pedido de mudança <id> e envie um novo",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "job/lpm-roadmap/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "which work in project <name> is not linked to the roadmap?",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "job/lpm-roadmap/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create a capability \"Payments\" in the roadmap (owner order)",
+      "expected": "lpm-roadmap",
+      "decidedBy": 29
+    },
+    {
+      "id": "job/lpm-start/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "a ferramenta de criar atividade não aparece no ChatGPT",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "job/lpm-start/02",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "configure o MCP do LPM no Codex",
+      "expected": "lpm-start",
+      "decidedBy": 2
+    },
+    {
+      "id": "job/lpm-start/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "qual é o id do projeto <nome> no workspace <nome>?",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "job/lpm-start/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "mostre minhas notificações do LPM e marque como lidas",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "job/lpm-start/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "got -32003 access denied from an LPM tool",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "job/lpm-start/06",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "set up LPM in Claude Code, Antigravity, Gemini CLI or Cursor",
+      "expected": "lpm-start",
+      "decidedBy": 2
+    },
+    {
+      "id": "job/lpm-start/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "o conector do ChatGPT parou de mostrar ferramentas",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "job/lpm-start/09",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "marque a notificação como lida",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "job/lpm-unblock-work/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "por que a atividade <id> está bloqueada?",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "job/lpm-unblock-work/02",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "o que está bloqueado no projeto <P>? qual é o caminho crítico?",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "job/lpm-unblock-work/03",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "mark activity <X> as blocked by activity <Y>",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "job/lpm-unblock-work/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "registre o bloqueio: aguardando acesso do fornecedor",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "job/lpm-unblock-work/05",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "the vendor delivered the API access, unblock <X>",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "job/lpm-unblock-work/06",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "vincule esta atividade à atividade <Y> do outro workspace",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 19
+    },
+    {
+      "id": "job/lpm-unblock-work/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "remove the wrong dependency link between <X> and <Y>",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "job/lpm-unblock-work/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "this blocker needs an owner decision on scope: escalate it",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "job/lpm-unblock-work/09",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "which projects of the workspace depend most on each other?",
+      "expected": "lpm-unblock-work",
+      "decidedBy": 18
+    },
+    {
+      "id": "job/lpm-workspace-admin/01",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "quero fazer o kickoff de um novo projeto para o time de checkout",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 14
+    },
+    {
+      "id": "job/lpm-workspace-admin/03",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "defina o product owner e o delivery lead do projeto <nome>",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/04",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "edite o perfil de roteamento do projeto para cobrir o domínio pagamentos",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/06",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "adicione <pessoa> ao workspace como member",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/07",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create a new workspace for the logistics area",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/08",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "rename the project and change its description",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/09",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "delete the duplicated test project after exporting it",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/10",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "create a team, add two members and remove the old one",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/11",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "who is the user behind this ownerId?",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/12",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "adicione o Joao ao time de checkout",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/13",
+      "kind": "skill",
+      "lang": "en",
+      "prompt": "renomeie o time Plataforma",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    },
+    {
+      "id": "job/lpm-workspace-admin/14",
+      "kind": "skill",
+      "lang": "pt-BR",
+      "prompt": "quem é o product owner do projeto Checkout?",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 35
+    }
+  ]
+}

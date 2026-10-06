@@ -1,0 +1,64 @@
+# Flow: close an activity (closure check)
+Load when: decision row 6 of SKILL.md (finish or close the activity)
+
+## Preconditions
+1. LPM API key (links, attachments and audit are not offered to connectors). `credential == "oauth"` or -32003 → SKILL.md row 3.
+2. projectId, workspaceId and issueId come from SKILL.md §3. activityId comes from step 6a (a feed entry `id`, never the issueId). Load {{ref:closure-checklist}} before step 5.
+3. The user asked a question ("posso fechar esta atividade?", "can I close it?") → run steps 1–6 as a read-only check (no upload), report the result, and ask "Close <issueId> now? (yes/no)" before any write.
+
+## Steps
+1. {{tool:get_issue}}(projectId, issueId) → keep `factoryGovernance`, `description`, `requirementId`, `assigneeId`.
+2. {{tool:list_issue_links}}(projectId) → blockers of this issue: `type == "blocks"` and `targetIssueId == issueId` (blocker = `sourceIssueId`), or legacy `type == "is-blocked-by"` and `sourceIssueId == issueId` (blocker = `targetIssueId`).
+3. ALWAYS, even when step 2 found no blocker (it covers links from other projects): {{tool:list_workspace_issue_links}}(workspaceId, targetProjectId=projectId) → cross-project blockers: `type == "blocks"` and `targetIssueId == issueId` (blocker = `sourceIssueId` in project `sourceProjectId`).
+4. Each blocker → {{tool:get_issue}}(projectId=<blocker's project>, issueId=<blocker>); `status` is not `done`/`canceled` → STOP → {{skill:lpm-unblock-work}}. A link alone, with a done or canceled blocker, does not block.
+
+**Failed read (steps 1–6).** A read returns an error (`isError`, "not found", "You do not have access") and it is not -32003 → retry once with the same arguments ("Activity <id> not found" → you passed the issueId: redo 6a instead). Still failing → STOP: no closure comment, no `done`. Report "Closure check incomplete: <tool> failed: <error text>" with Pending: <tool> check — the user must retry or check access. A failed read never means "no blockers" or "no evidence". An empty array is a valid answer, not a failure.
+
+5. Acceptance criteria = step 1 `description` (and the requirement `requirementId` points to) plus the acceptance notes kept in SKILL.md P1 step 2. Number them. None found → ask "What are the acceptance criteria for <issueId>?" and STOP.
+6. Evidence per criterion, in this order:
+   - 6a. {{tool:list_workspace_activities}}(workspaceId, projectId, limit=50) → activityId = the newest `id` with `targetType == "issue"` and `targetId == issueId`. Never pass the issueId as activityId (LPM answers "Activity <id> not found"). No entry → no attachment exists yet; skip 6b.
+   - 6b. {{tool:list_activity_attachments}}(projectId, activityId) → the files of ALL feed entries of this issue (one call is enough).
+   - 6c. Write one line per criterion: `<criterion> → <evidence>`. Evidence is one of:
+     - an attachment listed in 6b: `<fileName> (id <attachment id>)`;
+     - for a test criterion only: a test result `<test name> → <pass count>` already in {{tool:list_comments}} or stated by the user with the commit. A recorded test result counts, so do not ask for a `text/plain` file. Upload test output as `text/plain` only when you have the output file.
+     A UI or visual criterion needs a listed screenshot; a comment does not prove it. A commit is not closure; build ≠ deploy ≠ smoke.
+   - 6d. Every line has evidence → step 8. A line has neither an attachment nor a recorded test result: you can produce the file now → {{ref:flow-evidence}}, then re-run 6b; otherwise → step 7, even if the user told you to close.
+7. Still missing → send the SKILL.md §8 report (Pending = `<criterion> — <owner>`), then, as its last line, ask exactly "Keep <issueId> open with pending item <criterion> (owner <owner>)? (yes/no)". `<owner>` = step 1 `assigneeId`, else a person or role named in the issue or its comments, else "you"; never leave it as a placeholder. Never offer to close with the pending item or to drop the criterion (dropping one is a scope change → {{skill:lpm-governance-decisions}}). "yes" → pending item = that criterion; go to step 9 and skip step 10. "no" → STOP and ask which evidence closes it.
+8. `factoryGovernance` set → {{tool:audit_aish_issue_delivery}}(projectId, issueId) [A] → `status == "passed"`; `blocked` → STOP → {{skill:lpm-aish-delivery}}.
+9. {{tool:create_comment}}(projectId, issueId, content=<the "closure comment" example of {{ref:closure-checklist}}, every line filled from tool results: Correction (commit sha + subject), Test (test → result), Evidence: `<fileName> (id <attachmentId>)` per file, Result (met, or pending item — owner), Next>, idempotencyKey="close-<issueId>-<n>") [A]. `<n>` = 1 + the closure comments you already posted on this issue ({{tool:list_comments}}).
+10. No pending item → {{tool:update_issue}}(projectId, issueId, status="done") [A]. Never send `blocked`. With a pending item never set `done`: the activity stays `in-progress`.
+11. Verify: make all three calls and tick each one.
+    - 11a. {{tool:get_issue}}(projectId, issueId) → `status == "done"` (or `in-progress` with a pending item).
+    - 11b. {{tool:list_activity_attachments}}(projectId, activityId) → every attachment id you cited in the comment is listed. (No attachment cited → skip.)
+    - 11c. {{tool:list_comments}}(projectId, issueId) → the id from {{tool:create_comment}} has your closure text (same commit, test result and attachment ids). A different, older text → the key was reused: post again with idempotencyKey `close-<issueId>-<n+1>` and do not report success yet.
+    Say "verified" only when 11a–11c all ran and passed.
+
+## Example (happy path)
+```text
+User: "Fix in commit 1a2b3c4, e2e checkout.spec passed 8/8, screenshot cart-1280x800.png is attached. Close it."
+1   get_issue → criteria: (1) cart total updates [UI], (2) an e2e test covers it [test]; assigneeId usr_ana
+2-4 list_issue_links, list_workspace_issue_links → no open blocker
+6a  list_workspace_activities → act_55 (targetType issue, targetId iss_42)
+6b  list_activity_attachments(projectId, act_55) → cart-1280x800.png (id private-att-9)
+6c  (1) → cart-1280x800.png (id private-att-9)
+    (2) → checkout.spec → 8/8 passed (user, with commit 1a2b3c4)
+9   create_comment(idempotencyKey="close-iss_42-1") → 10 update_issue(status="done")
+11  get_issue status == "done"; private-att-9 listed; comment text matches → SKILL.md §8 report
+```
+
+## Stop and ask
+| Situation | Do / ask exactly |
+|---|---|
+| a question, not an order to close | report steps 1–6; ask "Close <issueId> now? (yes/no)" |
+| no acceptance criteria | "What are the acceptance criteria for <issueId>?" |
+| a criterion lacks evidence | §8 report first, then "Keep <issueId> open with pending item <criterion> (owner <owner>)? (yes/no)" |
+| a read in steps 1–6 failed twice (e.g. {{tool:list_workspace_issue_links}}) | report "Closure check incomplete: <tool> failed: <error text>"; STOP; never say the check passed or set `done` |
+| open blocker | STOP → {{skill:lpm-unblock-work}} |
+| audit `blocked` or "Factory Definition of Done is missing, blocked or stale." | STOP → {{skill:lpm-aish-delivery}} |
+
+## Verify
+Step 11 (11a status, 11b attachments, 11c closure comment): all three, every time.
+
+## Report fields
+Use SKILL.md §8 exactly: Done = correction, commit sha + subject (or "subject unknown"), closure comment id, `status <status>`; Evidence = one line per criterion (`fileName (id)` on activityId, or `test → result`); Pending = `none` | `<criterion> — <owner>`; Next = one action | `none — activity closed`.
+When you stop to ask (step 7 or a failed read): the filled report first, the question last. Never leave `<owner>` or any `<placeholder>` unfilled.

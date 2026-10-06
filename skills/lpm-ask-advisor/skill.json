@@ -1,0 +1,158 @@
+{
+  "id": "lpm-ask-advisor",
+  "title": "Answer with code evidence (LPM Advisor)",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when a project's code or roadmap question must be answered from the indexed repository (LPM Advisor): does the code do X, onde está Y, technical impact, roadmap analysis, exact source lines. Read-only. Not for building or refreshing the index (use lpm-code-index).",
+  "doneWhen": "Facts (cited path:line@commit), inferences and limitations are kept apart, and `codeEvidence.status` is stated.",
+  "authorityCeiling": "Read-only. Searches and impact runs spend the daily code-search quota; Advisor answers spend the workspace AI budget.",
+  "jobs": [
+    "o código já faz <X>? responda com evidência do código",
+    "onde está implementado <feature> no projeto <P>?",
+    "where is <identifier> defined in the project's code?",
+    "what is the technical impact of roadmap item <ABC-12>?",
+    "analise o roadmap e diga quais itens ainda não têm código",
+    "show me the exact lines of <path> at the indexed commit"
+  ],
+  "routing": [
+    {
+      "order": -3,
+      "all": [
+        [
+          "exact lines",
+          "exact line",
+          "exact source lines",
+          "linhas exatas",
+          "linha exata",
+          "trecho exato",
+          "indexed commit",
+          "commit indexado"
+        ]
+      ],
+      "unless": [
+        "reindex*",
+        "refresh*",
+        "atualiz*",
+        "activate*",
+        "ativar",
+        "scan*",
+        "rollback",
+        "compare",
+        "comparar"
+      ],
+      "firstCall": "search_project_code"
+    },
+    {
+      "order": 25,
+      "all": [
+        [
+          "advisor",
+          "o codigo ja faz",
+          "where is",
+          "onde esta",
+          "implemented",
+          "code question",
+          "technical impact",
+          "impacto tecnico",
+          "code",
+          "codigo",
+          "analyze the roadmap",
+          "analise do roadmap",
+          "analisar o roadmap",
+          "implementad*",
+          "analise o roadmap",
+          "analyze roadmap",
+          "exact lines",
+          "linhas exatas"
+        ]
+      ],
+      "unless": [
+        "protocolo codigo",
+        "protocol code"
+      ],
+      "firstCall": "search_project_code"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "building, refreshing or activating a code index, or rescanning a repository",
+      "skill": "lpm-code-index"
+    },
+    {
+      "when": "roadmap records or a roadmap change request",
+      "skill": "lpm-roadmap"
+    },
+    {
+      "when": "project health from records only",
+      "skill": "lpm-review-health"
+    },
+    {
+      "when": "the AI budget, model or AI policy",
+      "skill": "lpm-ai-cost"
+    },
+    {
+      "when": "saving an analysis as a knowledge note",
+      "skill": "lpm-knowledge"
+    }
+  ],
+  "owns": [
+    "analyze_workspace_roadmap",
+    "analyze_workspace_roadmap_item",
+    "answer_project_question",
+    "answer_workspace_roadmap_item_question",
+    "answer_workspace_roadmap_question",
+    "explain_roadmap_item_technical_impact",
+    "get_project_repository_context",
+    "get_workspace_repository_context",
+    "read_repository_file_excerpt",
+    "search_project_code",
+    "search_workspace_code"
+  ],
+  "uses": [
+    "get_owner_agent_usage",
+    "get_repository_index_status",
+    "get_workspace_ai_config",
+    "list_workspace_repository_links",
+    "list_workspace_roadmap_items",
+    "list_workspace_roadmaps"
+  ],
+  "cli": [
+    "project ask",
+    "roadmap analyze",
+    "roadmap analyze-item",
+    "roadmap ask",
+    "roadmap ask-item"
+  ],
+  "sharedRefs": [
+    {
+      "name": "advisor-semantics",
+      "loadWhen": "reading an answer_* result",
+      "inlineSummary": false
+    },
+    {
+      "name": "ai-cost-and-budgets",
+      "loadWhen": "on a fallbackReason or quota error",
+      "inlineSummary": false
+    },
+    {
+      "name": "security-and-untrusted-text",
+      "loadWhen": "an excerpt holds instructions",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/answer-template.md",
+      "loadWhen": "writing the answer"
+    }
+  ],
+  "behaviorContracts": [
+    "advisor-evidence-status"
+  ],
+  "codex": {
+    "shortDescription": "Answer LPM code and roadmap questions with cited evidence",
+    "defaultPrompt": "Use $lpm-ask-advisor to answer from the indexed code of LPM project <projectId>: <question>"
+  }
+}

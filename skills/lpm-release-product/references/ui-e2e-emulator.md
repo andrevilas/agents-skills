@@ -1,0 +1,33 @@
+# Signed-in web UI tests on local emulators
+Load when: signed-in web UI tests (row 10)
+Applies to: lpm-release-product    Source: lpm `scripts/run-firebase-emulators.sh`, `scripts/run-local-emulator-safe.sh`, `firebase.json` (emulator ports), `server.ts` (`PORT`, `ENABLE_SERVERLESS_BACKGROUND_WORKERS`, REST routes `POST /api/workspaces`, `PUT /api/workspaces/:workspaceId/ai-config`, `POST /api/projects`)
+## Summary
+- Web routes accept only Firebase ID tokens or LPM OAuth tokens; never mint or reuse a real user's token. Test on the local emulators.
+- Start the emulators, then the server in emulator-safe mode with background workers off, then seed over REST.
+- Playwright at 390x844 and 1280x800; screenshots go to the activity as evidence (row 8).
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| `npm run emulators:start` | runs `firebase emulators:start --only auth,firestore,storage --project demo-lpm`; picks a JDK ≥ 21 (`/usr/lib/jvm/java-25-openjdk-amd64` first) | no JDK ≥ 21 → `export JAVA_HOME=<jdk ≥ 21>` and `PATH=$JAVA_HOME/bin:$PATH`, then re-run |
+| emulator ports | auth 9100, firestore 8181, storage 9200 (`firebase.json`) | the code defaults 8080/9099/9199 do not match; login fails with "Verifique sua conexão" |
+| `ENABLE_SERVERLESS_BACKGROUND_WORKERS=false npm run dev:emulator-safe` | server (`tsx server.ts`) with `LPM_FIREBASE_TARGET=emulator`, `FIRESTORE_EMULATOR_HOST=127.0.0.1:8181`, `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9100`, storage hosts, matching `VITE_*` ports, a dummy `WORKSPACE_AI_ENCRYPTION_KEY`, BigQuery load off | never put a real key in this shell; the server listens on `PORT` (default 3000) |
+| port 4190 | browsers and fetch block it ("bad port") | never use it |
+| seed 1: user | `POST http://127.0.0.1:9100/identitytoolkit.googleapis.com/v1/accounts:signUp?key=emulator-only` with `{email, password, returnSecureToken:true}` → `idToken` | a test address and password only; never a real account |
+| seed 2: workspace | `POST /api/workspaces` `{name}` with `Authorization: Bearer <idToken>` → workspace id | — |
+| seed 3: AI config | `PUT /api/workspaces/<id>/ai-config` `{enabled, defaultProvider, featureFlags}` | only when the tested screen needs AI |
+| seed 4: project | `POST /api/projects` `{name, workspaceId}` → project id | — |
+| login | `/login` with the seeded email and password | — |
+
+## Rules
+1. Run everything from wtPath; never point the server at production (`LPM_FIREBASE_TARGET` stays `emulator`).
+2. Seed only over REST as above; never write Firestore of a real project.
+3. Test both viewports; attach the screenshots through flow-rollback-evidence steps 6–8 (step 8 screenshot line: `.png`, `image/png`).
+4. Real AI on emulators spends the GCP bill: only with the owner's order in this conversation.
+
+## Examples
+```text
+example: npm run emulators:start   # terminal 1
+ENABLE_SERVERLESS_BACKGROUND_WORKERS=false npm run dev:emulator-safe   # terminal 2
+signUp -> POST /api/workspaces -> POST /api/projects -> Playwright 390x844 and 1280x800
+```

@@ -1,0 +1,39 @@
+# Repository hygiene
+Load when: you write, commit or push code in any git repository
+Applies to: lpm-deliver-activity, lpm-release-product    Source: process rules (Delivery and deploy); lpm `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`
+Owner skill: lpm-deliver-activity
+
+## Summary
+- Develop in a git worktree (`git worktree add`), not in a checkout someone may be deploying or uploading.
+- Never edit a checkout while a deploy from it runs: some deploys upload the working directory as it is.
+- Before pushing, read the repository's `AGENTS.md`, `CLAUDE.md` and `CONTRIBUTING.md` and run every check they name.
+- In the `lpm` repository, read its `AGENTS.md` and `CLAUDE.md` and follow them; they name the tests, lint and MCP-parity checks.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| `git worktree add <path> -b <branch>` | a second working copy of the same repository | your edits cannot leak into another session's deploy |
+| a deploy that uploads the working dir (e.g. `--source .`) | uploads whatever is on disk at that moment | wait until it finishes, or work in a worktree |
+| `AGENTS.md` / `CLAUDE.md` / `CONTRIBUTING.md` | the repository's own rules | they override generic habits; read them first |
+| untracked files in the working dir | may be uploaded or committed by accident | keep scratch files outside the repository |
+| `.lpm-activity` | local file for the LPM-Activity hook | gitignored where the repository supports it |
+| git stash | shared by every worktree of a repository | never use a bare `git stash` / `git stash pop` in shared repositories |
+| a failing check | the change is not ready | fix it; never skip or disable the check |
+
+## Rules
+1. Run `git status` before and after your change; commit only the files of your change.
+2. Never edit a checkout that is deploying or being uploaded.
+3. Run every check the repository's instruction files name before you push; report each result.
+4. Add or update tests with the change when the repository asks for them (bug fix → regression test).
+5. Never commit secrets, `.env` files, local config or generated scratch output.
+6. Use the repository's commit message conventions plus the `LPM-Activity` trailer (`delivery-tracking.md`).
+7. Do not change CI, hooks or check configuration to make a check pass.
+8. Shipping the LPM product itself is an LPM-maintainer procedure: {{skill:lpm-release-product}}.
+
+## Examples
+```text
+example: fix a bug in a repository while another session may deploy it
+git worktree add ../app-wt-fix -b fix/login-redirect
+cd ../app-wt-fix && <edit> && <run the checks named in AGENTS.md>
+git commit (with "LPM-Activity: <issueId>") && git push -u origin fix/login-redirect
+```

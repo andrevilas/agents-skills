@@ -1,0 +1,160 @@
+{
+  "id": "lpm-code-index",
+  "title": "Repository links and code index",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when LPM code evidence is missing or stale (no_active_index, scan older than 24 h, índice de código desatualizado): link a GitHub repository to a project or workspace, scan it, refresh, activate, roll back or purge the code index, or compare commits. Not for code questions (use lpm-ask-advisor).",
+  "doneWhen": "The repository is linked and its active index version is at the expected commit, verified by a status read and a smoke search.",
+  "authorityCeiling": "Reads and scans are [A]; links, refresh, activate, rollback and purge are [C]; index caps are the owner's financial decision.",
+  "jobs": [
+    "the Advisor says no_active_index for repository <url>: fix it",
+    "is the code index current for the workspace repositories?",
+    "link a repository to project <name>: https://github.com/<owner>/<repo>",
+    "reindexa o repositório do workspace",
+    "o índice de código está desatualizado? escaneie o repositório do projeto",
+    "roll back the code index to the previous version",
+    "rollback a code-index version",
+    "compare commits <base> and <head> of the repository",
+    "purge the old code index version <versionId>"
+  ],
+  "routing": [
+    {
+      "order": 23,
+      "all": [
+        [
+          "reindex*",
+          "code index",
+          "code-index",
+          "indice-de-codigo",
+          "indice de codigo",
+          "scan",
+          "escanear",
+          "scans",
+          "no_active_index",
+          "link repository",
+          "link a repository",
+          "vincular repositorio",
+          "repository link",
+          "compare commits",
+          "comparar commits"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "list_workspace_repository_links"
+    },
+    {
+      "order": 24,
+      "all": [
+        [
+          "stale",
+          "desatualizad*"
+        ],
+        [
+          "scan",
+          "index",
+          "indice",
+          "code",
+          "codigo",
+          "repository",
+          "repositorio"
+        ]
+      ],
+      "unless": [],
+      "firstCall": "list_workspace_repository_links"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "asking what the code does, where something is, or a roadmap item's technical impact",
+      "skill": "lpm-ask-advisor"
+    },
+    {
+      "when": "a GitHub token, the workspace GitHub credential or an API key",
+      "skill": "lpm-access"
+    },
+    {
+      "when": "index caps, code-search quota or the AI budget",
+      "skill": "lpm-ai-cost"
+    },
+    {
+      "when": "a commit that delivers an activity (LPM-Activity trailer)",
+      "skill": "lpm-deliver-activity"
+    },
+    {
+      "when": "creating and kicking off a new project",
+      "skill": "lpm-workspace-admin"
+    }
+  ],
+  "owns": [
+    "list_project_repository_links",
+    "create_project_repository_link",
+    "update_project_repository_link",
+    "archive_project_repository_link",
+    "scan_project_repository_readonly",
+    "list_workspace_repository_links",
+    "create_workspace_repository_link",
+    "update_workspace_repository_link",
+    "archive_workspace_repository_link",
+    "scan_workspace_repository_readonly",
+    "get_repository_index_status",
+    "compare_repository_commits",
+    "preview_repository_code_index",
+    "refresh_repository_code_index",
+    "activate_repository_code_index",
+    "rollback_repository_code_index",
+    "purge_repository_code_index",
+    "reconcile_workspace_code_indexes"
+  ],
+  "uses": [
+    "search_workspace_code",
+    "get_workspace_repository_context",
+    "get_workspace_repository_credential"
+  ],
+  "cli": [
+    "code-index status",
+    "code-index preview",
+    "code-index refresh",
+    "code-index activate",
+    "code-index rollback",
+    "code-index reconcile",
+    "code-index purge",
+    "project-repos list",
+    "project-repos create",
+    "project-repos update",
+    "project-repos archive",
+    "project-repos scan",
+    "project-repos context",
+    "workspace-repos list",
+    "workspace-repos create",
+    "workspace-repos update",
+    "workspace-repos archive",
+    "workspace-repos scan",
+    "workspace-repos context"
+  ],
+  "sharedRefs": [
+    {
+      "name": "error-codes",
+      "loadWhen": "an error code or message is not in §9",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/code-index-lifecycle.md",
+      "loadWhen": "before any refresh, activate, rollback or purge"
+    },
+    {
+      "file": "references/flow-repository-links.md",
+      "loadWhen": "decision rows 1 (no_active_index), 2, 3, 8"
+    }
+  ],
+  "behaviorContracts": [
+    "code-index-activation"
+  ],
+  "codex": {
+    "shortDescription": "Link repos and keep the LPM code index fresh",
+    "defaultPrompt": "Use $lpm-code-index to check and refresh the LPM code index of repository <url>."
+  }
+}

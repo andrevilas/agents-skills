@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "schemaDrift": "warn"
+  },
+  "contracts": [
+    {
+      "id": "activity-evidence",
+      "tools": [
+        "create_comment",
+        "get_issue"
+      ],
+      "phrases": [
+        "LPM-Activity:"
+      ],
+      "scope": "owner-of:create_comment",
+      "anchorTool": "create_comment",
+      "skills": []
+    },
+    {
+      "id": "missing-tool-fallback",
+      "tools": [
+        "get_mcp_connection_info"
+      ],
+      "phrases": [],
+      "scope": "every-skill",
+      "everySkill": true,
+      "skills": []
+    }
+  ]
+}

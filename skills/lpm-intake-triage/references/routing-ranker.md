@@ -1,0 +1,51 @@
+# Routing ranker
+Load when: when reading a routing preview
+Applies to: lpm-intake-triage    Source: lpm `src/lib/workspaceRouting.ts` (`calculateRoutingProfileCompleteness` l.120-134, ownership penalty l.168, `resolveOutcome` l.249-266), `src/lib/projectRoutingProfile.ts`, `docs/workspace-intake-routing-adr.md`, `docs/workspace-routing-qa-matrix.md`; cards {{tool:preview_workspace_routing}}, {{tool:review_workspace_routing}}, {{tool:update_project}}, {{tool:list_unowned_domains_or_capabilities}}
+## Summary
+- {{tool:preview_workspace_routing}} is a deterministic keyword ranker: no AI call, no AI quota, nothing saved.
+- `score` = 0.45 ownership + 0.30 semantic + 0.15 dependency + 0.10 history. `confidence` = the top candidate's score.
+- Only non-archived projects of the same workspace are ranked. Quality depends on each project's `routingProfile`.
+- `ambiguous`, `multi-project` and `no-match` need a human decision. A preview never creates a project artifact.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| `outcome == "no-match"` | no candidate, or top score < 0.35 | present candidates and `reasonCode`; owner decides (route, reject, defer) |
+| `outcome == "multi-project"` | top ≥ 0.72, second ≥ 0.64, gap ≤ 0.06 | owner decides: split or one project |
+| `outcome == "ambiguous"` | second ≥ 0.5 and gap ≤ 0.1 | owner decides; never pick |
+| `outcome == "single-project"` | any other case with top ≥ 0.35 | recommend the top; the code has no separate low-confidence threshold, so the review still needs the owner's explicit choice |
+| `reasonCode` | only on `no-match`: `out_of_portfolio_scope` (no distinctive signal), `insufficient_routing_evidence` (weak signal) | quote it; `out_of_portfolio_scope` → reject, defer or another workspace (SKILL.md §2 item 3: other workspace → {{skill:lpm-unblock-work}}) |
+| `signals.ownershipScore` | intake tokens vs `routingProfile` fields, weights: `domains` 1.2, `aliases` 1.2, `intakeKeywords` 1.1, `ownedCapabilities` / `ownedComponents` / `ownedSystems` 1.0 | the strongest ownership evidence; name `matchedTerms` |
+| `signals.excludedTerms` | `excludedKeywords` that matched; −0.2 each, at most −0.5 | say why a project was pushed down |
+| `signals.semanticScore` | Dice token overlap with the project's name, key, description and profile terms; not embeddings | word overlap, not meaning |
+| `signals.dependencyScore` | non-zero only when the text names a project (name, key or alias); uses dependency-heatmap coupling | explains a project that was only mentioned |
+| `signals.historicalScore` | best Dice similarity to intake already routed to that project | past routing, not ownership |
+| tokenization | lowercase, accents stripped, PT/EN stopwords removed, tokens ≥ 2 chars, split on spaces, `-`, `_` | spelling variants do not match each other |
+| `routingProfileCompleteness` | 0–1: share of 6 fields populated (`domains`, `ownedCapabilities`, `ownedComponents`, `ownedSystems`, `aliases`, `intakeKeywords`); 0 = no profile | < 0.5 → offer the profile fix (row 13) |
+| project without `routingProfile` | ownership 0; in practice lands in `no-match` | the #1 cause of bad routing |
+| `limitCount` | 1–10, default 5 | pass 10 when the owner names a project not in the top 5; still absent → {{ref:flow-routing}} step 3 |
+| inputs | `intakeEntryId`, or both `title` and `description` | ad hoc text needs both |
+| `routingProfile` fields | `domains`, `ownedCapabilities`, `ownedComponents`, `ownedSystems`, `aliases`, `intakeKeywords`, `excludedKeywords`, `escalationRules`, `maintainedBy` | the last two are stored but not scored |
+| {{tool:update_project}} `routingProfile` | replaces the whole object; omitted arrays become `[]`; `null` clears it; the project must belong to a workspace | read {{tool:get_project}} first and send the full object |
+| workspace executive context | never read by the ranker | {{tool:list_unowned_domains_or_capabilities}} explains gaps but changes no score |
+| unowned domain or capability | exact string compare of executive-context domains/capabilities with the projects' `routingProfile.domains` / `ownedCapabilities` | close it by adding the exact string to the right project's profile (owner-approved) |
+
+## Rules
+1. Cite `outcome`, `reasonCode` and, per candidate, `score`, the four signals, `matchedTerms`, `excludedTerms` and `routingProfileCompleteness`.
+2. Never present a keyword match as proven ownership.
+3. On `ambiguous`, `multi-project` or `no-match`, present the candidates and stop for the owner's choice.
+4. No project-scoped artifact comes from a preview. Only a confirmed routing review, or the owner's explicit project choice for ad hoc text, creates one (routing ADR).
+5. Never route across workspaces: the ranker cannot, and selected ids are not checked by the server.
+6. Do not open a governance thread for routing: threads cannot target an intake entry.
+
+## Examples
+```text
+example: outcome single-project, confidence 0.61
+  1. Billing (BIL) score 0.61 ownership 0.80 semantic 0.42 dependency 0 history 0.30
+     matchedTerms: invoice, boleto   excludedTerms: —   routingProfileCompleteness 0.83
+  2. Portal (POR) score 0.22 ...
+  → "Recommend Billing: its profile claims 'invoice' and 'boleto'. This is a keyword match;
+     confirm the project before I route it."
+example: outcome no-match, reasonCode insufficient_routing_evidence, every completeness 0
+  → "No project profile matches. Routing profiles are empty: fix them first (row 13) or choose."
+```

@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "collision/c01",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "close the activity",
+        "fechar a atividade"
+      ],
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 3,
+      "collision": true,
+      "says": "close / fechar",
+      "about": "one activity"
+    },
+    {
+      "id": "collision/c02",
+      "kind": "collision",
+      "lang": [
+        "en",
+        "pt-BR"
+      ],
+      "prompt": [
+        "deploy LPM to production",
+        "implantar o LPM em producao"
+      ],
+      "expected": "lpm-release-product",
+      "decidedBy": 4,
+      "collision": true,
+      "says": "deploy / implantar",
+      "about": "the LPM product"
+    },
+    {
+      "id": "deliver/en-1",
+      "lang": "en",
+      "prompt": "commit this fix with the trailer",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 2
+    },
+    {
+      "id": "deliver/en-2",
+      "lang": "en",
+      "prompt": "finish the activity and close it",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 3
+    },
+    {
+      "id": "deliver/pt-1",
+      "lang": "pt-BR",
+      "prompt": "conclua a atividade 42",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 3
+    },
+    {
+      "id": "legacy/software-project-orchestrator/en",
+      "kind": "legacy",
+      "lang": "en",
+      "prompt": "use the software-project-orchestrator skill",
+      "expected": "lpm-deliver-activity",
+      "decidedBy": 5
+    },
+    {
+      "id": "release/en-1",
+      "lang": "en",
+      "prompt": "promote the candidate revision",
+      "expected": "lpm-release-product",
+      "decidedBy": 4
+    },
+    {
+      "id": "release/en-2",
+      "lang": "en",
+      "prompt": "deploy the new version",
+      "expected": "lpm-release-product",
+      "decidedBy": 4
+    },
+    {
+      "id": "release/pt-1",
+      "lang": "pt-BR",
+      "prompt": "promover a revisao candidata",
+      "expected": "lpm-release-product",
+      "decidedBy": 4
+    },
+    {
+      "id": "start/en-1",
+      "lang": "en",
+      "prompt": "connect my agent to LPM",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "start/en-2",
+      "lang": "en",
+      "prompt": "set up the LPM connection",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    },
+    {
+      "id": "start/pt-1",
+      "lang": "pt-BR",
+      "prompt": "como conectar o LPM no Codex",
+      "expected": "lpm-start",
+      "decidedBy": 1
+    }
+  ]
+}

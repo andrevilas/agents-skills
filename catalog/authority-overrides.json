@@ -1,0 +1,359 @@
+{
+  "schemaVersion": 1,
+  "source": "design §2.29 (validator V5); owner decisions §10 items 2 and 6 (recommendations accepted)",
+  "renderMap": {
+    "autonomous": "A",
+    "confirm-with-user": "C",
+    "owner-only": "O"
+  },
+  "rule": "Rendered tag = card authority mapped by renderMap, then the stricter tag of any entry below. Every tool that is both in LPM SENSITIVE_ADMIN_TOOLS and carded autonomous must have exactly one entry in sensitiveAutonomous; V5 fails otherwise.",
+  "ownerDecisions": [
+    {
+      "item": 2,
+      "decision": "Accept §2.29: raise 2 sensitive autonomous tools to [C] and keep 26 at [A] with reasons.",
+      "alternativeRejected": "Raise every sensitive write (17 tools); it stalls runner loops."
+    },
+    {
+      "item": 6,
+      "decision": "Static [O] for the six roadmap-structure writes. In `shadow`/`enforce`, item creation runs only on the owner's explicit order (draft first); later changes go through change requests.",
+      "alternativeRejected": "[C] in mode `off` and [O] otherwise; the tag would depend on state a low-reasoning agent must read correctly."
+    }
+  ],
+  "sensitiveAutonomous": [
+    {
+      "tool": "acquire_aish_coordinator_lease",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "audit_aish_issue_delivery",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "collect_aish_execution_pack",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "complete_aish_release",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "create_aish_execution_session",
+      "card": "autonomous",
+      "decision": "raise",
+      "from": "A",
+      "to": "C",
+      "group": "governed-work-object",
+      "reason": "They create governed work objects on an admin surface. Show the plan once."
+    },
+    {
+      "tool": "create_aish_intake_context",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "create_aish_job",
+      "card": "autonomous",
+      "decision": "raise",
+      "from": "A",
+      "to": "C",
+      "group": "governed-work-object",
+      "reason": "They create governed work objects on an admin surface. Show the plan once."
+    },
+    {
+      "tool": "create_copilot_conversation",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "export_aish_execution_pack",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "get_copilot_conversation",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "get_workspace_repository_credential",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "list_api_keys",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "list_copilot_conversations",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "list_webhook_deliveries",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "list_webhook_subscriptions",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "list_workspace_ai_credentials",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "list_workspace_mcp_agent_credentials",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "preview_repository_code_index",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "preview_workspace_roadmap_v2_migration",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "propose_copilot_action",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "reconcile_workspace_code_indexes",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "read",
+      "reason": "Reads. Sensitivity means \"full/custom key\", not \"ask first\". The access banner states the key profile."
+    },
+    {
+      "tool": "record_aish_execution_trace",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "register_aish_delivery_artifact",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "request_aish_execution_checkpoint",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "tick_aish_automation",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "upload_aish_delivery_artifact",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "upload_aish_intake_attachment",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    },
+    {
+      "tool": "upsert_aish_runner_session",
+      "card": "autonomous",
+      "decision": "keep",
+      "from": "A",
+      "to": "A",
+      "group": "fact-recording-proposal-or-input-write",
+      "reason": "These record facts (telemetry, evidence, audit, receipts), make proposals that a human decides, or prepare inputs. Asking before each one would stall runner loops and evidence capture."
+    }
+  ],
+  "governanceRaises": [
+    {
+      "tool": "archive_workspace_capability",
+      "card": "confirm-with-user",
+      "from": "C",
+      "to": "O",
+      "rule": "GOV-MAX v1",
+      "reason": "Roadmap changes are proposals for the owner's decision unless the owner authorizes them. On a connector, the person who says yes may not be the owner. In `shadow`/`enforce` mode a new item is created only on the owner's explicit order (`create_workspace_roadmap_item` [O] without `lifecycle`, so it starts as a draft, or `commit_owner_roadmap_change`); later changes go through change requests. `changeType: create` is not a working path: preview needs existing item ids and apply writes nothing for it."
+    },
+    {
+      "tool": "create_operational_entry",
+      "card": "autonomous",
+      "from": "A",
+      "to": "C",
+      "rule": "Routing ADR (project-scoped artifacts only through a routing confirmation)",
+      "reason": "Project-scoped artifacts are created only through a routing confirmation. The legacy routing digest: direct creation needs the owner's explicit choice."
+    },
+    {
+      "tool": "create_protocol_evidence_attachment",
+      "card": "autonomous",
+      "from": "A",
+      "to": "C",
+      "rule": "Permanent records: show the exact call and wait for yes",
+      "reason": "Each call adds a permanent protocol evidence record (no delete tool, no dedupe), uses a limited per-kind slot (image 10, audio 5, video 3, document 5, other 3; 20 files / 100 MB in total) and sets the protocol's lastInternalStatus. The agent cannot verify the 'stored and sanitized' precondition: show kind, fileName, size, sha256 and redactionState and wait for yes."
+    },
+    {
+      "tool": "create_workspace_capability",
+      "card": "confirm-with-user",
+      "from": "C",
+      "to": "O",
+      "rule": "GOV-MAX v1",
+      "reason": "Roadmap changes are proposals for the owner's decision unless the owner authorizes them. On a connector, the person who says yes may not be the owner. In `shadow`/`enforce` mode a new item is created only on the owner's explicit order (`create_workspace_roadmap_item` [O] without `lifecycle`, so it starts as a draft, or `commit_owner_roadmap_change`); later changes go through change requests. `changeType: create` is not a working path: preview needs existing item ids and apply writes nothing for it."
+    },
+    {
+      "tool": "create_workspace_roadmap",
+      "card": "confirm-with-user",
+      "from": "C",
+      "to": "O",
+      "rule": "GOV-MAX v1",
+      "reason": "Roadmap changes are proposals for the owner's decision unless the owner authorizes them. On a connector, the person who says yes may not be the owner. In `shadow`/`enforce` mode a new item is created only on the owner's explicit order (`create_workspace_roadmap_item` [O] without `lifecycle`, so it starts as a draft, or `commit_owner_roadmap_change`); later changes go through change requests. `changeType: create` is not a working path: preview needs existing item ids and apply writes nothing for it."
+    },
+    {
+      "tool": "create_workspace_roadmap_item",
+      "card": "confirm-with-user",
+      "from": "C",
+      "to": "O",
+      "rule": "GOV-MAX v1",
+      "reason": "Roadmap changes are proposals for the owner's decision unless the owner authorizes them. On a connector, the person who says yes may not be the owner. In `shadow`/`enforce` mode a new item is created only on the owner's explicit order (`create_workspace_roadmap_item` [O] without `lifecycle`, so it starts as a draft, or `commit_owner_roadmap_change`); later changes go through change requests. `changeType: create` is not a working path: preview needs existing item ids and apply writes nothing for it."
+    },
+    {
+      "tool": "update_workspace_capability",
+      "card": "confirm-with-user",
+      "from": "C",
+      "to": "O",
+      "rule": "GOV-MAX v1",
+      "reason": "Roadmap changes are proposals for the owner's decision unless the owner authorizes them. On a connector, the person who says yes may not be the owner. In `shadow`/`enforce` mode a new item is created only on the owner's explicit order (`create_workspace_roadmap_item` [O] without `lifecycle`, so it starts as a draft, or `commit_owner_roadmap_change`); later changes go through change requests. `changeType: create` is not a working path: preview needs existing item ids and apply writes nothing for it."
+    },
+    {
+      "tool": "update_workspace_roadmap",
+      "card": "confirm-with-user",
+      "from": "C",
+      "to": "O",
+      "rule": "GOV-MAX v1",
+      "reason": "Roadmap changes are proposals for the owner's decision unless the owner authorizes them. On a connector, the person who says yes may not be the owner. In `shadow`/`enforce` mode a new item is created only on the owner's explicit order (`create_workspace_roadmap_item` [O] without `lifecycle`, so it starts as a draft, or `commit_owner_roadmap_change`); later changes go through change requests. `changeType: create` is not a working path: preview needs existing item ids and apply writes nothing for it."
+    }
+  ],
+  "expectedTotals": {
+    "card": {
+      "A": 221,
+      "C": 97,
+      "O": 65
+    },
+    "rendered": {
+      "A": 217,
+      "C": 95,
+      "O": 71
+    },
+    "sensitiveAutonomous": {
+      "total": 28,
+      "raise": 2,
+      "keep": 26
+    }
+  }
+}

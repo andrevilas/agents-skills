@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "lpmCommit": "0000000000000000000000000000000000000000",
+  "lpmDirty": false,
+  "toolCount": 11,
+  "cliCount": 3,
+  "namesHash": "sha256:9acb881cd8985cbc8d01c7081f73f0c09a120025736b20810c9459b993bd647f",
+  "schemaHash": "sha256:4b748ac983f2bd3078d80503d4c582ca34879ec0d133f77b3db70ca8e4661995",
+  "cliHash": "sha256:97f503684ebaa05e1306b31ac2e9d1661eb5daca534b06425bfc75d36ee74bbd"
+}

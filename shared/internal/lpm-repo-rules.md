@@ -1,0 +1,56 @@
+# LPM repository rules (maintainers)
+Load when: you change, push or deploy the LPM product repository (`lpm`)
+Applies to: lpm-release-product    Source: lpm `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `scripts/deploy-production.sh`, `scripts/check-mcp-parity.ts`, `scripts/smoke-mcp-protocol.mjs`; owner's standing deploy rules
+Owner skill: lpm-release-product
+
+## Summary
+- Work in a git worktree of `lpm`; never edit the checkout being deployed: `gcloud run deploy --source .` uploads the working dir as it is.
+- Before push: `npx vitest run`, `npm run lint`, `npm run check:mcp-parity`. Commits carry `LPM-Activity: <issueId>`.
+- Before deploy: agents-skills `main` equal to `origin/main` (rule 2), the exact `.gcloudignore` below, and the `list-files-for-upload` comparison.
+- Deploy with `CANDIDATE_ONLY=true`, evaluate, record the rollback target, promote, smoke; on a failed smoke roll back and STOP.
+- No experiments through environment variables. Inform pilots only after the fix is verified live.
+
+## Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| service / project / region | `little-project-manager` / `gen-lang-client-0962999154` / `us-west1` (defaults in `scripts/deploy-production.sh`) | use them in every `gcloud run` command below |
+| `CANDIDATE_ONLY=true bash scripts/deploy-production.sh` | build, lint, parity, local start, deploy `--no-traffic --tag=lpm-candidate`, candidate smoke, then exit | prints `Revision:`, `Candidate:` and `Promote:` lines: keep all three |
+| candidate URL lost | `gcloud run services describe little-project-manager --project=gen-lang-client-0962999154 --region=us-west1 --format=json \| jq -r '.status.traffic[] \| select(.tag=="lpm-candidate") \| .url'` | the tag URL, never the plain service URL |
+| rollback target | `gcloud run services describe little-project-manager --project=gen-lang-client-0962999154 --region=us-west1 --format='value(status.traffic)'` → the revision at `percent=100` | write it in the activity comment BEFORE promoting |
+| promote | the printed `Promote:` command (`gcloud run services update-traffic … --to-revisions=<rev>=100`) | only after the evaluation passed |
+| smoke | `node scripts/smoke-mcp-protocol.mjs https://lpm.rocks` | run right after promotion; keep the output |
+| rollback | `gcloud run services update-traffic little-project-manager --project=gen-lang-client-0962999154 --region=us-west1 --to-revisions=<rollback target>=100` | then re-run the smoke and report both outputs |
+| parity gate | depends on what `scripts/deploy-production.sh` runs. `npm run check:mcp-parity` (lpm `main` today) reads the sibling `../agents-skills` working tree on whatever branch is checked out, and passes with a SKIP when that checkout is missing. The deploy-mode check (`check:mcp-parity:deploy`, not on lpm `main` yet) reads agents-skills `main` and fails when local `main` differs from `origin/main` | read the parity line of `scripts/deploy-production.sh`; keep agents-skills `main` equal to `origin/main` either way (rule 2); never switch branches in or edit that checkout during a deploy or someone else's work |
+| service template env | every deploy inherits the service's env vars | never set an experimental value there; evaluate on a candidate revision instead |
+| signed-in UI tests | web routes accept only Firebase ID tokens or LPM OAuth tokens | never mint or reuse a real user's token; use the local emulators |
+| local emulators | `npx firebase emulators:start --only auth,firestore,storage --project demo-lpm` with Java ≥21; client built with `VITE_FIREBASE_TARGET=emulator VITE_FIRESTORE_EMULATOR_PORT=8181 VITE_AUTH_EMULATOR_PORT=9100 VITE_STORAGE_EMULATOR_PORT=9200` | never use port 4190; seed over REST; Playwright at 390x844 and 1280x800 |
+| bug fix | `CLAUDE.md`: new features need tests; bug fixes need a regression test | add the test in the same change |
+
+### gcloudignore
+The untracked `.gcloudignore` of a worktree whose `node_modules` is a symlink holds exactly these lines (the `.gitignore` rule `node_modules/` does not match a symlink):
+```text
+.gcloudignore
+.git
+.gitignore
+#!include:.gitignore
+node_modules
+```
+
+## Rules
+1. Run `git worktree list`; develop only in a worktree; the main checkout stays untouched while a deploy runs.
+2. Before any deploy: `git -C ../agents-skills fetch origin`, then compare `git -C ../agents-skills rev-parse main` with `rev-parse origin/main`. Different and `main` is the checked-out branch → `git -C ../agents-skills pull --ff-only`; different and another branch is checked out → STOP and ask (never switch it). A parity failure about `main` vs `origin/main` → STOP.
+3. Upload check: `gcloud meta list-files-for-upload . | sort` in the worktree vs the same command in the main checkout; any difference beyond your change's files (e.g. `node_modules/` or `.git/` listed) → STOP and fix `.gcloudignore`.
+4. Run the three pre-push checks and keep their summaries for the evidence.
+5. Never deploy with uncommitted edits in the deploying checkout.
+6. Golden-set evaluation of the candidate follows `advisor-golden-set.md` (budget rule).
+7. A smoke failure after promotion → roll back to the rollback target, re-smoke, report "rolled back to <rollback target>", STOP (no second promotion in this run).
+8. Evidence on the activity: revision, rollback target, test summary, golden-set comparison, smoke output (and rollback output).
+9. Tell pilots only after promotion and a passing smoke: what changed, revision, what to retest.
+
+## Examples
+```text
+example: deploy output (CANDIDATE_ONLY=true)
+Revision: little-project-manager-00651-abc
+Candidate: <tag URL printed by the script>
+Promote: gcloud run services update-traffic little-project-manager --project=gen-lang-client-0962999154 --region=us-west1 --to-revisions=little-project-manager-00651-abc=100
+```
