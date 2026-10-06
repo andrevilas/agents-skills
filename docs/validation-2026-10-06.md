@@ -49,3 +49,30 @@ checks.
 A execução anterior com Haiku foi interrompida pelo limite do Claude. Os testes
 locais acima não demonstram uma nova taxa de sucesso de agentes com baixo
 reasoning. Nenhuma avaliação de IA em produção nem deploy foi feita nesta retomada.
+
+## Instalação no host
+
+Os 23 pacotes LPM foram instalados nos três destinos de usuário:
+
+- Codex: `~/.codex/skills`.
+- Claude Code: `~/.claude/skills`.
+- AgY: `~/.gemini/config/skills`.
+
+Em cada destino, `verify` conferiu os hashes, `update` confirmou 23 pacotes
+inalterados e `doctor` terminou com zero problemas. Os auxiliares externos
+`caveman` e `grill-me` não integram a seleção instalada; `grill-me` depende de
+uma skill não importada. Seus arquivos de origem continuam no repositório.
+
+O MCP LPM existente no Codex foi preservado. Claude Code e AgY receberam a
+conexão HTTP do LPM, reutilizando a credencial disponível no ambiente, sem
+registrá-la neste relatório. Os demais servidores foram preservados; cópias
+locais das configurações anteriores foram guardadas com permissões restritas.
+Uma verificação autenticada, somente de leitura, obteve HTTP 200 em
+`initialize` e `tools/list`, com 383 ferramentas e sem paginação.
+
+A instalação legada `software-project-orchestrator` do Codex foi substituída
+pelo catálogo v2 e preservada em backup local. Sessões já abertas devem ser
+recarregadas para descobrir as skills e conexões atualizadas.
+
+As integrações foram feitas nos branches `main` locais. Não houve push nem
+deploy remoto nesta retomada.
