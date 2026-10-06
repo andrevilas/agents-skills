@@ -1,42 +1,64 @@
-# Flow: escalations (comment and notification)
-Load when: decision rows 5–6 of SKILL.md (escalate a due date, blocker or stale item; notify a person in LPM)
+# Playbook: escalate
+Use when: escalate an activity; notify a person
+{{partial:playbook-rules}}
 
-## Preconditions
-1. {{tool:create_comment}} works on connectors (scope portfolio:manage). {{tool:create_notification}} and {{tool:list_project_assignable_members}} need an LPM API key; the notification needs profile full or custom. Connector → core rule 2.
-2. Prefer a comment: it stays with the activity. Send a notification only when the user asked for it and named the person ({{ref:planning-rules}} Rule 5).
-3. The server accepts any `userId` for a notification, even outside the workspace, and the notice looks like a system message: take the id only from step 6.
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| issueId | the user | STOP. Say: "Which activity? (id or title)" |
+| reason | "due-date", "stale" or "blocker", from the user's words | STOP. Say: "Is it a due date at risk, a stale activity or a blocker?" |
+| cause | the cause in one line, from the user | "unknown" |
+| notify | the person the user asked to notify (name or email) | "none" (comment only) |
+| day | today's date as yyyymmdd | — |
+| now | the current UTC time (ISO 8601) | — |
 
 ## Steps
-1. {{tool:get_issue}}(projectId, issueId) → keep `title`, `dueDate`, `assigneeId`, `status`.
-2. Template: due date → "Due-date escalation" below; blocker or stale → {{ref:comment-templates}}. Write it in the user's language.
-3. {{tool:create_comment}}(projectId, issueId, content, idempotencyKey) [A]; due-date key `due-<issueId>-<yyyymmdd>`, other keys per {{ref:comment-templates}}. New text → new key.
-4. Verify: {{tool:list_comments}}(projectId, issueId) → the comment is present once.
-5. Notification only when the user asked for one and named the person; otherwise stop after step 4.
-6. {{tool:list_project_assignable_members}}(projectId) → one `uid` for that person; 0 or 2+ matches → ask "Which person: <a> or <b>?". Never repeat `hourlyRate`.
-7. Ask "Notify <name> (<uid>): "<title>" — <message>, type <due-date | action_required>? (yes/no)". Continue only on "yes".
-8. {{tool:create_notification}}(userId=<uid>, title, message, type) [C], once → id after "ID: ". Report it as unverified: no tool reads another user's inbox. An error → report it; never retry.
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing more was written."
+1. CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<input:issueId>"} [A]
+   SAVE: title, dueDate, assigneeId, status, updatedAt = those fields of result (empty if absent)
+   IF <saved:status> is "done" or "canceled" → STOP. Say: "<input:issueId> is <saved:status>; there is nothing to escalate."
+   IF <input:reason> == "due-date" and <saved:dueDate> is empty → STOP. Say: "<input:issueId> has no due date. Set one with playbook owners-dates first."
+2. CALL {{tool:list_comments}} {"projectId":"<input:projectId>","issueId":"<input:issueId>"} [A]
+   SAVE: last = the createdAt of the newest item (empty if none); since = <saved:last>, else <saved:updatedAt>; key = "<prefix>-<input:issueId>-<input:day>" with prefix "due" for due-date, "stale" for stale, "blocker" for blocker
+   IF <input:reason> == "stale" and <saved:since> is less than 48 hours before <input:now> → STOP. Say: "<input:issueId> is not stale: last activity <saved:since>."
+3. SAVE: text = the template for <input:reason>, filled, in the user's language (translate the labels; delete a line you cannot fill instead of writing "n/a"):
+   ```text
+   due-date:  Prazo em risco: <saved:title> vence em <saved:dueDate> (em N dias) | venceu em <saved:dueDate> (N dias de atraso).
+              Responsável: <saved:assigneeId>, ou "sem responsável"
+              Causa: <input:cause>
+              Pedido: confirmar nova data ou reduzir o escopo até <date>.
+   stale:     Sem atualização há <hours> h (desde <saved:since>).
+              Risco: <what slips if it stays stopped>
+              Pergunta para <saved:assigneeId>: bloqueio, decisão pendente ou mudança de escopo?
+   blocker:   Bloqueio: <input:cause> — desbloqueia: <who> — desde <date>
+              Próximo passo: <action>, por <who>
+   ```
+4. CALL {{tool:create_comment}} {"projectId":"<input:projectId>","issueId":"<input:issueId>","content":"<saved:text>","idempotencyKey":"<saved:key>"} [A] (a second escalation on the same day returns the first comment; the SAVE below reports it)
+   SAVE: commentId = the id after "ID: " in result
+   VERIFY: CALL {{tool:list_comments}} {"projectId":"<input:projectId>","issueId":"<input:issueId>"} [A]
+   IF the call returns an error or item <saved:commentId> is missing → STOP. Say: "Comment <saved:commentId> is not listed on <input:issueId>."
+   SAVE: shown = "yes" if item <saved:commentId> has the text you sent, else "no (an earlier escalation with key <saved:key> already exists)"
+   IF <input:notify> is "none" → go to Answer.
+5. CALL {{tool:list_project_assignable_members}} {"projectId":"<input:projectId>"} [A]
+   IF the call returns an error → STOP. Say: "Notifications need an LPM API key (profile full or custom): <error text>. The comment was posted."
+   SAVE: matches = the items whose displayName or email contains <input:notify>, ignoring case
+   IF <saved:matches> is empty or has 2 or more items → STOP. Say: "Which person: <each match as "<displayName> (<email>)">?"
+   Show only displayName and email; never hourlyRate or currency; never pick one yourself. Take the uid only from this list: the server accepts any userId.
+   SAVE: uid = the uid of the one match; person = its displayName (else its email); type = "due-date" for due-date, else "action_required"; message = the first line of <saved:text>
+6. ASK: "Notify <saved:person> (<saved:uid>): "<saved:title>" — <saved:message>, type <saved:type>? (yes/no)" — continue only if the user says yes; otherwise STOP. Say: "No notification was sent; the comment stays."
+7. CALL {{tool:create_notification}} {"userId":"<saved:uid>","title":"<saved:title>","message":"<saved:message>","type":"<saved:type>"} [C]
+   IF the call returns an error → STOP. Say: "Notification not sent: <error text>. I do not retry it."
+   SAVE: notificationId = the id after "ID: " in result
+   VERIFY: CALL {{tool:list_comments}} {"projectId":"<input:projectId>","issueId":"<input:issueId>"} [A] (no tool reads another user's inbox; this re-reads the escalation the notice points to)
+   IF the call returns an error or item <saved:commentId> is missing → STOP. Say: "The notice was sent, but comment <saved:commentId> is gone."
 
-## Templates
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
 ```text
-example: Due-date escalation (key due-<issueId>-<yyyymmdd>)
-Due date at risk: <title> is due <dueDate> (in <N> days) | was due <dueDate> (<N> days late).
-Owner: <assignee name | no owner>
-Cause: <blocker or reason, one line | unknown>
-Ask: confirm a new date or reduce scope by <YYYY-MM-DD>.
+Scope: project <input:projectId>, activity <input:issueId> <saved:title>
+Done: comment <saved:commentId> (key <saved:key>, new text shown: <saved:shown>); <notification <saved:notificationId> to <saved:person> (delivery unverified) | no notification>; status <saved:status>
+Evidence: <list_comments listed <saved:commentId> | none>
+Pending: <none | a new due date or owner needs playbook owners-dates and the user's approval>
+Next: <the ASK or STOP text that ended the run | none>
 ```
-
-## Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| notification asked, no person named | "Who should receive the notification?" |
-| a person matches 0 or 2+ assignable members | "Which person: <a> or <b>?" |
-| a new due date is part of the escalation | SKILL.md row 3 ({{ref:flow-owners-dates}}): the date change is [C] |
-
-## Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| comment | {{tool:list_comments}}(projectId, issueId) | the comment is present once |
-| notification | none (another user's inbox is not readable) | report the returned id and say it is unverified; never retry |
-
-## Report fields
-Scope (project, activity), comment id or key, notification id (unverified) and recipient name, Pending, Next.
+status: backlog | todo | in-progress | done | canceled, from step 1. Never claim a comment that the VERIFY did not list, and never claim a notice was read.

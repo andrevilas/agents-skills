@@ -6,6 +6,7 @@ import path from "node:path";
 import { compareStrings, jsonText, loadGitignore, readText, sha256, sortStrings, uniqSorted, walk } from "./fs.mjs";
 import { SOURCE_REPO, accessClass, authorityCounts, installProfiles, isOAuth } from "./model.mjs";
 import { escapeCell, generatedMarker, renderedPaths } from "./render.mjs";
+import { isPlaybookSkill, playbookRefNames } from "./playbook.mjs";
 import { computeHashes } from "./snapshot.mjs";
 
 export const COVERAGE_PATH = "catalog/coverage.json";
@@ -106,6 +107,8 @@ export function buildCoverage(model, dist, { sourcesHash }) {
     owns: sortStrings(s.manifest.owns),
     uses: sortStrings(s.manifest.uses),
     rendered: renderedPaths(s.id),
+    // Playbook standard (rev. 3): the §5-indexed playbooks of a playbook router; [] until migrated.
+    playbooks: isPlaybookSkill(s) ? playbookRefNames(s).map((n) => n.replace(/^flow-/, "")) : [],
   }));
 
   const mainFiles = mainRenderedFiles(model).filter((p) => dist.has(p));
@@ -185,14 +188,16 @@ export function renderCoverageMatrix(model, coverage) {
     "",
     "## Skills",
     "",
-    "| Skill | Pack | Kind | Owned | A/C/O | OAuth | Access | Used |",
-    "|---|---|---|---|---|---|---|---|",
+    "| Skill | Pack | Kind | Owned | A/C/O | OAuth | Access | Used | Playbooks |",
+    "|---|---|---|---|---|---|---|---|---|",
   );
+  const playbooksOf = Object.fromEntries(coverage.skills.map((x) => [x.id, x.playbooks || []]));
   for (const sk of model.skills) {
     const c = authorityCounts(model, sk);
     const oauth = sk.manifest.owns.filter((x) => isOAuth(model, x)).length;
+    const pbs = playbooksOf[sk.id] || [];
     out.push(
-      `| ${code(sk.id)} | ${sk.manifest.pack} | ${sk.manifest.kind} | ${sk.manifest.owns.length} | ${c.A}/${c.C}/${c.O} | ${oauth} | ${accessClass(model, sk)} | ${sk.manifest.uses.length} |`,
+      `| ${code(sk.id)} | ${sk.manifest.pack} | ${sk.manifest.kind} | ${sk.manifest.owns.length} | ${c.A}/${c.C}/${c.O} | ${oauth} | ${accessClass(model, sk)} | ${sk.manifest.uses.length} | ${pbs.length ? pbs.length : "—"} |`,
     );
   }
   out.push("", "## Tools by category", "");

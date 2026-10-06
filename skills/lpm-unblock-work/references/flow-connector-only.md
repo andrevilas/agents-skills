@@ -1,0 +1,50 @@
+# Playbook: connector-only
+Use when: record a blocker on a connector
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| x | the blocked activity: its id or its exact title | STOP. Say: "Which activity is blocked? (id or exact title)" |
+| kind | "activity" (another activity must finish first), "decision" (an owner decision) or "external" | STOP. Say: "What blocks <input:x>: another activity, an owner decision, or something outside (vendor, person, access)?" |
+| cause | what blocks it and who can remove it, in the user's words | STOP. Say: "What blocks <input:x>, and who can remove it?" |
+| date | today's UTC date as yyyy-mm-dd | — |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was written."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential != "oauth" and <input:kind> == "activity" → switch to playbook add-link.
+   IF result.credential != "oauth" and <input:kind> == "decision" → switch to playbook owner-decision.
+   IF result.credential != "oauth" → switch to playbook blocker-context.
+   IF result.scopes does not contain "portfolio:manage" → STOP. Say: "<the howToEnable text of the portfolio:manage item of result.unavailableToolGroups>. Remove and reinstall the connector and tick that box; disconnect and connect is not enough."
+2. CALL {{tool:list_issues}} {"projectId":"<input:projectId>","limitCount":100} [A]
+   SAVE: xid = id of the item whose id == <input:x>, else of the only item whose title == <input:x>, else <input:x> when result.nextCursor is not empty
+   IF <saved:xid> is empty → STOP. Say: "Which activity is '<input:x>'? Send its id."
+3. CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF the call returns an error → STOP. Say: "<saved:xid> is not an activity of <input:projectId>. Send its id."
+   SAVE: xTitle = result.title; status = result.status; workspaceId = result.workspaceId
+4. SAVE: note = this text, filled, in the user's language:
+   ```text
+   Blocker: <input:cause>
+   Kind: <input:kind>
+   Since: <input:date>
+   Recorded as a comment: links and blocker contexts need an LPM API key.
+   ```
+5. CALL {{tool:list_comments}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF an item's content == <saved:note> → SAVE: commentId = that item's id; outcome = "already recorded"; go to Answer.
+   SAVE: day = <input:date> without dashes; n = 1 + the number of items whose content starts with "Blocker:" and whose createdAt starts with <input:date>; key = "blocker-<saved:xid>-<saved:day>-<saved:n>"
+6. CALL {{tool:create_comment}} {"projectId":"<input:projectId>","issueId":"<saved:xid>","content":"<saved:note>","idempotencyKey":"<saved:key>"} [A]
+   SAVE: commentId = the id in "Comment created with ID: <id>"; outcome = "recorded"
+   VERIFY: CALL {{tool:list_comments}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF the call returns an error or item <saved:commentId> is missing or has other text → STOP. Say: "Comment <saved:commentId> is not listed with the blocker note."
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<input:projectId>/<saved:xid> <saved:xTitle>
+Done: <comment <saved:commentId>, <saved:outcome> | nothing written>; status <saved:status>
+Evidence: <list_comments → <saved:commentId> | none>
+Pending: record it as a link or a blocker context — you, with an LPM API key or the web UI
+Next: <the STOP text that ended the run | with an API key, run playbook <add-link | blocker-context | owner-decision> for <saved:xid>>
+```
+status: backlog | todo | in-progress | done | canceled, from step 3; a comment never makes an activity blocked and never changes its status. Never claim that a link or a blocker context exists.

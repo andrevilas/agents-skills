@@ -1,0 +1,53 @@
+# Playbook: blocker-context
+Use when: X waits for an external cause
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user, or lpm-start | STOP. Say: "Which LPM project? (id or name)" |
+| x | the blocked activity: its id or its exact title | STOP. Say: "Which activity is blocked? (id or exact title)" |
+| cause | what blocks it, in the user's words | STOP. Say: "What blocks <input:x>?" |
+| who | who can remove the cause (a person, team or vendor) | STOP. Say: "Who can remove that cause?" |
+| date | the day the block started (user), else today's UTC date, yyyy-mm-dd | — |
+| still | "yes" or "no": the user's answer to "is the old cause still blocking?" | "unknown" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing more was written."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → switch to playbook connector-only.
+2. CALL {{tool:list_issues}} {"projectId":"<input:projectId>","limitCount":100} [A]
+   SAVE: xid = id of the item whose id == <input:x>, else of the only item whose title == <input:x>, else <input:x> when result.nextCursor is not empty
+   IF <saved:xid> is empty → STOP. Say: "Which activity is '<input:x>'? <each item whose title contains it, as "<id>: <title>", or "none in <input:projectId>">. Send its id."
+3. CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF the call returns an error → STOP. Say: "<saved:xid> is not an activity of <input:projectId>. Send its id."
+   SAVE: xTitle = result.title; old = result.blockerContext.content when result.blockerContext.status == "active", else empty
+   IF result.isDeleted == true or result.status is "done" or "canceled" → STOP. Say: "<saved:xid> is <result.status>, not an open activity. Nothing was recorded."
+   IF <saved:old> contains <input:cause> → SAVE: text = <saved:old>; outcome = "already recorded, nothing changed"; go to Answer.
+   IF <saved:old> is empty or <input:still> == "yes" → go to step 5.
+   IF <input:still> == "unknown" → STOP. Say: "<saved:xid> already has an active blocker: '<saved:old>'. Is it still blocking? yes = I keep both causes; no = I resolve it first. Nothing was changed."
+   IF <saved:old> contains "portfolio link" → STOP. Say: "The old cause is a portfolio link. Close it first with playbook close-portfolio-link. Nothing was changed."
+4. CALL {{tool:resolve_project_issue_blocker_context}} {"projectId":"<input:projectId>","issueId":"<saved:xid>","resolution":"No longer blocking (the user confirmed on <input:date>): <saved:old>"} [A]
+   VERIFY: CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF the call returns an error or result.blockerContext.status != "resolved" → STOP. Say: "The old blocker of <saved:xid> is still <result.blockerContext.status>. Nothing new was recorded."
+5. SAVE: text = "<input:cause> — <input:who> — since <input:date>"
+   IF <saved:old> is not empty and <input:still> == "yes" → SAVE: text = "<saved:old> | <saved:text>"; go to step 6.
+   One context per activity: a new one REPLACES the active one, so the text keeps every cause that still blocks.
+6. CALL {{tool:set_project_issue_blocker_context}} {"projectId":"<input:projectId>","issueId":"<saved:xid>","blockerContext":"<saved:text>"} [A] (no idempotencyKey: this tool has none; it also posts a comment)
+   IF the call returns an error → STOP. Say: "Not recorded: <error text>. Run this playbook again: it reads the context first."
+   VERIFY: CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF the call returns an error or result.blockerContext.status != "active" or result.blockerContext.content != <saved:text> → STOP. Say: "The blocker context of <saved:xid> does not show the new text."
+   SAVE: outcome = "recorded"
+7. CALL {{tool:list_blocked_project_issues}} {"projectId":"<input:projectId>","limitCount":100} [A]
+   IF the call returns an error → SAVE: listed = "not checked (<error text>)"; go to Answer.
+   SAVE: listed = the "Contexto do bloqueio" value of the item with id == <saved:xid>, else "not listed"
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:projectId>/<saved:xid> <saved:xTitle>
+Done: <blocker context "<saved:text>", <saved:outcome> | nothing changed>
+Evidence: <get_issue → blockerContext active "<saved:text>"; list_blocked_project_issues → <saved:listed> | none>
+Pending: <<input:cause> — <input:who> | the STOP text>
+Next: <the STOP text that ended the run | when the cause is gone, run playbook resolve-context>
+```
+blockerContext.status: active | resolved, from the VERIFY in step 6. A blocker context never changes the activity status; never set a status "blocked". Never claim a context that a VERIFY did not show.

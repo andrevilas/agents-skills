@@ -30,8 +30,8 @@ Do not use:
 | projectId | {{skill:lpm-start}} §3 | ask |
 | accountId | user, or CLI `lpm aish accounts list --json` → `id` | §6 row 1 |
 | hostId, updatedAt | {{tool:get_aish_runner_management_overview}}(accountId, search=<name>; removed host: `includeRemoved=true`) → `runners[].id`, `updatedAt` | 0 or 2+ → ask |
-| action, reason | user: `drain`/`suspend`/`reactivate`/`remove`; reason: P1 step 3 | ask |
-| idempotencyKey | P1 step 4: new per attempt; retry = same key, reason, expectedUpdatedAt | — |
+| action, reason | user: `drain`/`suspend`/`reactivate`/`remove`; reason: the lifecycle preview | ask |
+| idempotencyKey | the lifecycle playbook: new per attempt; retry = same key, reason, expectedUpdatedAt | — |
 | jobId | {{ref:flow-cli-runner}} step 5 `job.id` (the job the CLI ran) | flow step 1 |
 | executorCommand | operator (a script path, never the job prompt) | ask |
 
@@ -49,12 +49,8 @@ Do not use:
 
 ## 5. Procedures
 ### P1 Lifecycle action — row 4
-1. {{tool:get_aish_runner_management_overview}}(accountId, search; `includeRemoved=true` for `reactivate`) → keep `id`, `displayName`, `legacy`, `updatedAt`, `canManage`, `health`, `workState`, `lastTask`. They contradict the user (e.g. "dead" but online and busy) → say so first.
-2. {{tool:preview_aish_runner_management_action}}(accountId, hostId, action, expectedUpdatedAt=step 1 `updatedAt`) → keep `allowed`, `blockingReasons`, `currentStatus`, `targetStatus`, `expectedUpdatedAt`, `impact`. `allowed == false` → STOP, report (§8) `blockingReasons`, `impact` (`activeLeaseCount`, `activeCredentialCount`, `activeGrantCount`), `health`/`workState`/`lastTask`. `active-capacity-leases` → ask only: "Drain <displayName> (<hostId>) first? Its host worker takes no new jobs; the current job may finish. Then I preview <action> again once activeLeaseCount is 0." Yes → NEW P1 run, action=`drain` (own preview, own step 3).
-3. [C] Show: "<action> <displayName> (<hostId>): <currentStatus> → <targetStatus>; impact: <activeLeaseCount> active leases (last task <lastTask.id>), <activeCredentialCount> credentials, <activeGrantCount> grants. Reason: "<drafted from the user's words, 8–1000 chars>" — confirm?" (`remove` → add §6 row 2.) Wait for yes. Never send a reason the user has not seen.
-4. {{tool:apply_aish_runner_management_action}}(accountId, hostId, action, expectedUpdatedAt=step 2 `expectedUpdatedAt`, reason=the confirmed reason, idempotencyKey=`runner-<action>-<full hostId>-<yyyymmddHHMMss>`, confirmed=true) [C].
-5. Verify: {{tool:get_aish_runner_management_overview}} → §7 lifecycle row.
-6. After `drain` the step 5 row still has `workState == "busy"` → do not re-call the overview to wait; the user watches `lpm aish host monitor --project <lastTask.projectId> --host <hostId> --json` until `jobs.running == 0` and asks again. Report (§8), STOP.
+1. Open {{ref:flow-lifecycle}}. It checks host identity, current capacity, preview, user authorization and the resulting state.
+2. Verify: use the playbook’s read-back. A busy host is reported with the monitor command, not polled indefinitely.
 
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
@@ -86,7 +82,7 @@ Next: <one action>
 {{errors:auto}}
 | Error or result contains | Do |
 |---|---|
-| "active-capacity-leases" | report; offer `drain` as a question (P1 steps 2, 6); never wait in a loop |
+| "active-capacity-leases" | report; offer `drain` as a question (playbook lifecycle); never wait in a loop |
 | "idempotency key conflicts" | re-read the overview; new attempt → new key (§3) |
 
 ## 10. Tools and references

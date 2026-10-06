@@ -1,5 +1,5 @@
 // validate.mjs — `node scripts/skills.mjs check [--json] [--lpm <dir>]` (§5.6, §5.9).
-// Runs every validator V1–V19 (V18 only with --lpm). ✖ = failure (exit 1), ⚠ = warning.
+// Runs every validator V1–V22 (V18 only with --lpm). ✖ = failure (exit 1), ⚠ = warning.
 //
 //   runCheck(opts)            opts = { root, flags, args, log }   (dispatcher contract, API.md)
 //   runCheck(model, opts)     same, with an already loaded model
@@ -24,6 +24,7 @@ import {
   routingRows,
 } from "./model.mjs";
 import { bundleRefs, renderedPaths, sectionLines, splitCells, toolMentions } from "./render.mjs";
+import { checkPlaybookSkill, isPlaybookSkill } from "./playbook.mjs";
 import { computeSourcesHash, COVERAGE_PATH } from "./coverage.mjs";
 import { buildOutputs, writeOutputs } from "./build.mjs";
 
@@ -32,7 +33,7 @@ import { buildOutputs, writeOutputs } from "./build.mjs";
 /** Validator ids in report order. */
 export const VALIDATORS = [
   "V1", "V2", "V3", "V4", "V4g", "V4w", "V5", "V6", "V7", "V8", "V9", "V10",
-  "V11", "V12", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20",
+  "V11", "V12", "V13", "V14", "V15", "V16", "V17", "V18", "V19", "V20", "V21", "V22",
 ];
 
 /** §3.3 headings, in order (V7). */
@@ -376,7 +377,7 @@ function makeCtx(model, opts) {
     if (m) return model.skillById[m[1]] ? m[1] : null;
     m = rel.match(/^dist\/(?:codex|claude-code|antigravity)\/([^/]+)\//);
     if (m) return model.skillById[m[1]] ? m[1] : null;
-    m = rel.match(/^dist\/generic\/([^/]+?)(?:\.refs)?\.md$/);
+    m = rel.match(/^dist\/generic\/([^/]+?)(?:\.(?:refs|flows|tools))?\.md$/);
     if (m) return model.skillById[m[1]] ? m[1] : null;
     return null;
   };
@@ -1016,15 +1017,17 @@ function V7(ctx) {
     const sec10 = sectionLines(src, 10).map((l) => l.trim());
     if (s.manifest.owns.length + s.manifest.uses.length && !sec10.includes("{{tools:index}}")) ctx.fail("V7", s.id, "§10 must contain {{tools:index}}");
     if (!sec10.includes("{{refs:index}}")) ctx.fail("V7", s.id, "§10 must contain {{refs:index}}");
-    if (!sectionLines(src, 9).some((l) => /^\{\{errors:auto(?::[a-z0-9_,\s]+)?\}\}$/.test(l.trim()))) ctx.warn("V7", s.id, "§9 has no {{errors:auto}}");
+    // A playbook router keeps per-call errors in its playbooks (V20 rule 6 warns the other way).
+    const playbookSkill = isPlaybookSkill(s);
+    if (!playbookSkill && !sectionLines(src, 9).some((l) => /^\{\{errors:auto(?::[a-z0-9_,\s]+)?\}\}$/.test(l.trim()))) ctx.warn("V7", s.id, "§9 has no {{errors:auto}}");
 
     // decision table
     const rows = tableDataRows(sectionLines(src, 4)).filter((c) => /^\d+$/.test((c[0] || "").trim()));
     if (rows.length > 14) ctx.fail("V7", s.id, `§4 decision table has ${rows.length} rows (max 14)`);
     if (!rows.length && s.manifest.kind === "tools") ctx.fail("V7", s.id, "§4 decision table has no numbered rows");
 
-    // procedures
-    const procs = procedures(src);
+    // procedures (a playbook router has none: V20 checks its §5 index)
+    const procs = playbookSkill ? [] : procedures(src);
     if (procs.length > 6) ctx.fail("V7", s.id, `§5 has ${procs.length} procedures (max 6)`);
     for (const p of procs) {
       if (p.steps.length > 10) ctx.fail("V7", s.id, `§5 ${p.id} has ${p.steps.length} steps (max 10; move it to references/flow-<name>.md)`);
@@ -1297,7 +1300,7 @@ function V10(ctx) {
   const { model } = ctx;
   if (ENDPOINT !== "https://lpm.rocks/mcp") ctx.fail("V10", null, `endpoint constant is ${ENDPOINT}, expected https://lpm.rocks/mcp`);
   const internal = internalSkillIds(model);
-  const exemptGlobs = ["shared/internal/**", ...internal.flatMap((id) => [`skills/${id}/**`, `dist/*/${id}/**`, `dist/generic/${id}.md`, `dist/generic/${id}.refs.md`, `dist/generic/${id}.tools.md`])].map(globToRegExp);
+  const exemptGlobs = ["shared/internal/**", ...internal.flatMap((id) => [`skills/${id}/**`, `dist/*/${id}/**`, `dist/generic/${id}.md`, `dist/generic/${id}.flows.md`, `dist/generic/${id}.refs.md`, `dist/generic/${id}.tools.md`])].map(globToRegExp);
   const files = [...sourceTextFiles(ctx), ...model.skills.map((s) => s.manifestPath), ...ctx.distFiles, ...walk(path.join(ctx.root, "catalog/cards")).map((f) => `catalog/cards/${f}`)];
   for (const rel of sortStrings(uniq(files))) {
     const text = ctx.read(rel);
@@ -1398,12 +1401,14 @@ function resolveScopeFiles(ctx, scopes, scope, target, id) {
   const patterns = (scopes && scopes[scope] && scopes[scope][target]) || null;
   const defaults = {
     skill: { generic: ["dist/generic/<id>.md"], native: ["dist/<target>/<id>/SKILL.md"] },
-    bundle: { generic: ["dist/generic/<id>.md", "dist/generic/<id>.refs.md", "dist/generic/<id>.tools.md"], native: ["dist/<target>/<id>/**"] },
+    bundle: { generic: ["dist/generic/<id>.md", "dist/generic/<id>.flows.md", "dist/generic/<id>.refs.md", "dist/generic/<id>.tools.md"], native: ["dist/<target>/<id>/**"] },
   };
   const list = patterns || (defaults[scope] || defaults.skill)[target === "generic" ? "generic" : "native"];
   const out = [];
   for (const p of list) {
     const pat = p.replace(/<id>/g, id).replace(/<target>/g, target);
+    // <id>.flows.md exists only for a skill with playbooks (R3): optional in a bundle scope.
+    if (/\.flows\.md$/.test(pat) && !ctx.distSet.has(pat)) continue;
     if (pat.includes("*")) {
       const re = globToRegExp(pat);
       out.push(...ctx.distFiles.filter((f) => re.test(f)));
@@ -1559,7 +1564,11 @@ function V14(ctx) {
       }
     }
     const gen = ctx.read(`dist/generic/${id}.md`);
-    if (gen !== null && byteLen(gen) > 24 * KB) ctx.fail("V14", id, `dist/generic/${id}.md: ${(byteLen(gen) / KB).toFixed(1)} KB (max 24 KB)`);
+    // Playbook routers (playbook-standard §8.3): <id>.md ≤ 12 KB; their playbooks live in <id>.flows.md.
+    const genMax = isPlaybookSkill(s) ? 12 : 24;
+    if (gen !== null && byteLen(gen) > genMax * KB) ctx.fail("V14", id, `dist/generic/${id}.md: ${(byteLen(gen) / KB).toFixed(1)} KB (max ${genMax} KB)`);
+    const flows = ctx.read(`dist/generic/${id}.flows.md`);
+    if (flows !== null && byteLen(flows) > 48 * KB) ctx.warn("V14", id, `dist/generic/${id}.flows.md: ${(byteLen(flows) / KB).toFixed(1)} KB (above 48 KB)`);
     const refs = ctx.read(`dist/generic/${id}.refs.md`);
     if (refs !== null && byteLen(refs) > 64 * KB) ctx.warn("V14", id, `dist/generic/${id}.refs.md: ${(byteLen(refs) / KB).toFixed(1)} KB (above 64 KB)`);
     // Tool cards are split out of <id>.refs.md: a generic agent opens them only when a call fails.
@@ -1828,7 +1837,60 @@ function V19(ctx) {
   }
 }
 
-// ─── V20 trace flows ↔ skills ──────────────────────────────────────────────────
+// ─── V20 playbook structure, V21 CALL lines (playbook-standard.md §8) ──────────
+
+/** "warn" | "fail" | null: catalog/contracts.json policy.playbookRouter for a `kind: tools` skill without a §5 playbook index. */
+function playbookRouterPolicy(ctx) {
+  const raw = readJson(path.join(ctx.root, "catalog/contracts.json")).value;
+  const p = raw && raw.policy && raw.policy.playbookRouter;
+  return p === "fail" || p === "warn" ? p : null;
+}
+
+/** V20 + V21 findings of every playbook skill, computed once per check run. */
+function playbookFindings(ctx) {
+  if (!ctx.playbookFindings) {
+    const out = [];
+    for (const s of ctx.model.skills) {
+      const found = checkPlaybookSkill(ctx.model, s, { readRendered: (target) => ctx.read(`dist/${target}/${s.id}/SKILL.md`) });
+      for (const f of found) out.push({ ...f, skill: s.id });
+    }
+    ctx.playbookFindings = out;
+  }
+  return ctx.playbookFindings;
+}
+
+function reportPlaybook(ctx, v) {
+  for (const f of playbookFindings(ctx)) if (f.validator === v) (f.level === "fail" ? ctx.fail : ctx.warn)(v, f.skill, f.message);
+}
+
+/**
+ * V20 playbook structure (§8.1): a skill whose SKILL.src.md §5 holds `| Playbook | Use when | File |`
+ * is a router of self-contained playbooks (references/flow-<name>.md). Checks the router (§5 index,
+ * §4 Do cells, rendered body size) and every playbook (layout, step grammar, VERIFY after writes,
+ * ASK / ONLY IF gates, forward jumps, no file pointers, the Answer block, size). With
+ * policy.playbookRouter "warn" | "fail", a `kind: tools` skill without that index is reported too.
+ */
+function V20(ctx) {
+  reportPlaybook(ctx, "V20");
+  const policy = playbookRouterPolicy(ctx);
+  if (!policy) return;
+  for (const s of ctx.model.skills) {
+    if (s.manifest.kind !== "tools" || s.src === null || isPlaybookSkill(s)) continue;
+    (policy === "fail" ? ctx.fail : ctx.warn)("V20", s.id, "§5 has no | Playbook | Use when | File | index; convert the procedures to playbooks (playbook-standard.md §11)");
+  }
+}
+
+/**
+ * V21 CALL lines (§8.2): every CALL of a playbook (numbered, FOR EACH, VERIFY) and every §4 CALL row
+ * has literal JSON args with every required param and no unknown one (catalog snapshot), literals for
+ * number/integer/boolean params, placeholders with a source (<input:x> a "You need" / §3 row,
+ * <saved:x> an earlier SAVE, <each:x> inside FOR EACH) and a tag no weaker than the rendered authority.
+ */
+function V21(ctx) {
+  reportPlaybook(ctx, "V21");
+}
+
+// ─── V22 trace flows ↔ skills ──────────────────────────────────────────────────
 
 /** Groups of tool names a trace spec requires: a plain/unordered spec → one group per tool; anyOf → one group. */
 function traceSpecGroups(spec) {
@@ -1844,19 +1906,19 @@ function traceSpecGroups(spec) {
  * must exist, and every tool the flow expects to be called (orderedCalls, requiresVerify) must be
  * named in that skill's sources: SKILL.src.md, its references, or a shared reference it bundles.
  */
-function V20(ctx) {
+function V22(ctx) {
   const { model, root } = ctx;
   const dir = path.join(root, "evals/trace");
   for (const f of sortStrings(walk(dir).filter((x) => x.endsWith(".json") && !x.includes("/")))) {
     const rel = `evals/trace/${f}`;
     const flow = readJson(path.join(dir, f)).value;
     if (!flow || typeof flow !== "object") {
-      ctx.fail("V20", null, `${rel}: invalid JSON`);
+      ctx.fail("V22", null, `${rel}: invalid JSON`);
       continue;
     }
     const skill = model.skillById[flow.skill];
     if (!skill) {
-      ctx.fail("V20", null, `${rel}: skill "${flow.skill}" does not exist`);
+      ctx.fail("V22", null, `${rel}: skill "${flow.skill}" does not exist`);
       continue;
     }
     const texts = [skill.src || "", ...bundleRefs(model, skill).map((r) => r.content || "")].join("\n");
@@ -1871,13 +1933,13 @@ function V20(ctx) {
         if (real.length && !real.some(named)) missing.add(real.join(" | "));
       }
     }
-    for (const m of sortStrings([...missing])) ctx.fail("V20", skill.id, `${rel}: expects ${m}, which ${skill.id} never names (SKILL.src.md, references, bundled shared refs)`);
+    for (const m of sortStrings([...missing])) ctx.fail("V22", skill.id, `${rel}: expects ${m}, which ${skill.id} never names (SKILL.src.md, references, bundled shared refs)`);
   }
 }
 
 // ─── Runner ────────────────────────────────────────────────────────────────────
 
-const IMPL = { V1, V2, V3, V4, V4g, V4w, V5, V6, V7, V8, V9, V10, V11, V12, V13, V14, V15, V16, V17, V18, V19, V20 };
+const IMPL = { V1, V2, V3, V4, V4g, V4w, V5, V6, V7, V8, V9, V10, V11, V12, V13, V14, V15, V16, V17, V18, V19, V20, V21, V22 };
 
 /** Model warnings that are not owned by a validator, reported as warnings ("load"). */
 const LOAD_HANDLED = new Set(["duplicate-card", "invalid-card", "duplicate-skill", "duplicate-owner"]);

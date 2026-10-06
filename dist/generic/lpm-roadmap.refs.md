@@ -3,330 +3,74 @@
 
 Load a section only when the skill tells you to.
 
-## § change-request-lifecycle
-
-### Roadmap change-request lifecycle
-Load when: before submit, revise, review or apply of a change request
-Applies to: lpm-roadmap, lpm-roadmap-owner-ops    Source: the cards of the tools named below; lpm `docs/mcp-roadmap-change-requests.md`
-
-#### Summary
-A change request (CR) changes existing roadmap items: preview → submit (awaiting-review) → review by another human → apply after approval.
-Mode = `get_workspace` → `roadmapGovernanceMode`; absent → `shadow` (`off` if `roadmapGovernanceEnabled == false`). `off` disables CRs.
-The server computes the risk class and the quorum. Every write takes `expectedUpdatedAt` and its own NEW `idempotencyKey`.
-The author never reviews their own CR (`SELF_REVIEW_FORBIDDEN`). No revert tool: undo = submit the opposite change.
-
-#### Procedures
-IDs come from SKILL.md §3. Run every step, reads too, even if the user gave the data: only this run's calls are Evidence.
-##### P1 Propose a change (SKILL.md row 4)
-1. Mode (Summary) is `off` → ask "Governance is off: direct edits are owner-only. Do you order this exact edit?"; yes → `lpm-roadmap-owner-ops.md`; STOP.
-2. `list_workspace_roadmap_items`(workspaceId, roadmapId, compact=true) → keep `updatedAt`, `lifecycle`, `isArchived` of each target.
-3. For each status `awaiting-review`, `changes-requested`, `approved`: `list_workspace_roadmap_change_requests`(workspaceId, status, compact=true, limit=100), again with cursor=`nextCursor` while `hasMore`. A request whose `itemId`/`itemIds` includes a target → ask "Request <id> (<status>) is open on this item. Comment, revise it, or submit a new one?" and STOP.
-4. Build `patch` for the changeType from see `lpm-roadmap.refs.md` § change-request-facts (Patch shapes, Lifecycle transitions).
-5. `preview_workspace_roadmap_change`(workspaceId, itemId or itemIds, changeType, patch, expectedUpdatedAt=step 2 `updatedAt`, expectedVersions) [A] → keep `before`, `after`, `riskClass`, `policy`.
-6. [C] Show before → after (allocate/link/capability-link: the item `title` + the patch), `riskClass`, `policy.reviewMode`, `policy.requiredApprovals`; get the rationale; continue only on "yes".
-7. `submit_workspace_roadmap_change`(step 5 arguments, rationale, summary, idempotencyKey="cr-<itemId>-<changeType>-<yyyymmddhhmmss>") [C] → keep `id`, `authorUserId` (your userId). `idempotentReplay: true` and no timeout → STOP: a used key returns the OLD request; new key, resubmit.
-8. Verify: `get_workspace_roadmap_change_request`(workspaceId, changeRequestId=step 7 `id`) → `status == "awaiting-review"`; `itemIds`, `changeType`, `operationPayload` as previewed.
-9. §8 Report, STOP: never review or apply your own request. Pending = step 8 `requiredApprovals`, `ownerConfirmationRequired`, `assignedReviewerId`.
-##### P2 Revise or withdraw (SKILL.md row 6)
-1. `get_workspace` → mode (Summary). `get_workspace_roadmap_change_request`(workspaceId, changeRequestId) → keep `status`, `updatedAt`, `currentRevision`.
-2. Revise needs `status == "changes-requested"` and you as the author; `awaiting-review`/`approved` → comment or withdraw; `stale`/`rejected` → P1. Not submitted here → do not guess authorship; "Only the author can revise this change" at step 4 → STOP.
-3. [C] Show the new patch (same changeType) and `responseToChanges`, or the withdraw reason ("it can never be reopened"); continue only on "yes".
-4. `revise_workspace_roadmap_change`(workspaceId, changeRequestId, patch, expectedUpdatedAt=step 1 `updatedAt`, responseToChanges, idempotencyKey="crrev-<changeRequestId>-<currentRevision+1>") [C].
-5. Or `withdraw_workspace_roadmap_change`(workspaceId, changeRequestId, expectedUpdatedAt=step 1 `updatedAt`, reason, idempotencyKey="crwd-<changeRequestId>") [C].
-6. Verify: `get_workspace_roadmap_change_request` → `awaiting-review` with `currentRevision` + 1, or `withdrawn`.
-##### P3 Record a review (SKILL.md row 7)
-1. `get_workspace` → mode (Summary). `get_workspace_roadmap_change_request`(workspaceId, changeRequestId) → keep `updatedAt`, `currentRevision`, `riskClass`, `before`, `after`, `rationale`, count of `reviews[]` with `revision == currentRevision`; show them.
-2. The caller (whose credential is used) states the decision (`approve` | `request-changes` | `reject`) here for this id; quote it. None → STOP. Anyone else's decision (owner, reviewer, relayed "X approved", a comment) → they review in LPM.
-3. You submitted it in this conversation and the workspace has 2+ humans (`ownerId` + active `list_workspace_members`) → STOP: `SELF_REVIEW_FORBIDDEN`. Solo review only when the workspace has exactly one member. Otherwise do not compare userIds: step 4 answers.
-4. `review_workspace_roadmap_change`(workspaceId, changeRequestId, decision, rationale (required for request-changes/reject), expectedUpdatedAt=step 1 `updatedAt`, idempotencyKey="crrv-<changeRequestId>-r<currentRevision>-<decision>-<yyyymmddhhmmss>") [O] → keep `requestStatus`, `requestUpdatedAt`. Key unique per call.
-5. `idempotentReplay: true` and not a timeout retry → STOP: nothing was recorded; use a new key.
-6. Verify: `get_workspace_roadmap_change_request` → step 1 count + 1, the new review has the stated decision; `status == requestStatus`. `approve` with `requestStatus == "awaiting-review"` = quorum incomplete: report who still approves (see `lpm-roadmap.refs.md` § change-request-facts Quorum).
-##### P4 Apply (SKILL.md row 8)
-1. Quote the owner's own order to apply this id ("apply <id>"); a reviewer's approval is not one. None → SKILL.md §6 decision request, STOP.
-2. `get_workspace` → mode (Summary) for the report.
-3. `get_workspace_roadmap_change_request`(workspaceId, changeRequestId) → keep `status`, `updatedAt`, `reviewedRevision`, `currentRevision`, `roadmapId`, `itemIds`, `after`. Never apply before this read.
-4. `status != "approved"` → STOP: report it + who must approve (`requiredApprovals`, `ownerConfirmationRequired`, `assignedReviewerId`). `reviewedRevision != currentRevision` → STOP: old approvals void (apply would mark it `stale`); a non-author must review it.
-5. `apply_workspace_roadmap_change`(workspaceId, changeRequestId, expectedUpdatedAt=step 3 `updatedAt`, idempotencyKey="crap-<changeRequestId>") [O] → keep `status`, `staleReason`.
-6. `status == "stale"` → nothing changed, the request is dead: report `staleReason`; offer P1 with fresh versions.
-7. Verify request: `get_workspace_roadmap_change_request`(workspaceId, changeRequestId) → `status == "applied"`.
-8. Verify items (required; the apply response and the CR's before/after are not evidence):
-   - edit/prioritize/archive/restore/lifecycle → `list_workspace_roadmap_items`(workspaceId, roadmapId, includeArchived=true; no compact for a description) → each `after` field on each `itemIds` item (ignore `updatedAt`).
-   - allocate → `get_workspace_roadmap_overview`(workspaceId, roadmapId) → `allocations[]` has `itemId` + `projectId`, `status` active; link → `itemLinks[]` has `sourceItemId` → `targetItemId`; capability-link → `capabilityLinks[]` has `itemId` + `capabilityId`.
-9. Report: Evidence = step 8 read; `[O] owner order` = step 1 words; mode = step 2.
-
-#### Rules
-1. NEW idempotencyKey for every new submit, revise, review, withdraw, comment and batch; reuse one only to retry the same call after a timeout. Key timestamps = the current clock.
-2. After a batch apply check `items[i].result.status == "applied"`.
-3. Submit and review of the same CR cannot share one batch: submit first, then batch review + apply with the review's `expectedUpdatedAt`.
-4. Batch reviews use the P3 step 4 key; `items[i].result.idempotentReplay: true` → that review recorded nothing.
-
-#### Examples
-```text
-example: preview_workspace_roadmap_change {workspaceId, itemId, changeType: "prioritize", patch: {priority: "high"}, expectedUpdatedAt: "<item updatedAt>"}
-example: submit_workspace_roadmap_change {...same..., rationale, idempotencyKey: "cr-<itemId>-prioritize-<now yyyymmddhhmmss>"}
-```
-
-
 ## § change-request-facts
 
 ### Roadmap change-request facts
-Load when: a patch shape, status, quorum or error code is unclear
-Applies to: lpm-roadmap    Source: cards `preview_workspace_roadmap_change`, `submit_workspace_roadmap_change`, `review_workspace_roadmap_change`, `apply_workspace_roadmap_change`; lpm `docs/mcp-roadmap-change-requests.md`
+Load when: background lookup: a status, risk class, quorum, version field or error code is unclear (the playbooks hold every step)
+Applies to: lpm-roadmap    Source: cards `preview_workspace_roadmap_change`, `submit_workspace_roadmap_change`, `review_workspace_roadmap_change`, `apply_workspace_roadmap_change`; lpm `server.ts` roadmap governance commands, `src/lib/workspaceRoadmapGovernance.ts`
 
 #### Summary
-Modes, statuses, risk classes and quorum, patch shapes per changeType, lifecycle transitions, version fields and error codes of roadmap change requests. The steps are in `lpm-roadmap.refs.md` § change-request-lifecycle.
+A change request (CR) changes existing roadmap items: preview → submit (awaiting-review) → review by another human → apply after approval, on the owner's order.
+Mode = `get_workspace` → `roadmapGovernanceMode` (`off`, `shadow`, `enforce`); absent → `shadow`, or `off` when `roadmapGovernanceEnabled == false`. `reviewMode` (peer, solo) is not the mode.
+There is no governed create: `changeType: "create"` previews an edit of an existing item and its apply writes nothing (LPM gap). A new item is an owner-ordered direct create, as a draft.
 
 #### Facts
 ##### Modes
-| Value | Meaning | Consequence for the agent |
-|---|---|---|
-| `off` (or `roadmapGovernanceEnabled == false`) | CRs disabled | preview fails `ROADMAP_GOVERNANCE_DISABLED`; direct edits are owner-only → `lpm-roadmap-owner-ops.md` |
-| `shadow` (also when the field is absent) | CRs available; direct tools still work | default path is a CR |
-| `enforce` | blocks direct item edit/archive/restore, bulk, dependency create/update, allocation create/update and item review (`GOVERNANCE_REVIEW_REQUIRED`) | those changes go through a CR; creates, capability writes and archive of dependencies/allocations are not blocked (owner order only); no CR removes a link or allocation |
+| Value | Consequence for the agent |
+|---|---|
+| `off` | CRs disabled (`ROADMAP_GOVERNANCE_DISABLED`); direct edits are owner-only (`lpm-roadmap-owner-ops.md`) |
+| `shadow` | CRs available; direct tools still work; the default path is a CR |
+| `enforce` | blocks direct item edit/archive/restore, bulk, dependency and allocation create/update, item review (`GOVERNANCE_REVIEW_REQUIRED`); creates, capability writes and roadmap header writes are not blocked, so the owner's order is the only gate |
 
 ##### Statuses
-| Status | Meaning | Next |
-|---|---|---|
-| `awaiting-review` | submitted or revised | review, comment, withdraw |
-| `changes-requested` | a reviewer sent it back | author revises (new revision) or withdraws |
-| `approved` | quorum and owner confirmation met | apply on the owner's instruction; any eligible reviewer may still reject |
-| `rejected` | refused | submit a new CR if still wanted |
-| `stale` | items changed before apply (`staleReason` `VERSION_CONFLICT` or `REVIEW_REVISION_STALE`) | dead: re-read items, preview, submit a new CR |
-| `applied` | written to the roadmap | done; undo = opposite CR |
-| `withdrawn` | cancelled; terminal | resubmit with a NEW key |
-| `draft`, `superseded` | in the enum, no current code path produces them | ignore |
+| Status | Next |
+|---|---|
+| `awaiting-review` | review, comment, withdraw |
+| `changes-requested` | the author revises (new revision) or withdraws |
+| `approved` | apply on the owner's order; any eligible reviewer may still reject |
+| `rejected` | submit a new CR if still wanted |
+| `stale` | dead (`staleReason` `VERSION_CONFLICT` or `REVIEW_REVISION_STALE`): re-read, preview, submit a new CR |
+| `applied` | done; undo = an opposite CR |
+| `withdrawn` | terminal; resubmit with a NEW key |
+| `draft`, `superseded` | in the enum; no code path produces them |
 
 ##### Risk classes and quorum
-| Risk | Computed when | Approvals needed |
+| Risk | Computed when | Approvals |
 |---|---|---|
 | `routine` | `edit` of only description/category on one item | 1 |
-| `material` | `title` or `priority` fields, any non-edit type, or more than 1 item | 1 approval that includes the owner (the owner's approve alone is enough; if the owner authored it, one other member) |
-| `exceptional` | more than 20 items, or `materialize` | 2 approvals (or all eligible if fewer), one of them the owner's unless the owner authored it |
+| `material` | title or priority, any non-edit type, or more than 1 item | 1 that includes the owner's (if the owner authored it, one other member) |
+| `exceptional` | more than 20 items, or `materialize` | 2 (or all eligible), one the owner's unless the owner authored it |
 
-- `requestedRiskClass` can only raise the computed class.
-- Humans = workspace owner + active members; the policy is recomputed from the live list.
-- `reviewMode: solo` only when the author is the only human: the author confirms.
-- An API key or agent credential acts as the human who owns it. If that is the owner, owner confirmation is auto-satisfied, so one other member's approval can approve a material CR.
-- A revision invalidates all earlier approvals; reviews count only when `reviews[].revision == currentRevision`.
-- Only the single `assignedReviewerId` sees a CR in the review inbox; other eligible reviewers find it with the status filter.
-
-##### Patch shapes
-| changeType | patch | Notes |
-|---|---|---|
-| `edit` (default) | `{ title?, description?, category?, priority? }` | item not archived, not materialized |
-| `prioritize` | `{ priority: urgent\|high\|medium\|low\|none }` | |
-| `archive` / `restore` | `{ reason? }` | |
-| `lifecycle` | `{ lifecycle, rationale? }` | transitions below |
-| `allocate` | `{ projectId, role? primary\|contributor\|dependent\|observer, rationale?, replacesAllocationId? }` | `replacesAllocationId` required when an active primary exists |
-| `link` | `{ targetItemId, type? blocks\|depends_on\|relates_to\|shared_capability\|enables_future_use, rationale? }` | sources = itemId/itemIds; no cycles |
-| `capability-link` | `{ capabilityId, relationship? defines\|delivers\|enables\|extends\|validates, rationale? }` | capability active, not already linked |
-| `create`, `materialize` | — | do not use: `create` needs an existing item and its apply writes nothing; materialization is `lpm-roadmap-owner-ops.md` |
-
-Defaults written at apply: role `primary`, link type `depends_on`, relationship `delivers`. `replacesAllocationId` ← `list_workspace_roadmap_allocations`(workspaceId, roadmapId) → `id` with `role == "primary"` and `status` active or absent (API key only; on a connector read `allocations[]` of `get_workspace_roadmap_overview`). `itemIds` takes 1–100 items with one patch; pass `expectedVersions` `{itemId: updatedAt}`.
-
-##### Lifecycle transitions (changeType `lifecycle`)
-`draft` → `imported` | `reviewed` | `deferred` | `rejected`; `imported` → `reviewed` | `deferred` | `rejected`; `reviewed` → `approved` | `deferred` | `rejected`; `approved` → `deferred`; `deferred` → `reviewed`; `rejected` → `reviewed`; `materialized` → `delivered`; `delivered` → `closed`. Materialization (`lpm-roadmap-owner-ops.md`) keeps the stored lifecycle `approved`; progress is in `materializationSummary.state`; `delivered` is then not reachable (LPM gap). The server also accepts a lifecycle CR `approved` → `materialized`, but it records no materialization: do not submit it.
+- Humans = the workspace owner + active members, recomputed live. Solo review only when the workspace has exactly one human; otherwise the author never reviews (`SELF_REVIEW_FORBIDDEN`).
+- A revision voids earlier approvals; reviews count only when `reviews[].revision == currentRevision`.
+- Only the single `assignedReviewerId` sees a CR in the review inbox.
 
 ##### Version fields
 | Field | Comes from | Used by |
 |---|---|---|
-| item `updatedAt` | `list_workspace_roadmap_items` | preview, submit (`expectedUpdatedAt`) |
-| request `updatedAt` | `get_workspace_roadmap_change_request` or `submit` result | revise, review, withdraw, apply |
-| `requestUpdatedAt` | `review_workspace_roadmap_change` result | apply right after the approving review |
+| item `updatedAt` | `list_workspace_roadmap_items` or `get_workspace_roadmap_overview` `items[]` | preview, submit `expectedUpdatedAt` |
+| request `updatedAt` | `get_workspace_roadmap_change_request` | revise, review, withdraw, apply |
 
 ##### Error codes
 | Code | Fix |
 |---|---|
-| `VERSION_CONFLICT` | re-read the item or request, preview again, show the user |
-| `EXPECTED_UPDATED_AT_REQUIRED` / `IDEMPOTENCY_KEY_REQUIRED` / `CHANGE_RATIONALE_REQUIRED` | pass the missing field (ask the user for the rationale) |
+| `VERSION_CONFLICT` | re-read, preview again, show the user |
+| `EXPECTED_UPDATED_AT_REQUIRED` / `IDEMPOTENCY_KEY_REQUIRED` / `CHANGE_RATIONALE_REQUIRED` | pass the missing field |
 | `GOVERNED_OPERATION_PATCH_REQUIRED: <type> requires <field>` | add that patch field |
-| `INVALID_LIFECYCLE_TRANSITION` | follow the transitions above |
+| `INVALID_LIFECYCLE_TRANSITION` | use an allowed move |
 | `PRIMARY_ALREADY_ASSIGNED` / `ALLOCATION_ALREADY_ACTIVE` | pass `replacesAllocationId` of the active primary, or another role |
-| `ROADMAP_DEPENDENCY_CYCLE` / `INVALID_ROADMAP_LINK_TARGET` / `INVALID_ROADMAP_CAPABILITY_TARGET` | choose another target; at apply: withdraw and report |
-| `SELF_REVIEW_FORBIDDEN` / `REVIEWER_NOT_ELIGIBLE` / `SOLO_CONFIRMATION_REQUIRED` | another human must review; tell the user |
+| `ROADMAP_DEPENDENCY_CYCLE` / `INVALID_ROADMAP_LINK_TARGET` / `INVALID_ROADMAP_CAPABILITY_TARGET` | another target; at apply: withdraw and report |
+| `SELF_REVIEW_FORBIDDEN` / `REVIEWER_NOT_ELIGIBLE` / `SOLO_CONFIRMATION_REQUIRED` | another human reviews |
 | `CHANGE_NOT_REVIEWABLE` / `CHANGE_NOT_REVISIONABLE` / `CHANGE_NOT_WITHDRAWABLE` / `CHANGE_NOT_APPROVED` | read the request status first |
-| `IDEMPOTENCY_CONFLICT` (batch) | the batch key was used with other operations: new batch key |
-
-
-## § traceability
-
-### Roadmap traceability
-Load when: when tracing a roadmap item or auditing unlinked work
-Applies to: lpm-roadmap    Source: cards `get_workspace_roadmap_traceability`, `explain_workspace_roadmap_traceability_gap`, `get_project_roadmap_drilldown`, `list_unlinked_project_work`, `list_workspace_roadmap_materializations`, `list_workspace_roadmap_allocations`, `get_workspace_roadmap_governance_observability`
-
-#### Summary
-Lineage runs item → project allocation → materialization into a requirement → activities that carry the item's lineage.
-`explain_workspace_roadmap_traceability_gap` names the missing steps; `get_workspace_roadmap_traceability` returns the records.
-Both are heavy (they load every activity of the workspace) and need an LPM API key: one item per call, never a loop.
-Records include superseded, rejected or archived entries: check each `status` before counting.
-This skill reports gaps and names the owner skill; it closes no gap itself.
-
-#### Facts
-##### Item lineage (`get_workspace_roadmap_traceability`)
-| Field | Meaning | Consequence for the agent |
-|---|---|---|
-| `completeness.allocated` | the item has an allocation record | count only allocations with `status` active or absent |
-| `completeness.materialized` | any materialization record exists | true even for `method` `conflict` or `deferred`: check `materializations[].method` |
-| `completeness.executionLinked` | an activity points at the item | only activities created with `workOrigin: "roadmap-materialized"` and `roadmapLineageRefs` count |
-| `linkedIssues[]` | those activities, each with `projectId` | report title, status and project |
-| `dependencies[]`, `allocations[]` | include rejected/archived records | filter by `status` |
-| `edges[]` | `{sourceType, sourceId, targetType, targetId, relationship}` | use for "what depends on what" |
-
-##### Gaps (`explain_workspace_roadmap_traceability_gap`)
-| Gap | Next action | Owner skill |
-|---|---|---|
-| `allocated` | mode `shadow`/`enforce`: change request `changeType: "allocate"` (SKILL.md P1); mode `off`: owner-ordered allocation | this skill / `lpm-roadmap-owner-ops.md` |
-| `materialized` | the item must be `approved` and allocated, then materialization preview → commit | `lpm-roadmap-owner-ops.md`, then `lpm-requirements-scope.md` |
-| `executionLinked` | create activities from the materialized requirement with `workOrigin` and `roadmapLineageRefs` | `lpm-plan-work.md` |
-
-`nextActions[]` holds one English sentence per gap, in the same order as `gaps[]`. `complete == true` → no gap.
-
-##### Materialization methods (`list_workspace_roadmap_materializations`)
-| `method` | `lineageState` | Meaning |
-|---|---|---|
-| `linked_existing`, `new_requirement`, `split_from_parent` | `productive` | the item reached a requirement (`requirementId`, `baselineId`); one productive lineage per item + project |
-| `conflict`, `deferred` | `attention` | a decision is still needed: report it to the owner |
-
-##### Project drilldown (`get_project_roadmap_drilldown`)
-| Field | Meaning |
-|---|---|
-| `allocations[]` | includes `superseded`: an item may show for a project that lost primary ownership |
-| `items[]` | roadmap items allocated to the project (archived items excluded) |
-| `upstreamLinks[]` / `downstreamLinks[]` | what the project's items depend on / what depends on them |
-| `materializations[]` | lineage records of the project |
-| error "Project is not attached to a workspace" | there is no workspace roadmap: nothing to drill down |
-
-##### Unlinked work (`list_unlinked_project_work`)
-| Fact | Consequence |
-|---|---|
-| plain array of full activity objects, no count, no pagination | count it yourself |
-| includes `done` and `canceled` activities | drop them unless the user asked for all |
-| loads every activity of the workspace | always pass `projectId` on a large workspace |
-| relinking an activity to an item is a governed roadmap change | propose it to the owner (decision request); never relink yourself |
-
-##### Coverage numbers
-`get_workspace_roadmap_governance_observability` → `lineage{issueCount, coveredCount, coverageRatio}` gives workspace coverage without listing activities. It is slow: call it once per report.
 
 #### Rules
-1. Call `explain_workspace_roadmap_traceability_gap` first; call `get_workspace_roadmap_traceability` only when the user needs the records.
-2. Never call either tool in a loop over many items; for a whole-roadmap view use `get_workspace_roadmap_overview` → `counts`, `allocations[]`, `materializations[]`.
-3. Treat an allocation as current only when `status` is `active` or absent.
-4. Report `conflict` and `deferred` materializations as pending decisions, never as delivered.
-5. Every gap in the report names its owner skill from the Gaps table.
-6. On a connector these tools are absent: say "Traceability needs an LPM API key." and STOP.
+1. A NEW idempotencyKey for every submit, revise, review, withdraw and comment; reuse a key only to retry the same call after a timeout. A reused submit key silently returns the OLD request.
+2. `apply` returning `status: "stale"` is a successful call that changed nothing.
+3. A lifecycle CR `approved` → `materialized` is accepted by the server but records no materialization: never submit it.
 
 #### Examples
 ```text
-example: gaps = ["materialized", "executionLinked"]
-  → "Item <title> is allocated to <project> but not materialized.
-     Next: lpm-roadmap-owner-ops (materialization, owner order), then lpm-plan-work (activities with lineage)."
-```
-
-
-## § capabilities-vs-executive
-
-### Roadmap capabilities vs executive capabilities
-Load when: the request mentions capabilities
-Applies to: lpm-roadmap    Source: cards `list_workspace_capabilities`, `create_workspace_capability`, `update_workspace_capability`, `archive_workspace_capability`, `preview_workspace_roadmap_change`
-
-#### Summary
-"Capability" names three different things in LPM. Pick the right one before any call:
-1. the **roadmap capability registry** (records with an id, linked to roadmap items) → this skill;
-2. the **executive-context capability list** (`portfolio.capabilities` strings, "unowned capability") → `lpm-executive-context.md`;
-3. a **project's owned capabilities** for intake routing (`routingProfile.ownedCapabilities`) → `lpm-workspace-admin.md`.
-They are separate data: changing one never changes the others.
-
-#### Facts
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| registry record `{id, name, description, status, ownerUserId, tags[]}` | roadmap capability, read with `list_workspace_capabilities` | `id` is the `capabilityId` of capability writes and `capability-link` change requests |
-| `status` `active` / `deferred` / `archived` | archived records are hidden unless `includeArchived=true` | search with `includeArchived=true` before creating |
-| item ↔ capability link | made by a change request `changeType: "capability-link"`, patch `{capabilityId, relationship?}` | relationship `defines`, `delivers` (default), `enables`, `extends`, `validates` |
-| create / update / archive | [O], API key only (no connector scope), not blocked by `enforce` mode | owner order required (SKILL.md row 10) |
-| names | not deduplicated by the server; roadmap import matches names ignoring case and accents | compare names the same way before creating |
-| `tags` on update | replaces the whole list; `[]` clears it | send the full list |
-| archive | logical: the record stays, existing item links stay, new links fail with `INVALID_ROADMAP_CAPABILITY_TARGET` | undo with update `status="active"` |
-| an archived name in a later roadmap import | creates a new capability instead of reusing the archived one | un-archive first when the owner wants the old record |
-| list result over 1 MB | returns `{items, truncated, returned, total, hint}` | report that the list is truncated |
-| executive `portfolio.capabilities` | plain strings in the workspace executive context, with ownership gaps | read and change them in `lpm-executive-context.md` (owner-only apply) |
-| project `routingProfile.ownedCapabilities` | which project receives intake for a capability | edit through `lpm-workspace-admin.md` |
-
-#### Rules
-1. "Unowned capability", "capability sem dono", "who owns capability X in the operating model" → `lpm-executive-context.md`.
-2. "Which project handles requests about capability X" (routing) → `lpm-workspace-admin.md`.
-3. "List / create / rename / defer / archive a roadmap capability", "link item X to capability Y" → this skill.
-4. Before a create, list with `includeArchived=true`; a same-name record (any case or accent) → ask "reuse or update?".
-5. Linking an item to a capability is always a change request (`capability-link`), never a capability write.
-6. Capability writes are [O]: without the owner's order in this conversation, send the decision request and STOP.
-
-#### Examples
-```text
-example: "link item Checkout v2 to capability Payments"
-  → list_workspace_capabilities(includeArchived=true) → capabilityId of "Payments"
-  → SKILL.md P1 with changeType "capability-link", patch {capabilityId}
-example: "a capacidade Pagamentos está sem dono" → lpm-executive-context
-```
-
-
-## § flow-structure-write
-
-### Flow: owner-ordered roadmap structure write
-Load when: decision row 10 of SKILL.md (an owner-ordered roadmap, item or capability write)
-
-#### Preconditions
-1. The workspace owner ordered this exact write in this conversation: the tool, the title or name, and the fields. This holds in every governance mode (`off`, `shadow`, `enforce`).
-2. The caller is the workspace owner or an owner/admin member (`get_workspace` → `ownerId`; `list_workspace_members` → `role`).
-3. workspaceId, roadmapId and capabilityId come from SKILL.md §3.
-4. These six tools are [O] (GOV-MAX v1, `authority-overrides.json`). The server does not block them in `enforce` mode, so the owner order is the only gate.
-5. A new item never goes through `changeType: "create"`: the preview needs an existing itemId and apply writes nothing. Edits to an existing item go through SKILL.md P1, not this flow.
-
-#### Steps
-1. Quote the message in this conversation where the workspace owner orders this write (e.g. "I am the workspace owner: create item ..."). The user's plain request ("add item X") does not count. None → send the decision request (see `lpm-roadmap.refs.md` § authority-and-owner-decisions (#decision-request); Option A = the exact create call with its arguments, B = do nothing) and STOP. Do not switch to `lpm-roadmap-owner-ops.md`, do not call `preview_owner_roadmap_change` or `commit_owner_roadmap_change`, never `changeType: "create"`.
-2. Duplicate check, by target:
-   - roadmap → `list_workspace_roadmaps`(workspaceId, includeArchived=true) → keep `id`, `title`, `status`;
-   - item → `list_workspace_roadmap_items`(workspaceId, roadmapId, includeArchived=true, compact=true) → keep `id`, `title`;
-   - capability → `list_workspace_capabilities`(workspaceId, includeArchived=true) → keep `id`, `name`, `status`.
-3. Same title or name, ignoring case and accents → STOP and ask: "<id> '<title>' already exists. Reuse it or update it?"
-4. New roadmap: `create_workspace_roadmap`(workspaceId, title, description, ownerUserId=<the owner's choice of member `userId`; else omit>) [O]. Omit `status` (default `draft`); pass `status="active"` only when the owner said "active".
-5. Roadmap header edit: `update_workspace_roadmap`(workspaceId, roadmapId, only the fields the owner named) [O]. Never pass `status="archived"`: archiving is `lpm-roadmap-owner-ops.md`.
-6. New item: `create_workspace_roadmap_item`(workspaceId, roadmapId of a non-archived roadmap, title, description, category, priority=`urgent|high|medium|low|none`) [O]. Never send `lifecycle`: the default `draft` keeps the review gates.
-7. New capability: `create_workspace_capability`(workspaceId, name, description, status `active|deferred`, tags) [O].
-8. Capability edit: `update_workspace_capability`(workspaceId, capabilityId, only the named fields) [O]. `tags` REPLACES the whole list: send the full list. `status="active"` un-archives.
-9. Capability archive: `archive_workspace_capability`(workspaceId, capabilityId, reason=<owner's words>) [O]. Existing item links stay; new links to it fail.
-10. Timeout or connection error on a create → do NOT call again; re-run step 2 first. Create tools are not idempotent: a retry makes a duplicate.
-11. Verify: re-run the step 2 list → the returned `id` exists with the requested values (archive: `status == "archived"`).
-
-#### Stop and ask
-| Situation | Ask exactly |
-|---|---|
-| no owner order in this conversation (any mode, `enforce` too) | send the decision request and STOP; no owner-ops tool, no change request |
-| a duplicate title or name exists | "<id> '<title>' already exists. Reuse it or update it?" |
-| more than one roadmap could hold the item | "Which roadmap: <title A> (<id>) or <title B> (<id>)?" |
-| archive reason missing | "Why is capability <name> being retired? (one sentence)" |
-| "You do not have permission to manage this workspace roadmap" | "Only the workspace owner or an owner/admin member can do this. Shall I send the owner a decision request?" |
-| connector: capability tool missing | "Capability changes need an LPM API key; the connector does not expose them." |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| create / update roadmap | `list_workspace_roadmaps`(workspaceId, includeArchived=true) | the `id` has the requested `title`, `status`, `ownerUserId` |
-| create item | `list_workspace_roadmap_items`(workspaceId, roadmapId) | the `id` exists with `lifecycle == "draft"` |
-| create / update / archive capability | `list_workspace_capabilities`(workspaceId, includeArchived=true) | the `id` has the requested fields (archive: `status == "archived"`) |
-
-#### Report fields
-- Scope: workspace, roadmap, target id and title.
-- Done: the tool called, the returned id, the changed fields.
-- Evidence: the quoted owner order and the step 11 re-read.
-- Pending: none, or the exact item and who must act.
-- Next: one action, e.g. "submit a capability-link change request for item <id> (P1)".
-- No owner order: the reply is the filled decision request + the SKILL.md §8 block (Done: reads only; Pending: owner decision; mode from `get_workspace`).
-
-#### Examples
-```text
-example: mode enforce; user: "Add item Offline mode (priority medium)"; no owner message
--> reads only, decision request (A: create_workspace_roadmap_item(workspaceId, roadmapId, title="Offline mode", priority="medium"); B: do nothing), STOP
-example: owner: "I am the workspace owner: create item Offline mode, priority medium, in roadmap rm_1"
--> steps 2-3, then create_workspace_roadmap_item, then step 11
+example: preview_workspace_roadmap_change {"workspaceId":"ws_1","itemId":"ri_11","changeType":"prioritize","patch":{"priority":"high"},"expectedUpdatedAt":"<item updatedAt>"}
 ```
 
 

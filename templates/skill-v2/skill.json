@@ -46,8 +46,12 @@
   ],
   "references": [
     {
+      "file": "references/flow-TEMPLATE.md",
+      "loadWhen": "playbook TEMPLATE: <the playbook's Use when line, word for word>"
+    },
+    {
       "file": "references/<topic>.md",
-      "loadWhen": "<exact situation>"
+      "loadWhen": "<exact situation; facts only, never needed to run a playbook>"
     }
   ],
   "behaviorContracts": [],

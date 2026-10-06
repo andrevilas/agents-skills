@@ -6,68 +6,46 @@ Load a section only when the skill tells you to.
 ## § code-index-lifecycle
 
 ### Code index lifecycle
-Load when: before any refresh, activate, rollback or purge
-Applies to: lpm-code-index    Source: cards of get_repository_index_status, preview_repository_code_index, refresh_repository_code_index, activate_repository_code_index, rollback_repository_code_index, purge_repository_code_index, reconcile_workspace_code_indexes, scan_workspace_repository_readonly
+Load when: background facts: index states, caps, limits
+Applies to: lpm-code-index    Source: cards of get_repository_index_status, preview_repository_code_index, refresh_repository_code_index, activate_repository_code_index, rollback_repository_code_index, purge_repository_code_index, reconcile_workspace_code_indexes, scan_workspace_repository_readonly; lpm server.ts 6795-7141, 7306-7323, 7779, 14116
 
 #### Summary
 Only workspace repository links carry a code index; project links get metadata scans only.
 A build is an immutable version: preview (dry run) → refresh (candidate, `validating`) → activate (live).
 Activate and rollback need `expectedGeneration` = the current `pointer.generation` (0 when `pointer` is null).
 GitHub pushes and the daily maintenance job already refresh and activate stale or missing indexes.
-Caps (files, chunks, daily documents) are the owner's financial decision: never work around them.
-Purge is irreversible and only for old, terminal versions; always dry-run first.
+Caps (files, chunks) are LPM platform settings and the owner's decision: never work around them.
+Purge is irreversible and only for old, terminal versions; the daily job purges them after 30 days.
 
 #### Facts
 | Field / value | Meaning | Consequence for the agent |
 |---|---|---|
 | `pointer` null | the repository was never indexed | `expectedGeneration` = 0; rollback is impossible |
-| `pointer.activeIndexVersionId` | the version every agent and the Advisor search | verify it after activate or rollback |
-| `pointer.previousIndexVersionId` | the only rollback target | null → no rollback; offer a refresh |
+| `pointer.activeIndexVersionId` | the version every agent and the Advisor search | read it after activate or rollback; never trust the write response |
+| `pointer.previousIndexVersionId` | the only rollback target | null → no rollback; a refresh is the way forward |
 | `pointer.expectedRepositoryCommitSha` | commit of the active version | base commit for `compare_repository_commits` |
-| `pointer.generation` | integer, +1 on every activate and rollback | re-read with `get_repository_index_status` right before each activate or rollback |
+| `pointer.generation` | integer, +1 on every activate and rollback | re-read right before each activate or rollback |
 | version `validating` | a refresh result that is not live yet | the only status `activate_repository_code_index` accepts |
 | version `active` / `superseded` / `failed` | live / replaced (rollback target) / build failed (`failureReason`) | a failed build: fix the cause, refresh again |
-| candidate not in `versions[]` | status lists only the active and previous versions | keep the `id` that `refresh_repository_code_index` returned |
-| `idempotentReplay: true` | refresh of an already-built commit | same commit → same version id; `status == "active"` means already live |
-| reconcile `state` | `missing` (no index), `stale` (branch moved after indexing), `current` | the requested repository `current` → STOP, nothing to do |
-| reconcile scope | at most 25 active agent-visible links, one GitHub preview each; archived and hidden links are skipped | `results` empty or the repository absent is NOT current: check the link (SKILL.md P0) or re-run with `repositoryLinkId`; one failing repository fails the whole call |
+| candidate not in `versions[]` | status lists only the active and previous versions; no tool lists the others (LPM gap) | keep the `id` that refresh returned |
+| `idempotentReplay: true` | refresh of an already-built commit | same commit → same version id |
+| reconcile `state` | `missing` (no index), `stale` (branch moved after indexing), `current` | owner/admin only; one failing repository fails the whole call |
+| reconcile scope | at most 25 active agent-visible links; archived and hidden links are skipped | a repository absent from `results` is NOT current |
+| `codeEvidence.status` `no_active_index` | in LPM it means no visible workspace link is mapped to the scope (server.ts 7779, 14116); a mapped link without an active index gives `no_matches` | check the link and its `projectMappings` first, then the index |
 | preview `truncated: true` | more eligible files than `maxFiles` | implementation code is kept before tests, config and docs |
-| `maxFiles` | 500 files per build by default (platform max 1000) | report it; raising it is not an agent decision |
-| chunk cap | 5,000 chunks per build | "exceeds configured document cap 5000" → owner decision, STOP |
-| daily document cap | configured daily indexing capacity | "exceeds the configured daily document cap" → owner decision, STOP |
+| `maxFiles` | 500 files per build by default (platform max 1000) | raising it is not an agent decision |
+| document cap | 5,000 chunks per build ("exceeds configured document cap 5000" or "daily document cap": same cap) | owner decision about LPM platform configuration; STOP |
 | eligible file | source, config or doc extension, ≤ 512 KB, outside node_modules/dist/build/vendor/coverage/secrets; no lock, min.js, map or .env files | explains why a file never appears in search |
-| refresh duration | synchronous; server timeout 9 min | client timeout → wait ~10 min, then one call with the same key and commit |
+| refresh duration | synchronous; server timeout 9 min | client timeout → wait ~10 min, then one call with the same commit and key |
 | refresh `idempotencyKey` | stored only; dedupe is by commit | recipe `manual:<yyyy-mm-dd>:<repositoryLinkId>` |
 | purge eligibility | `superseded` or `failed`, not active or previous, ≥ 30 days old, no incident hold, not purged | `reasons[]`: active-version, rollback-version, non-terminal-version, incident-hold, purge-in-progress, already-purged, retention-window |
-| purge retention | the daily maintenance job purges eligible versions after 30 days | routine cleanup needs no agent action; a secret indexed in a recent or rollback version cannot be purged here → SKILL.md §6 incident |
-| scan vs index | a scan stores GitHub metadata (commit, languages, tree); it never refreshes the index | after a scan, still check reconcile `state` |
+| emergency purge | no MCP tool purges a recent or rollback version or sets an incident hold (LPM gap) | a leaked secret is an incident for the owner and an LPM admin |
+| scan vs index | a scan stores GitHub metadata (commit, languages, tree); it never refreshes the index | after a scan, still check the index |
 | scan limits | 10 scans per workspace hour (project, workspace and automated), 30 s, 30 GitHub requests, 5 MB | a failed scan still counts: never repeat in a loop |
 | scan age | older than 24 h = stale | re-scan before stating the current branch or commit |
 | GitHub access for indexing | GitHub App, or the personal credential of the link creator (`credentialOwnerId`) | the workspace vault token is used only by scans with `credentialSource="workspace"` |
-| archived or `agentVisible == false` link | "not available for code intelligence" | unhide with an update, or link again (new id, no index) |
-
-#### Rules
-1. Run `reconcile_workspace_code_indexes` before any refresh; the requested repository `current` → STOP.
-2. Run `preview_repository_code_index` before `refresh_repository_code_index`; pass its `commitSha`.
-3. Never call refresh twice in a row: a repeat while the build is running restarts it.
-4. Activate only a `validating` candidate, once; after success verify with status, never re-send.
-5. "Code index pointer generation conflict" → re-read status; target already active → done; else retry once with the new generation.
-6. Roll back once: it is a swap, so a second rollback re-activates the version just replaced.
-7. Purge with `dryRun=true` first; the real purge needs a reason of at least 10 characters and the user's explicit yes.
-8. Indexing disabled ("dedicated data store is not configured") is platform configuration: STOP and report.
-
-#### Rollback
-Decision row 5. One call; verify, never re-send.
-1. `get_repository_index_status`(workspaceId, repositoryLinkId) → keep `pointer.generation` (expectedGeneration), `previousIndexVersionId`. Null → no rollback; offer a refresh (SKILL.md P2).
-2. [C] "Roll back <url> to older code?" → `rollback_repository_code_index`(workspaceId, repositoryLinkId, expectedGeneration) [C], once.
-3. Verify: AFTER rollback call `get_repository_index_status` AGAIN (the rollback response does not count) → `pointer.activeIndexVersionId` == step 1 `previousIndexVersionId`.
-
-#### Purge
-Decision row 6. Irreversible; dry run first.
-1. versionId: only from the user or an earlier refresh result in this conversation; never from `versions[]` (it lists only the active and rollback versions, which are never eligible). None → STOP: "Old versions are purged automatically after 30 days." reason: from the user, ≥ 10 characters.
-2. [C] "Dry-run purge of <versionId>?" → `purge_repository_code_index`(workspaceId, versionId, reason, dryRun=true) [C] → keep `eligibility`. `eligibility.eligible == false` → STOP, report `reasons[]`.
-3. [C] "Delete <versionId> forever?" → `purge_repository_code_index`(workspaceId, versionId, reason, dryRun=false) [C].
-4. Verify: `purge_repository_code_index`(workspaceId, versionId, reason, dryRun=true) → `eligibility.reasons` contains `already-purged`; `get_repository_index_status` → active version unchanged.
+| archived or `agentVisible == false` link | "not available for code intelligence" | make it visible again, or link again (new id, no index) |
+| `accessLevel` "write" on preview, reconcile, compare, search | LPM classifies these read-only tools as writes (keeps them out of read-only keys) | they need a full or custom API key |
 
 #### Examples
 ```text
@@ -76,56 +54,8 @@ pointer: null                       -> expectedGeneration = 0
 pointer.generation: 4               -> activate(versionId=<refresh id>, expectedGeneration=4) -> generation 5
 example: idempotencyKey = manual:2026-10-06:<repositoryLinkId>
 example: reconcile result {state: "stale", indexedCommitSha: A, repositoryCommitSha: B}
-  -> compare_repository_commits(base=A, head=B) lists the changed files (max 100)
+  -> compare_repository_commits(baseCommitSha=A, headCommitSha=B) lists the changed files (max 100)
 ```
-
-
-## § flow-repository-links
-
-### Flow: repository links
-Load when: decision rows 1 (`no_active_index`), 2, 3 and 8 of SKILL.md (link, change, unlink or scan a repository)
-
-#### Preconditions
-1. Workspace links: workspace owner/admin and a `full`/`custom` API key. Project links: project manage rights.
-2. Only workspace links get a code index and code search. A project link stores metadata and scans only.
-3. Every write here is [C]: show the exact call and wait for "yes".
-
-#### P0 Link check
-Row 1, `no_active_index`: run before SKILL.md P1. In LPM it means no visible workspace link is mapped to the asked scope, not that the index is missing.
-1. `list_workspace_repository_links`(workspaceId, includeArchived=true) → the link of repositoryUrl: `id`, `archivedAt`, `agentVisible`, `projectMappings`.
-2. No link, or `archivedAt` set → step 4a (new link); STOP P0.
-3. `agentVisible == false` → step 7 with `agentVisible=true` [C].
-4. Project-scoped question and projectId not in `projectMappings` (or its mapping has `agentVisible == false`) → step 7: the full existing array plus `{projectId, repositoryPath}` [C].
-5. Only after these checks: SKILL.md P1 with this `repositoryLinkId`.
-
-#### Steps
-1. List first: `list_workspace_repository_links`(workspaceId, includeArchived=true) / `list_project_repository_links`(projectId) → keep `id`, `canonicalRepositoryUrl`, `archivedAt`, `agentVisible`, `projectMappings` (the whole array). Already linked at the same level → step 7 (change), never a second link. Only a project link exists and code search or the Advisor is wanted → step 4a.
-2. Code search wanted (workspace link): ask projectMappings, one `{projectId, repositoryPath}` per project.
-3. Private repo: `get_workspace_repository_context`(workspaceId) → `userCredential` null and `connector.missingConfiguration` non-empty → STOP: "Whoever creates the link becomes its credential owner (credentialOwnerId) and needs a personal GitHub credential in the LPM web app, or an LPM admin must install the GitHub App. The workspace GitHub token does not enable indexing."
-4. Create exactly one link. Never both 4a and 4b.
-   - 4a. Default, and whenever code search or the Advisor is needed: [C] show URL, branch and mappings → `create_workspace_repository_link`(workspaceId, repositoryUrl, defaultBranch, projectMappings) [C] → keep `id`.
-   - 4b. Only if the user asks for metadata only, or is not workspace owner/admin: [C] `create_project_repository_link`(projectId, repositoryUrl) [C] → keep `id`.
-5. Verify: the list tool of step 1 → that `id` with the same URL and mappings.
-6. Then § Scan; after 4a also SKILL.md P2 (refresh).
-7. Change branch, visibility or mappings: [C] `update_workspace_repository_link` / `update_project_repository_link` [C] with the changed fields only. `projectMappings` REPLACES the whole array: send the step 1 array plus or minus the requested change, never only the new mapping. The [C] message prints the full current `projectMappings` array and the full new array, as JSON.
-8. Archived link → it cannot be edited: link again (step 4a or 4b; new id, no index).
-9. Unlink: ask "Archive <url>? No unarchive. Reason?" Hide only → step 7 with `agentVisible=false`.
-10. [C] `archive_workspace_repository_link` / `archive_project_repository_link`(…, reason) [C]. Archiving a workspace link removes its code index from search.
-11. Verify: the list tool with `includeArchived=true` → `archivedAt` set; after step 7 → the changed fields are equal and every earlier mapping that was not removed is still in `projectMappings`.
-
-#### Scan
-Rows 2, 3 and 8. A scan is a write [A]: run it only when the user asked for a scan or a link step sends you here.
-1. Row 8 (workspace vault) only: `get_workspace_repository_credential`(workspaceId) → `configured` false → `lpm-access.md`, STOP.
-2. `scan_workspace_repository_readonly`(workspaceId, repositoryLinkId[, credentialSource="workspace"]) [A] / `scan_project_repository_readonly`(projectId, repositoryLinkId) [A].
-3. Error → never repeat (10 scans per workspace hour, automated scans included; failures count).
-4. Verify: the list tool → `lastScanStatus == "completed"`. Scans never refresh the index: check SKILL.md P1 afterwards.
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| create, update | the list tool of step 1 | `id` present, fields equal, every kept mapping present |
-| archive | the list tool, `includeArchived=true` | `archivedAt` set |
-| scan | the list tool | `lastScanStatus == "completed"` |
 
 
 ## § error-codes

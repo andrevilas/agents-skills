@@ -1,0 +1,50 @@
+# Playbook: lifecycle
+Use when: move one item through a lifecycle gate (approve, deliver, close)
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user, or skill lpm-start | STOP. Say: "Which LPM workspace?" |
+| order | the owner's message, quoted verbatim: the speaker says they are the workspace owner and decides this gate | STOP. This belongs to skill {{skill:lpm-roadmap}}. Say: "There is no owner decision, so I can only propose this gate as a change request; nothing was changed." |
+| roadmap | the roadmap title or id the user named | STOP. Say: "Which roadmap?" |
+| item | the item title or id the user named | STOP. Say: "Which roadmap item?" |
+| target | the gate in the order: "reviewed", "approved" ("aprovar"), "deferred", "rejected", "delivered" ("entregue") or "closed" | STOP. Say: "Which gate: reviewed, approved, deferred, rejected, delivered or closed?" |
+| rationale | the owner's reason, verbatim | the quoted order |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing more was changed."
+1. CALL {{tool:get_workspace}} {"workspaceId":"<input:workspaceId>"} [A]
+   SAVE: mode = result.roadmapGovernanceMode, else "off" when result.roadmapGovernanceEnabled == false, else "shadow"
+   IF <saved:mode> == "enforce" → STOP. This belongs to skill {{skill:lpm-roadmap}}. Say: "<input:workspaceId> is in enforce: lifecycle gates go through a change request (changeType lifecycle). Nothing was changed."
+2. CALL {{tool:get_workspace_roadmap_overview}} {"workspaceId":"<input:workspaceId>","compact":true,"includeArchived":true} [A]
+   SAVE: roadmapId = id of the one roadmaps[] entry whose title or id equals <input:roadmap>; itemId, lifecycle, isArchived = those fields of the one items[] entry with roadmapId == <saved:roadmapId> whose title or id equals <input:item>; was = <saved:lifecycle>
+   IF 0 or 2+ entries match → STOP. Say: "Which one do you mean: <the matching titles with ids>?"
+   IF <saved:isArchived> == true → STOP. Say: "<input:item> is archived; restore it first (playbook items, change restore)."
+   IF <saved:lifecycle> == <input:target> → SAVE: gates = "none (already <input:target>)"; go to Answer.
+   IF <input:target> == "delivered" and <saved:lifecycle> == "approved" → STOP. Say: "<input:item> keeps lifecycle approved after materialization, and LPM allows delivered only from materialized (LPM gap). Nothing was changed."
+3. SAVE: gates = [<input:target>] when this move is allowed: draft or imported → reviewed, deferred, rejected; reviewed → approved, deferred, rejected; approved → deferred; deferred or rejected → reviewed; materialized → delivered; delivered → closed. Else ["reviewed","approved"] when <input:target> == "approved" and <saved:lifecycle> is draft, imported, deferred or rejected; else ["delivered","closed"] when <input:target> == "closed" and <saved:lifecycle> == "materialized"; else empty
+   IF <saved:gates> is empty → STOP. Say: "LPM allows no move from <saved:lifecycle> to <input:target> (closed is final; approved goes back only to deferred). Nothing was changed."
+   SAVE: first = the first entry of <saved:gates>
+4. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Decision needed: move <input:item> from <saved:lifecycle> to <input:target>? Reply as the workspace owner."
+   IF the order does not name this item and this gate → ASK: "Record <saved:gates> for <input:item> (<saved:itemId>) as your decision? (yes/no)" — continue only if the user says yes; otherwise STOP.
+5. CALL {{tool:review_workspace_roadmap_item}} {"workspaceId":"<input:workspaceId>","itemId":"<saved:itemId>","lifecycle":"<saved:first>","rationale":"<input:rationale>"} [O]
+   VERIFY: CALL {{tool:list_workspace_roadmap_items}} {"workspaceId":"<input:workspaceId>","roadmapId":"<saved:roadmapId>","compact":true,"includeArchived":true} [A]
+   IF the call returns an error or item <saved:itemId> has lifecycle != <saved:first> → STOP. Say: "<input:item> still shows lifecycle <lifecycle read>."
+   SAVE: lifecycle = the lifecycle read
+   IF <saved:gates> has one gate → go to Answer.
+6. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "<input:item> is now <saved:lifecycle>. Decision needed: also move it to <input:target>?"
+7. CALL {{tool:review_workspace_roadmap_item}} {"workspaceId":"<input:workspaceId>","itemId":"<saved:itemId>","lifecycle":"<input:target>","rationale":"<input:rationale>"} [O]
+   VERIFY: CALL {{tool:list_workspace_roadmap_items}} {"workspaceId":"<input:workspaceId>","roadmapId":"<saved:roadmapId>","compact":true,"includeArchived":true} [A]
+   IF the call returns an error or item <saved:itemId> has lifecycle != <input:target> → STOP. Say: "<input:item> is <saved:lifecycle>, not <input:target>."
+   SAVE: lifecycle = the lifecycle read
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:workspaceId> / <saved:roadmapId> / <saved:itemId> (mode <saved:mode>); owner order: "<input:order>"
+Done: <review_workspace_roadmap_item: <saved:was> → <saved:gates> | nothing changed>; lifecycle <saved:lifecycle>
+Evidence: <list_workspace_roadmap_items: <saved:itemId> lifecycle <saved:lifecycle> | none>
+Pending: <none | the gate not recorded>
+Next: <the ASK or STOP text that ended the run | approved: playbook materialize (needs your order) | none>
+```
+lifecycle: draft | imported | reviewed | approved | deferred | rejected | materialized | delivered | closed, from your last list_workspace_roadmap_items. Never claim a gate that a VERIFY above did not show.

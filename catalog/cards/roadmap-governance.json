@@ -1031,7 +1031,7 @@
       },
       {
         "when": "-32003 scope roadmap:manage required",
-        "fix": "Call get_mcp_connection_info; the user must reinstall the connector and tick roadmap:manage"
+        "fix": "Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes."
       }
     ],
     "oauthScope": "roadmap:manage",

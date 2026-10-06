@@ -1,0 +1,44 @@
+# Playbook: triage
+Use when: pending decisions of one project
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user, or `items[].projectId` of `get_workspace_decision_inbox` | STOP. Say: "Which LPM project? (id or name)" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "Triage incomplete: <tool> failed: <error text>."
+1. CALL {{tool:get_project_decision_inbox}} {"projectId":"<input:projectId>","requiresActionOnly":true,"limitCount":100} [A]
+   Make no reply, update, resolve or create call in this playbook, even for a thread that looks easy to fix.
+   IF the call returns an error that contains "owner surface" → SAVE: inbox = none; inboxNote = "inbox denied (no project governance role); list built from the sweep"; go to step 2.
+   IF the call returns any other error → STOP. Say: "Triage incomplete: get_project_decision_inbox failed: <error text>."
+   SAVE: inbox = each item of result.items: threadId, title, status, assignedTo, latestMessageAt, blockedAishJobIds; inboxNote = "none"
+2. CALL {{tool:list_governance_threads}} {"projectId":"<input:projectId>","limitCount":100} [A]
+   Always make this call: the inbox never shows decided threads whose artifact is still missing.
+   SAVE: threads = result.items; pages = 1; cursor = result.nextCursor
+   IF result.hasMore != true → go to step 5.
+3. CALL {{tool:list_governance_threads}} {"projectId":"<input:projectId>","limitCount":100,"cursor":"<saved:cursor>"} [A]
+   SAVE: threads = <saved:threads> plus result.items; pages = 2; cursor = result.nextCursor
+   IF result.hasMore != true → go to step 5.
+4. CALL {{tool:list_governance_threads}} {"projectId":"<input:projectId>","limitCount":100,"cursor":"<saved:cursor>"} [A]
+   SAVE: threads = <saved:threads> plus result.items; pages = 3
+   IF result.hasMore == true → SAVE: inboxNote = "only the 300 most recent threads were read"; go to step 5.
+5. CALL {{tool:get_project}} {"projectId":"<input:projectId>"} [A]
+   SAVE: workspaceId = result.workspaceId; projectName = result.name; roleHolders = each "<role> <userId>" of result.governanceAssignments, else "none"
+6. SAVE: pending = the items of <saved:inbox>, plus each item of <saved:threads> with status "open", "answered" or "decision-needed", an empty decisionOutcome and an id not already in the list
+   SAVE: pending = <saved:pending> sorted: first status "decision-needed"; then a non-empty blockedAishJobIds; then the oldest latestMessageAt
+   SAVE: decided = each item of <saved:threads> with status "resolved" or "closed", decisionOutcome.type "create-activity", "derive-requirement" or "propose-change-set", and an empty decisionOutcome.actionTargetId
+     Not pending, leave out: outcome type "clarification", "publication-note" or "no-action", or an actionTargetId that is set.
+   SAVE: decider of each pending item = its assignedTo exactly as returned (a userId such as usr_x), else "unassigned"
+     Never turn a userId into a person's name. Copy titles as returned; a thread without a title is named by its id only.
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<input:projectId> (<saved:projectName>)
+Done: read-only, nothing changed: <count of <saved:pending>> pending + <count of <saved:decided>> decided with artifact pending
+Evidence: <each <saved:pending> item: "<threadId> (<status>, <decider>[, holds <blockedAishJobIds>])"> | no pending thread; sweep <saved:pages> page(s): <each <saved:decided> item: "<id> <status> <decisionOutcome.type> '<decisionOutcome.actionTitle>' without actionTargetId"> | no decided thread without its artifact; <saved:inboxNote>
+Pending: <each pending item: "<decider> decides <threadId>" or "<threadId>: no decider assigned (role holders: <saved:roleHolders>)">; <"jobs <blockedAishJobIds> held until <threadId> is resolved"> ; <"artifact of <id> not created"> | none
+Next: <the ASK or STOP text that ended the run | one action: the decider of the first pending thread decides it | assign a decider to <threadId> (playbook update-thread) | the decider orders the artifact of <id> (playbook create-artifact) | none>
+```
+status: open | answered | decision-needed | resolved | closed, from steps 1-4. Never claim a thread is pending or decided unless step 6 listed it; never write a person's name for a userId.

@@ -2120,7 +2120,7 @@
       "lang": "en",
       "prompt": "archive the project",
       "expected": "lpm-workspace-admin",
-      "decidedBy": 35
+      "decidedBy": 14
     },
     {
       "id": "skill/lpm-workspace-admin/en-3",
@@ -3697,6 +3697,42 @@
       "prompt": "quem é o product owner do projeto Checkout?",
       "expected": "lpm-workspace-admin",
       "decidedBy": 35
+    },
+    {
+      "id": "handoff-routing-1",
+      "prompt": "cria estas atividades no backlog do projeto <nome>",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "handoff-routing-2",
+      "prompt": "daily sync for project <name>: what is open and what is next",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "handoff-routing-3",
+      "prompt": "estimate the unestimated issues of project <name>",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "handoff-routing-4",
+      "prompt": "o que está atrasado no projeto <nome>?",
+      "expected": "lpm-plan-work",
+      "decidedBy": 36
+    },
+    {
+      "id": "handoff-routing-5",
+      "prompt": "arquive o projeto <nome>; depois veja se a baseline ainda está atual",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 14
+    },
+    {
+      "id": "handoff-routing-6",
+      "prompt": "crie o projeto Mobile App Rewrite com a chave MOBR no workspace <nome>",
+      "expected": "lpm-workspace-admin",
+      "decidedBy": 14
     }
   ]
 }

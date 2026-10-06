@@ -1,34 +1,45 @@
-# Flow: onboard a runner host
-Load when: decision row 2 of SKILL.md
+# Playbook: host-onboarding
+Use when: onboard a new runner host (enrollment, wizard, doctor, repos, start)
+{{partial:playbook-rules}}
 
-## Preconditions
-1. Load {{ref:host-onboarding}} (commands, scopes, doctor findings).
-2. Ask: anchor projectId, scope (`project`/`workspace`/`account`), accountId (account scope), repos, executor command.
-3. The enrollment token and the host profile are secrets: they go to the host terminal only, never to chat, comments, evidence or your own tool output.
-4. Default: the host is logged in to the `lpm` CLI. `lpm aish host wizard` without `--token` creates its own 60-minute token and never prints it. You never run `lpm aish hosts create-token` yourself.
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| anchorProjectId | the user: the project the host serves first | STOP. Say: "Which LPM project should this host serve first? (id)" |
+| scopeFlags | the user's scope: project → `--scope project`; workspace → `--scope workspace --workspace <workspaceId>`; account → `--scope account --account <accountId>` | "--scope project" |
+| executorCommand | the operator: a script path (never a job prompt) | STOP. Say: "Which executor script should the host run? (path)" |
+| onHost | "yes" if this terminal runs on the host machine | "no" |
+| logFile | a file path on the host for the worker log | "~/.lpm/aish-host-worker.log" |
 
 ## Steps
-1. Host: `lpm aish host wizard --project <anchorProjectId> [--scope …] [--account <accountId>] --dry-run --json` → `ok == true`; else fix `findings`. The host has no LPM login → Stop and ask row 2.
-2. [C] The same command without `--dry-run` → keep `hostId`, `profilePath`.
-3. `lpm aish host doctor --profile <profilePath> --json` → `ok == true`; else fix every finding.
-4. `lpm aish host sync-repos --profile <profilePath> --dry-run --json` → expected repos `planned`; then without `--dry-run`.
-5. `lpm aish host monitor --project <projectId> --host <hostId> --json` → keep `host.connection`.
-6. [C] `lpm aish host start --profile <profilePath> --executor-command <cmd> --budget-contract aish-budget/1 --targeted-only --json`.
-7. Verify: step 5 again → `host.connection` `online`/`busy`.
+Every CALL or RUN with no error line: IF it returns an error → STOP. Say: "<command> failed: <error text>. The host was not started."
+1. IF <input:onHost> == "no" → STOP. Say: "Run on the host terminal (not here): `lpm aish host wizard --project <input:anchorProjectId> <input:scopeFlags> --dry-run --json`, and send me its JSON. Never paste a token or the profile file to me."
+2. RUN `lpm aish host wizard --project <input:anchorProjectId> <input:scopeFlags> --dry-run --json`
+   IF the command fails and the error contains "not bound" → STOP. Say: "The runner account owner must run `lpm aish accounts bind-workspace --account <accountId> --workspace <workspaceId>`. I never run it."
+   IF the command fails → STOP. Say: "The wizard failed: <error text>. If this host has no LPM login, the person at the host runs `lpm aish hosts create-token --project <input:anchorProjectId> --expires-minutes 60 --json` there, then `lpm aish host wizard --token <token> --project <input:anchorProjectId> --dry-run --json`. Never paste the token to me."
+   IF the output's ok != true → STOP. Say: "Wizard findings: <findings>. Fix them, then run this playbook again."
+3. ASK: "Enroll this host: `lpm aish host wizard --project <input:anchorProjectId> <input:scopeFlags> --json`? It makes its own 60-minute token, enrolls the host and writes a profile that holds the host credential. Enrolling approves no job. (yes/no)" — continue only if the user says yes; otherwise STOP. Say: "Nothing was enrolled."
+4. RUN `lpm aish host wizard --project <input:anchorProjectId> <input:scopeFlags> --json`
+   SAVE: hostId, profilePath = those output fields (never print or upload the profile file)
+   VERIFY: RUN `lpm aish host doctor --profile <saved:profilePath> --json`
+   IF the output's ok != true → STOP. Say: "Doctor findings: <findings>. profile-permissions-too-open → `chmod 600 <saved:profilePath>`; any other finding → install or log in the named tool. Then run `lpm aish host doctor --profile <saved:profilePath> --json` again."
+5. RUN `lpm aish host sync-repos --profile <saved:profilePath> --dry-run --json`
+   IF an expected repository is missing from the output → STOP. Say: "Repository <name> is not declared on <saved:hostId>; re-enroll with the right --repo."
+6. RUN `lpm aish host sync-repos --profile <saved:profilePath> --json`
+   SAVE: repos = each repository and its status from the output
+   IF a status != "ok" → STOP. Say: "Repository sync failed: <repository and status>."
+7. ASK: "Start the host worker: `lpm aish host start --profile <saved:profilePath> --executor-command <input:executorCommand> --budget-contract aish-budget/1 --targeted-only --json` in the background, log in <input:logFile>? It takes only jobs targeted to <saved:hostId>, and only approved and funded ones. (yes/no)" — continue only if the user says yes; otherwise STOP. Say: "<saved:hostId> is enrolled but not started."
+8. RUN `nohup lpm aish host start --profile <saved:profilePath> --executor-command <input:executorCommand> --budget-contract aish-budget/1 --targeted-only --json > <input:logFile> 2>&1 &`
+   VERIFY: RUN `sleep 35 && lpm aish host monitor --project <input:anchorProjectId> --host <saved:hostId> --json`
+   IF host.connection in the output is neither "online" nor "busy" → STOP. Say: "<saved:hostId> shows <host.connection>. Read <input:logFile> on the host (redact secrets before you share it)."
+   SAVE: connection = host.connection from the output
 
-## Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| the host has no LPM login | "On the host terminal (not here), run `lpm aish hosts create-token --project <anchorProjectId> --expires-minutes 60 --json` and then `lpm aish host wizard --token <token> --project <anchorProjectId> --dry-run --json`. Never paste the token to me." |
-| a token or profile value would enter chat or your tool output | do not send it; redact ({{ref:security-and-untrusted-text}}) |
-| account scope, workspace not bound | "The account owner must run `lpm aish accounts bind-workspace --account <accountId> --workspace <workspaceId>`." |
-
-## Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| host start (step 6) | `lpm aish host monitor --json` | `host.connection` `online`/`busy` |
-
-## Report fields
-- anchor projectId, scope, hostId, profilePath (path only, never its content)
-- doctor result, synced repos, `host.connection`
-- pending: workspace binding, grants — the account owner
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:anchorProjectId> / <input:scopeFlags> / host <saved:hostId>
+Done: <enrolled <saved:hostId>, profile at <saved:profilePath> (path only); worker started targeted-only | preflight only, nothing enrolled>
+Evidence: <doctor ok; repos <saved:repos>; host.connection <saved:connection> | wizard dry-run only>
+Pending: <none | workspace binding or grants — the runner account owner | the host still needs a job targeted to it — skill lpm-aish-jobs>
+Next: <the ASK or STOP text that ended the run | none — host <saved:connection>>
+```
+host.connection: online | busy | stale | offline | draining | revoked | unknown. A token, host credential or profile content never enters this answer. Never claim a connection that the VERIFY monitor run did not print.

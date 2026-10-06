@@ -4,6 +4,8 @@ Catálogo de skills que permite a qualquer agente de IA (Claude Code, Codex, Ant
 
 Cada skill cobre um trabalho que o usuário pede ("entregar uma atividade", "planejar o backlog", "revisar a saúde do projeto"), não uma tool isolada. Toda tool MCP do LPM tem exatamente uma skill dona; os totais atuais estão em `docs/lpm-coverage-matrix.md`. As skills seguem o mesmo esqueleto: quando usar, pré-condições, tabela de decisão (a primeira linha que casar vence), procedimentos, quando parar e perguntar, verificação, relatório e falhas comuns.
 
+Os fluxos de execução usam playbooks com chamadas completas, origem de cada valor e verificação após escritas. Procedimentos extensos já existentes continuam suportados; nas skills híbridas, cada playbook também passa pelos validadores V20/V21. O formato e seus limites estão em [docs/playbook-standard.md](docs/playbook-standard.md).
+
 - **Pacote `core`**: as skills públicas do LPM. Comece sempre por `lpm-start` quando nenhuma outra skill servir claramente: ela resolve IDs, diagnostica conexão e roteia para uma única skill.
 - **Pacote `internal`**: `lpm-release-product` e `lpm-pilot-feedback`, só para mantenedores do LPM; instalam apenas com `--include-internal` e escopo de usuário.
 - **Roteamento determinístico**: `lpm-start/references/route.md` (e `INDEX.md` no target genérico) traz as linhas de roteamento geradas de `skill.json.routing[]`; o mesmo algoritmo roda em `eval --router` com gate de 100 %.
@@ -42,7 +44,7 @@ node scripts/skills.mjs install --agent generic --dest ~/lpm-skills   # Gemini C
 - **Primeira instalação v2** numa máquina com as skills antigas: `install … --prune --adopt-legacy` remove os 15 diretórios legados reconhecidos (nunca toca `.system/` nem `synced/`).
 - **Depois**: `update` reaplica a seleção gravada em `.agents-skills-manifest.json`; `verify --agent X` lista arquivos ausentes, alterados, órfãos e legados; `doctor` mostra quais agentes têm o servidor MCP do LPM configurado (só nomes, nunca valores) e a próxima ação para cada problema.
 - Bundles externos ativos (`external/`): `--include-external` nos targets nativos (codex, claude-code, antigravity).
-- **Genérico, arquivos**: cada skill instala `<id>.md` (o corpo), `<id>.refs.md` (as referências, lidas só quando a skill manda) e `<id>.tools.md` (os cards completos das ferramentas, lidos quando uma chamada falha ou um parâmetro não está claro).
+- **Genérico, arquivos**: cada skill instala `<id>.md` (o corpo), `<id>.refs.md` (referências), `<id>.flows.md` (quando há fluxos) e `<id>.tools.md` (contratos das ferramentas). Leia apenas a seção do fluxo escolhido; não carregue os demais fluxos ou o catálogo completo sem necessidade.
 - **Manifesto** `<destino>/.agents-skills-manifest.json` (escrito por `install`/`update`, lido por `verify`, `update`, `prune` e `doctor`): `sourceCommit` (HEAD deste repositório na instalação, ou `null`), `agent`, `scope` (`user`|`project`), `selection` (`mode` `profile`|`skills`|`all`, `profile`, `skills[]`, `includeInternal`, `includeExternal`), `shared` (só no genérico: hashes de `INDEX.md` e `AGENTS-snippet.md`) e `skills` (`id` → `version`, `pack`, `files` com sha256). Só ids listados em `skills` são removidos.
 - **Vários repositórios** (`--scope project`): crie `install-targets.json` na raiz deste repositório, por exemplo `{"projects": ["~/work/app", {"path": "~/work/api", "agents": ["codex"]}]}`. Cada entrada é um caminho ou `{path, agents[]}` (sem `agents` = todos os agentes). `verify --scope project` sem `--project` verifica `<path>/.agents/skills` (Claude Code: `<path>/.claude/skills`) de cada entrada; sem o arquivo, verifica só o repositório atual.
 - **`doctor` no Claude Code**: sem servidor MCP local do LPM, o `doctor` só mostra uma nota (o conector LPM do claude.ai basta) e o comando para adicionar um servidor local.
@@ -74,6 +76,7 @@ Quando o LPM ganhar tools novas, `node scripts/skills.mjs snapshot --lpm <checko
 ```bash
 node scripts/skills.mjs check          # validadores + reconstrução byte a byte (drift)
 node scripts/skills.mjs eval --router  # roteamento determinístico, gate 100 %
+node scripts/skills.mjs eval --trace all # valida os cenários do MCP simulado; não executa um modelo
 node --test scripts/test/              # testes do build, install e validadores
 ```
 

@@ -3,8 +3,10 @@
 // Targets: dist/codex/<id>/{SKILL.md, agents/openai.yaml, references/*.md}
 //          dist/claude-code/<id>/{SKILL.md, references/*.md}
 //          dist/antigravity/<id>/{SKILL.md, references/*.md}
-//          dist/generic/{INDEX.md, <id>.md, <id>.refs.md, <id>.tools.md, AGENTS-snippet.md}
-// Linking rules: §4.3 and V8 (see API.md "Link rendering").
+//          dist/generic/{INDEX.md, <id>.md, <id>.flows.md, <id>.refs.md, <id>.tools.md, AGENTS-snippet.md}
+// Linking rules: §4.3 and V8 (see API.md "Link rendering"). Playbook skills (playbook-standard.md
+// §9): R1 the refs index omits flow-* files, R2 the tools index is one line per group, R3 generic
+// playbooks live in <id>.flows.md.
 
 import {
   BASE_SHARED_REFS,
@@ -23,6 +25,7 @@ import {
   smallestProfile,
 } from "./model.mjs";
 import { compareStrings, normalizeText, sortStrings, uniqSorted } from "./fs.mjs";
+import { isFlowRefName, isPlaybookSkill, playbookRefNames } from "./playbook.mjs";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -88,6 +91,7 @@ export function skillDistPrefixes(id) {
     `dist/claude-code/${id}/`,
     `dist/antigravity/${id}/`,
     `dist/generic/${id}.md`,
+    `dist/generic/${id}.flows.md`,
     `dist/generic/${id}.refs.md`,
     `dist/generic/${id}.tools.md`,
   ];
@@ -318,13 +322,18 @@ function renderRefLink(ctx, rawName, textBefore) {
     );
   }
   if (ctx.target === "generic") {
-    const needsSee = !/\b(see|follow|read|load|per|in)\s*$/i.test(String(textBefore || ""));
+    const before = String(textBefore || "");
+    const flow = isFlowRefName(name);
+    // "playbook {{ref:flow-x}}" and a flow alone at the start of a table cell need no "see ".
+    const needsSee = !/\b(see|follow|read|load|per|in|playbook)\s*$/i.test(before) && !(flow && /\|\s*$/.test(before));
     const where =
       name === "route"
         ? "`INDEX.md`"
         : name === "tools"
           ? `\`${genericToolsFile(ctx.skill.id)}\``
-          : `\`${ctx.skill.id}.refs.md\` § ${name}${anchor ? ` (#${anchor})` : ""}`;
+          : flow
+            ? `\`${genericFlowsFile(ctx.skill.id)}\` § ${name}${anchor ? ` (#${anchor})` : ""}`
+            : `\`${ctx.skill.id}.refs.md\` § ${name}${anchor ? ` (#${anchor})` : ""}`;
     return (needsSee ? "see " : "") + where;
   }
   const href = (ctx.location === "skill" ? `references/${name}.md` : `${name}.md`) + (anchor ? `#${anchor}` : "");
@@ -557,8 +566,19 @@ function isAliasTool(model, name) {
   return Boolean(t && t.aliasOf);
 }
 
+/** R2 (playbook skills): owned tools on one line, used tools on one line: `name` [A] scope · … */
+function toolsLineIndex(ctx) {
+  const { model, skill } = ctx;
+  const owns = skill.manifest.owns.filter((t) => !isAliasTool(model, t));
+  const uses = skill.manifest.uses.filter((t) => !isAliasTool(model, t));
+  const cardsLink = ctx.target === "generic" ? `\`${genericToolsFile(skill.id)}\`` : renderRefLink(ctx, "tools", "");
+  const summary = `Tool contracts: ${cardsLink} (${owns.length} owned, ${uses.length} borrowed). Open for parameter or permission details.`;
+  return isPlaybookSkill(skill) ? summary : `${summary}\n${[...owns, ...uses].map(t => `\`${t}\``).join(", ")}`;
+}
+
 function toolsIndex(ctx) {
   const { model, skill } = ctx;
+  if (isPlaybookSkill(skill) || skill.manifest.owns.length + skill.manifest.uses.length > 20) return toolsLineIndex(ctx);
   if (ctx.target === "generic") return compactToolTable(ctx);
   const owns = skill.manifest.owns.filter((t) => !isAliasTool(model, t));
   const uses = skill.manifest.uses.filter((t) => !isAliasTool(model, t));
@@ -613,14 +633,21 @@ function compactToolTable(ctx) {
 /** Generic target: the tool cards of a skill live in their own file next to `<id>.refs.md`. */
 export const genericToolsFile = (id) => `${id}.tools.md`;
 
+/** Generic target: the playbooks (flow-* references) of a skill, in §5 order (R3). */
+export const genericFlowsFile = (id) => `${id}.flows.md`;
+
 function refsIndex(ctx) {
   const lines = [];
   const generic = ctx.target === "generic";
+  // R1: a playbook router's §5 already indexes its flow-* files.
+  const playbooks = isPlaybookSkill(ctx.skill);
   for (const r of ctx.refs) {
+    if (playbooks && isFlowRefName(r.name)) continue;
     const when = stripLoadWhen(r.loadWhen);
     const suffix = when ? ` — ${when}` : "";
     if (generic && r.name === "route") lines.push(`- \`INDEX.md\` (routing table)${suffix}`);
     else if (generic && r.name === "tools") lines.push(`- \`${genericToolsFile(ctx.skill.id)}\`${suffix}`);
+    else if (generic && isFlowRefName(r.name)) lines.push(`- \`${genericFlowsFile(ctx.skill.id)}\` § ${r.name}${suffix}`);
     else if (generic) lines.push(`- \`${ctx.skill.id}.refs.md\` § ${r.name}${suffix}`);
     else lines.push(`- \`references/${r.name}.md\`${suffix}`);
   }
@@ -951,7 +978,7 @@ export function renderRouting(model, target) {
     out.push(
       "# LPM skills index",
       "",
-      "Read this file first, then exactly one `<id>.md` from this folder. Read `<id>.refs.md` only when that skill says so.",
+      "Read this file first, then exactly one `<id>.md` from this folder. When that file names a playbook, read that one playbook in `<id>.flows.md` (its `§ flow-<name>` section), do its steps in order and reply with its Answer block only. Read `<id>.refs.md` only when that skill says so.",
       "",
       "## Skills",
       "",
@@ -1039,7 +1066,7 @@ function agentsSnippet() {
   return [
     "## LPM skills",
     "",
-    "LPM: read `<dest>/INDEX.md` first, then exactly one `<id>.md`.",
+    "LPM: read `<dest>/INDEX.md` first, then exactly one `<id>.md`, and the one playbook it names in `<id>.flows.md`.",
     "",
     "- Replace `<dest>` with the folder that holds the installed generic files (`node scripts/skills.mjs install --agent generic --dest DIR` prints the exact line).",
     `- LPM MCP endpoint: \`${ENDPOINT}\`.`,
@@ -1144,7 +1171,9 @@ export function renderSkill(model, skill, target, warn = () => {}) {
     if (titleIdx >= 0) lines.splice(titleIdx + 1, 0, ...header);
     else lines.unshift(`# ${skill.manifest.title}`, ...header);
     body = lines.join("\n");
-    const summaries = ctx.refs.filter((r) => r.inlineSummary && !ctx.inlined.has(r.name) && r.summary);
+    const playbookSkill = isPlaybookSkill(skill);
+    // R3: a playbook router carries no reference summaries (its playbooks are self-contained).
+    const summaries = playbookSkill ? [] : ctx.refs.filter((r) => r.inlineSummary && !ctx.inlined.has(r.name) && r.summary);
     if (summaries.length) {
       body += "\n\n## Reference summaries\n";
       for (const r of summaries) body += `\n### ${r.name}\n${expandInline(r.summary, ctx)}\n`;
@@ -1152,10 +1181,27 @@ export function renderSkill(model, skill, target, warn = () => {}) {
     files.push([renderedPaths(id).generic, `${generatedMarker(`skills/${id}/`)}\n${body}`]);
 
     const refCtx = makeContext(model, skill, "generic", "ref", warn);
+    // R3: every flow-* reference (playbook) goes to <id>.flows.md, in §5 order.
+    const flowNames = playbookRefNames(skill).filter((n) => ctx.refs.some((r) => r.name === n));
+    if (flowNames.length) {
+      const fl = [generatedMarker(`skills/${id}/references/`), `# Playbooks: ${skill.manifest.title} (\`${id}\`)`, ""];
+      fl.push(
+        playbookSkill
+          ? `Run only the playbook that \`${id}.md\` names: find its \`## § flow-<name>\` section, do its steps in order, and reply with its Answer block only.`
+          : `Load a section only when \`${id}.md\` tells you to.`,
+        "",
+      );
+      for (const n of flowNames) {
+        const r = ctx.refs.find((x) => x.name === n);
+        fl.push(`## § ${n}`, "", demoteHeadings(referenceBody(model, skill, r, refCtx), 1), "");
+      }
+      files.push([`dist/generic/${genericFlowsFile(id)}`, fl.join("\n")]);
+    }
     const parts = [generatedMarker(`skills/${id}/ and shared/`), `# References: ${skill.manifest.title} (\`${id}\`)`, ""];
     parts.push("Load a section only when the skill tells you to.", "");
     for (const r of ctx.refs) {
       if (r.name === "tools") continue; // tool cards: <id>.tools.md
+      if (isFlowRefName(r.name)) continue; // playbooks: <id>.flows.md
       parts.push(`## § ${r.name}`, "");
       if (r.name === "route") parts.push("The routing table is `INDEX.md` in this folder.", "");
       else parts.push(demoteHeadings(referenceBody(model, skill, r, refCtx), 2), "");

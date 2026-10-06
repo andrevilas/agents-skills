@@ -1,0 +1,58 @@
+# Playbook: automation
+Use when: refresh the release-readiness brief of an AISH job, or recover its dead-lettered automation delivery
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| jobId | the user | STOP. Say: "Which AISH job? (id)" |
+| deliveryId | the user or an earlier tick (64 hex characters); no tool lists deliveries | "none" |
+| stamp | the current UTC time as yyyymmddHHMM; keep the same value when you run this again for the same brief | the current UTC time |
+| reason | requeue only: the user's words, 10–500 characters | STOP. Say: "Why should the dead-lettered delivery run again? (10–500 characters)" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. ("requires a scoped user credential" = use your own LPM user API key, not an agent credential.)"
+1. CALL {{tool:get_aish_job}} {"jobId":"<input:jobId>"} [A]
+   IF result is null → STOP. Say: "AISH job <input:jobId> was not found. Which job? (id)"
+   SAVE: projectId, title = those fields of result
+   IF <input:deliveryId> != "none" → SAVE: deliveryId = <input:deliveryId>; go to step 3.
+2. CALL {{tool:tick_aish_automation}} {"projectId":"<saved:projectId>","jobId":"<input:jobId>","trigger":{"kind":"manual","commandId":"tick-<input:jobId>-<input:stamp>"}} [A]
+   SAVE: deliveryId = result.delivery.id (all 64 characters); status = result.delivery.status; errorCode = result.delivery.errorCode; nextAttemptAt = result.delivery.nextAttemptAt; reused = result.reused
+   VERIFY: CALL {{tool:get_aish_automation_delivery}} {"projectId":"<saved:projectId>","jobId":"<input:jobId>","deliveryId":"<saved:deliveryId>"} [A]
+   IF the call returns an error or result.delivery.id != <saved:deliveryId> → STOP. Say: "Delivery <saved:deliveryId> is not readable; run this again with stamp <input:stamp>."
+   IF <saved:status> == "succeeded" → go to Answer.
+   IF <saved:errorCode> == "pack-unavailable" → STOP. Say: "No execution pack for <input:jobId> yet. Run playbook pack, then this playbook again with stamp <input:stamp> after <saved:nextAttemptAt>."
+   IF <saved:status> == "queued" → STOP. Say: "Delivery <saved:deliveryId> is queued; run this playbook again with stamp <input:stamp> after <saved:nextAttemptAt>. Retries are not automatic."
+3. CALL {{tool:get_aish_automation_delivery}} {"projectId":"<saved:projectId>","jobId":"<input:jobId>","deliveryId":"<saved:deliveryId>"} [A]
+   SAVE: status = result.delivery.status; errorCode = result.delivery.errorCode; generation = result.delivery.generation; triggerKind = result.delivery.trigger.kind; triggerCommand = result.delivery.trigger.commandId; slot = result.delivery.trigger.slot; did12 = the first 12 characters of <saved:deliveryId>
+   IF <saved:status> == "queued" → go to step 6.
+   IF <saved:status> != "dead-lettered" → go to Answer.
+   IF <saved:errorCode> is "pack-integrity", "source-scope" or "source-limit" → STOP. Say: "Delivery <saved:deliveryId> dead-lettered with <saved:errorCode>; a requeue cannot fix that. Tell the project owner; nothing was requeued."
+   IF <saved:triggerKind> == "schedule" and <saved:slot> is more than 7 days old → STOP. Say: "The schedule slot <saved:slot> is older than 7 days; it cannot run again. Refresh with a new manual brief instead."
+   IF <saved:generation> != 0 → STOP. Say: "Delivery <saved:deliveryId> was requeued before (generation <saved:generation>). This playbook sends only generation 0: run `lpm aish command requeue_aish_automation --file <payload.json>` yourself with expectedGeneration <saved:generation> and commandId requeue-<saved:did12>-<saved:generation>, then run this playbook with deliveryId <saved:deliveryId>. Nothing was requeued."
+4. ASK: "Requeue dead-lettered delivery <saved:deliveryId> (job <input:jobId>, error <saved:errorCode>, generation 0) with reason "<input:reason>", then run it once? Every requeue is audited; at most 20. (yes/no)" — continue only if the user says yes; otherwise STOP.
+5. CALL {{tool:requeue_aish_automation}} {"projectId":"<saved:projectId>","jobId":"<input:jobId>","deliveryId":"<saved:deliveryId>","commandId":"requeue-<saved:did12>-0","expectedGeneration":0,"reason":"<input:reason>"} [C]
+   IF the call returns an error → STOP. Say: "requeue_aish_automation failed: <error text>. ("Only the expected dead-letter generation" = it changed: run this playbook again.) Nothing was requeued."
+   VERIFY: CALL {{tool:get_aish_automation_delivery}} {"projectId":"<saved:projectId>","jobId":"<input:jobId>","deliveryId":"<saved:deliveryId>"} [A]
+   IF the call returns an error or result.delivery.status != "queued" → STOP. Say: "Delivery <saved:deliveryId> is <result.delivery.status>, not queued."
+6. IF <saved:triggerKind> == "schedule" → go to step 8.
+7. CALL {{tool:tick_aish_automation}} {"projectId":"<saved:projectId>","jobId":"<input:jobId>","trigger":{"kind":"manual","commandId":"<saved:triggerCommand>"}} [A]
+   SAVE: status = result.delivery.status
+   VERIFY: CALL {{tool:get_aish_automation_delivery}} {"projectId":"<saved:projectId>","jobId":"<input:jobId>","deliveryId":"<saved:deliveryId>"} [A]
+   IF the call returns an error or result.delivery.id != <saved:deliveryId> → STOP. Say: "The tick did not reach delivery <saved:deliveryId>."
+   SAVE: status = result.delivery.status; go to Answer.
+8. CALL {{tool:tick_aish_automation}} {"projectId":"<saved:projectId>","jobId":"<input:jobId>","trigger":{"kind":"schedule","slot":"<saved:slot>"}} [A]
+   SAVE: status = result.delivery.status
+   VERIFY: CALL {{tool:get_aish_automation_delivery}} {"projectId":"<saved:projectId>","jobId":"<input:jobId>","deliveryId":"<saved:deliveryId>"} [A]
+   IF the call returns an error or result.delivery.id != <saved:deliveryId> → STOP. Say: "The tick did not reach delivery <saved:deliveryId>."
+   SAVE: status = result.delivery.status
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:projectId>; job <input:jobId> <saved:title>; delivery <saved:deliveryId>
+Done: <brief <saved:status> | requeued (generation 1) and ticked: <saved:status> | read-only check: <saved:status>>
+Evidence: get_aish_automation_delivery → status <saved:status>, errorCode <saved:errorCode>
+Pending: <none | the item in the STOP text — who acts>
+Next: <the ASK or STOP text that ended the run | none — the brief is not a release approval>
+```
+delivery: queued | succeeded | dead-lettered. errorCode: pack-unavailable | pack-integrity | source-scope | source-limit | null. A brief is not a release authorization and is not sent to anyone. Never claim a delivery succeeded unless a VERIFY read showed it.

@@ -38,7 +38,10 @@
           "start a project",
           "iniciar um projeto",
           "iniciar projeto",
-          "comecar um projeto"
+          "comecar um projeto",
+          "crie o projeto",
+          "arquive o projeto",
+          "archive the project"
         ]
       ],
       "unless": [],
@@ -81,7 +84,16 @@
         "ciclo",
         "milestone",
         "marco",
-        "label"
+        "label",
+        "atividades",
+        "activities",
+        "issues",
+        "tasks",
+        "backlog",
+        "daily sync",
+        "estimat*",
+        "overdue",
+        "atrasad*"
       ],
       "firstCall": "list_workspaces"
     }

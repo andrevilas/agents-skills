@@ -1,27 +1,59 @@
-# Flow: owner decision
-Load when: decision row 7 of SKILL.md (a blocker that needs a scope or business decision of the owner)
+# Playbook: owner-decision
+Use when: X waits for an owner decision
+{{partial:playbook-rules}}
 
-## Preconditions
-1. Scope, priority and business choices belong to the owner (GOV-MAX v1). This flow records and escalates the decision; it never takes it.
-2. `draft` fields and `readyToCreate` meaning: {{ref:link-or-context-or-thread}}.
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user, or lpm-start | STOP. Say: "Which LPM project? (id or name)" |
+| x | the blocked activity: its id or its exact title | STOP. Say: "Which activity is blocked? (id or exact title)" |
+| question | the decision the owner must take, one sentence | STOP. Say: "Which decision must the owner take?" |
+| options | "A: …; B: …; C: do nothing", from the user or your reading of the activity | STOP. Say: "Which options should the owner choose from?" |
+| recommendation | one option and why, in one sentence | "none" |
+| date | today's UTC date as yyyy-mm-dd | — |
 
 ## Steps
-1. Run SKILL.md P3 with the text "Waiting for an owner decision: <question>".
-2. {{tool:prepare_governance_thread_from_blocker}}(projectId, issueId, content=<options, recommendation>) → keep `readyToCreate`, `blockingReasons`, `draft`.
-3. {{tool:create_comment}}(projectId, issueId, content=<question, options>, idempotencyKey="decision-<issueId>-<yyyymmdd>-<n>") [A]. Threads never target activities.
-4. Verify: {{tool:list_comments}}(projectId, issueId) → the comment id is listed with your text; other text → the key was used before: retry with `<n>`+1 (SKILL.md §3).
-5. `readyToCreate == true` → Next: {{skill:lpm-governance-decisions}} ({{tool:create_governance_thread}} from `draft`). False → the comment is the record; report `blockingReasons`.
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing more was written."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → switch to playbook connector-only.
+2. CALL {{tool:list_issues}} {"projectId":"<input:projectId>","limitCount":100} [A]
+   SAVE: xid = id of the item whose id == <input:x>, else of the only item whose title == <input:x>, else <input:x> when result.nextCursor is not empty
+   IF <saved:xid> is empty → STOP. Say: "Which activity is '<input:x>'? Send its id."
+3. CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF the call returns an error → STOP. Say: "<saved:xid> is not an activity of <input:projectId>. Send its id."
+   SAVE: xTitle = result.title; requirementId = result.requirementId; baselineId = result.baselineId; old = result.blockerContext.content when result.blockerContext.status == "active", else empty
+   IF result.isDeleted == true or result.status is "done" or "canceled" → STOP. Say: "<saved:xid> is <result.status>, not an open activity. Nothing was recorded."
+   IF <saved:old> contains "Waiting for an owner decision: <input:question>" → SAVE: text = <saved:old>; go to step 6.
+4. SAVE: text = "Waiting for an owner decision: <input:question> — project owner — since <input:date>"
+   IF <saved:old> is not empty → SAVE: text = "<saved:old> | <saved:text>"; go to step 5.
+   Keep every active cause in the text: a new context REPLACES the active one.
+5. CALL {{tool:set_project_issue_blocker_context}} {"projectId":"<input:projectId>","issueId":"<saved:xid>","blockerContext":"<saved:text>"} [A] (no idempotencyKey: this tool has none)
+   VERIFY: CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF the call returns an error or result.blockerContext.status != "active" or result.blockerContext.content != <saved:text> → STOP. Say: "The blocker context of <saved:xid> does not show the decision request. No comment was posted."
+6. CALL {{tool:list_comments}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   SAVE: day = <input:date> without dashes; n = 1 + the number of items whose content starts with "Decision needed:" and whose createdAt starts with <input:date>; key = "decision-<saved:xid>-<saved:day>-<saved:n>"
+   IF an item's content starts with "Decision needed: <input:question>" → SAVE: commentId = that item's id; go to step 9.
+7. SAVE: comment = this text, filled, in the user's language:
+   ```text
+   Decision needed: <input:question>
+   Options: <input:options>
+   Recommendation: <input:recommendation>
+   Who decides: the project owner (GOV-MAX v1). <saved:xid> stays blocked until the owner decides.
+   ```
+8. CALL {{tool:create_comment}} {"projectId":"<input:projectId>","issueId":"<saved:xid>","content":"<saved:comment>","idempotencyKey":"<saved:key>"} [A]
+   SAVE: commentId = the id in "Comment created with ID: <id>"
+   VERIFY: CALL {{tool:list_comments}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF the call returns an error or item <saved:commentId> is missing or has other text → STOP. Say: "Comment <saved:commentId> is not listed with the decision request (the key may be used: run this playbook again)."
+9. SAVE: target = "requirement <saved:requirementId>" when <saved:requirementId> is not empty, else "baseline <saved:baselineId>" when <saved:baselineId> is not empty, else "none"
+   IF <saved:target> == "none" → SAVE: handoff = "the owner answers in comment <saved:commentId>; no governance thread, because <saved:xid> has no requirement or baseline and threads cannot target activities"; go to Answer.
+   SAVE: handoff = "open a governance thread with skill lpm-governance-decisions on <saved:target>, anchorKey issue:<saved:xid>:blocker, content from comment <saved:commentId>"
 
-## Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| the user asks you to choose the scope | say "Scope is the owner's decision (GOV-MAX v1)."; run steps 1–5 and STOP |
-
-## Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| step 1 ({{tool:set_project_issue_blocker_context}}) | {{tool:get_issue}}(projectId, issueId) | `blockerContext.status == "active"` |
-| {{tool:create_comment}} | {{tool:list_comments}}(projectId, issueId) | comment id exists and its content is your text |
-
-## Report fields
-Scope, issueId, blocker context text, comment id, `readyToCreate` (+ `blockingReasons` when false), Next ({{skill:lpm-governance-decisions}} or the owner).
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:projectId>/<saved:xid> <saved:xTitle>
+Done: <blocker context "<saved:text>"; decision request comment <saved:commentId> | nothing changed>
+Evidence: <get_issue → blockerContext active; list_comments → <saved:commentId> | none>
+Pending: owner decision on "<input:question>" — the project owner
+Next: <the STOP text that ended the run | <saved:handoff>>
+```
+blockerContext.status: active | resolved. Never pick an option, never write that the owner decided, never change scope here (GOV-MAX v1). Never claim a check that a step above did not run and pass.

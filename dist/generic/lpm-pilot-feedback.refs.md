@@ -270,10 +270,11 @@ Owner skill: lpm-ask-advisor
 | `citations[]` | `repoUrl@sha:path#Lx-Ly` (expanded from excerpt refs) | cite path:line@commit |
 | `advisor{mode, model, fallbackReason, correlationId}` | how the answer was produced | `mode` deterministic-fallback → not an AI answer |
 | `codeEvidence.status == "found"` | relevant excerpts were cited | cite them |
-| `"no_relevant_matches"` / `"no_matches"` | the search found nothing relevant / nothing | say "not found in the indexed code", never "does not exist" or "not implemented" |
-| `"no_active_index"` | no active index for the scope | STOP; hand off to `lpm-code-index` |
+| `"no_relevant_matches"` / `"no_matches"` | the search found nothing relevant / nothing; `no_matches` is also what a mapped repository WITHOUT an active index returns (LPM gap) | say "not found in the indexed code, or the repository has no active index"; Pending: check the index (`lpm-code-index`); never "does not exist" or "not implemented" |
+| `"no_active_index"` | in practice: no authorized workspace repository link maps the scope (the omission "No authorized active repository link is mapped to this scope") | no code evidence; hand off to `lpm-code-index` |
 | `"not_requested"` | no code search ran (`useWorkspaceAi: false` or no AI) | records-only answer |
 | `"unavailable"` | code search could not run | say so; no claim about the code |
+| `explain_roadmap_item_technical_impact` gap "<n> evidence records are stale" | LPM bug: added for every hit (code chunks have no `createdAt`) | ignore it; judge freshness from scans or the index |
 | guard: no-match verdicts | removes "not proven / not implemented" wording when nothing matched and adds the standard limitation | do not re-add those verdicts |
 | guard: certainty degree | adds a limitation when inferences hedge but the answer is categorical | keep the hedge |
 | guard: contradiction | removes a "no evidence" sentence when the answer cites evidence | trust the citations |

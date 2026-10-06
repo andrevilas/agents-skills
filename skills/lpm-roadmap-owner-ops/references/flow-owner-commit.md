@@ -1,0 +1,54 @@
+# Playbook: owner-commit
+Use when: create items, or edit item, roadmap or capability text, in one owner commit
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user, or skill lpm-start | STOP. Say: "Which LPM workspace?" |
+| order | the owner's message, quoted verbatim: the speaker says they are the workspace owner ("I am the workspace owner", "sou o dono") and orders these changes | STOP. This belongs to skill {{skill:lpm-roadmap}}. Say: "There is no owner order, so I can only propose this change; nothing was changed." |
+| changes | the order, one line per change: create item (roadmap, title, description, category, priority), edit item (item, new title/description/category/priority), edit roadmap (title/description), edit capability (name/description) | STOP. Say: "Which changes exactly?" |
+| rationale | the owner's reason, verbatim (after "Rationale:", "Motivo:", "porque", "because"), 10–2000 characters | STOP. Say: "What is the reason for these changes? It is stored with the commit." |
+| commitSaid | "yes" when the order says commit, apply, "do it", "pode aplicar" for these changes; else "no" | "no" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was committed."
+1. CALL {{tool:get_workspace}} {"workspaceId":"<input:workspaceId>"} [A]
+   Always make this call, even when the order says "commit".
+   SAVE: mode = result.roadmapGovernanceMode, else "off" when result.roadmapGovernanceEnabled == false, else "shadow"
+2. CALL {{tool:get_workspace_roadmap_overview}} {"workspaceId":"<input:workspaceId>","compact":true} [A]
+   SAVE: ids = for each named roadmap, item and capability: the id and updatedAt of the one roadmaps[], items[] or capabilities[] entry whose title (capability: name) or id equals it, plus the item's lifecycle and isArchived
+   IF a name matches 0 or 2+ entries → STOP. Say: "Which one do you mean: <the matching titles with ids>?"
+   IF an edited item has lifecycle "materialized" → STOP. Say: "<item> is materialized and locked for edits. Archive it, or add a follow-up item?"
+   IF an edited item has isArchived true → STOP. Say: "<item> is archived. Restore it first (playbook items, change restore)."
+3. IF <saved:mode> == "enforce" and a change edits an item → STOP. This belongs to skill {{skill:lpm-roadmap}}. Say: "<input:workspaceId> is in enforce: item edits go through a change request (changeType edit or prioritize). Nothing was changed."
+   IF <input:changes> has a dependency or an allocation → STOP. Say: "Dependencies and allocations use playbook dependency or allocation. Nothing was changed."
+4. SAVE: operations = a JSON array, one object per change, built only from these templates (key "type", never "op"; changed fields only inside "patch" or "values"; leave out a field the order does not give):
+   ```text
+   {"type":"create_item","roadmapId":"<roadmap id>","values":{"title":"<title>","description":"<text>","category":"<text>","priority":"urgent|high|medium|low|none"}}
+   {"type":"update_item","itemId":"<item id>","expectedVersion":"<item updatedAt>","patch":{"title":"<new title>","priority":"<new priority>"}}
+   {"type":"update_roadmap","roadmapId":"<roadmap id>","expectedVersion":"<roadmap updatedAt>","patch":{"title":"<new title>","description":"<text>"}}
+   {"type":"update_capability","capabilityId":"<capability id>","expectedVersion":"<capability updatedAt>","patch":{"name":"<new name>","description":"<text>"}}
+   ```
+   IF <saved:operations> has more than 20 objects → STOP. Say: "One commit holds at most 20 changes. Which 20 first?"
+5. CALL {{tool:preview_owner_roadmap_change}} {"workspaceId":"<input:workspaceId>","rationale":"<input:rationale>","operations":"<saved:operations>"} [A] (send operations as the JSON array, not as a string)
+   SAVE: previewId = result.id; digest = result.digest; previewRationale = result.rationale
+   IF result.operations differ from <saved:operations> (a text cut, a priority dropped) → STOP. Say: "LPM changed the request: <difference>. Nothing was committed; correct the values and run again."
+6. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Decision needed: commit these <n> roadmap changes directly (preview <saved:previewId>)? It skips change-request review. Reply as the workspace owner."
+   IF <input:commitSaid> == "no" → ASK: "Commit these <n> operations now (preview <saved:previewId>, digest <saved:digest>)? It skips change-request review. (yes/no)" — continue only if the user says yes; otherwise STOP.
+7. CALL {{tool:commit_owner_roadmap_change}} {"workspaceId":"<input:workspaceId>","previewId":"<saved:previewId>","previewDigest":"<saved:digest>","rationale":"<saved:previewRationale>","idempotencyKey":"owner-commit-<saved:previewId>"} [O]
+   IF the call returns an error → STOP. Say: "Commit failed: <error text>. Nothing was committed. After a timeout run this step again with the same idempotencyKey; after 'expired' or 'changed' run this playbook again."
+   SAVE: commitId = result.commitId; affected = result.affectedEntityIds (one id per operation, in order; a create_item gives the new item id; never the preview's ids)
+   VERIFY: CALL {{tool:get_workspace_roadmap_overview}} {"workspaceId":"<input:workspaceId>","includeArchived":true} [A]
+   IF the call returns an error or an id of <saved:affected> is missing from items[], roadmaps[] and capabilities[] or shows other values than the preview → STOP. Say: "Commit <saved:commitId> ran, but the re-read does not show <id> with the previewed values."
+   SAVE: readBack = each id of <saved:affected> with the values read; newItems = the ids at create_item positions
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:workspaceId> (mode <saved:mode>); owner order: "<input:order>"
+Done: <commit_owner_roadmap_change <saved:commitId> (preview <saved:previewId>, digest <saved:digest>): each id of <saved:affected> with its new values | nothing committed>; <in enforce: "LPM has no change request that creates an item or edits roadmap or capability text, so this owner commit is the path, run on your order" | nothing>
+Evidence: <get_workspace_roadmap_overview: <saved:readBack> | none>
+Pending: <none | the changes left out and why>
+Next: <the ASK or STOP text that ended the run | new items <saved:newItems> are draft: their next gate is reviewed (playbook lifecycle, needs your order) | none>
+```
+mode: off | shadow | enforce, from step 1. A created item is always lifecycle draft. Never claim a change that the VERIFY in step 7 did not show.

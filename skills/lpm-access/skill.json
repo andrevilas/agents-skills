@@ -82,7 +82,10 @@
         "cota",
         "custa",
         "routing",
-        "roteamento"
+        "roteamento",
+        "crie o projeto",
+        "create project",
+        "create a project"
       ],
       "firstCall": "list_api_keys"
     }

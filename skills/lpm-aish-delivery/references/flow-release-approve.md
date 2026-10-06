@@ -1,0 +1,41 @@
+# Playbook: release-approve
+Use when: approve one sealed AISH release package on the workspace owner's own order, or send the owner the decision request
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| sessionId | the user, or the job's workflowBinding.sessionId | STOP. Say: "Which AISH execution session? (id)" |
+| issueId | the user: the factory activity | STOP. Say: "Which AISH activity? (id)" |
+| ownerName | the name the user gives for the workspace owner | "workspace owner" |
+| ownerOrder | the owner's own words in this conversation that approve this release, quoted exactly (8–3,000 characters, no secrets) | "none" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Release not approved."
+1. CALL {{tool:get_aish_execution_session}} {"sessionId":"<input:sessionId>"} [A]
+   Always make this call; never take a releaseId from the user's message or memory.
+   SAVE: planHash = result.session.currentPlanHash; waiting = id of each result.releases item with issueId == <input:issueId> and status "awaiting-approval"
+   IF result.session.status != "executing" or result.session.activeCheckpointId is set or result.session.currentPlanHash != result.session.approvedPlanHash → STOP. This belongs to skill {{skill:lpm-aish-jobs}}. Say: "Session <input:sessionId> is not executing on its approved plan without a checkpoint; nothing can be approved."
+   IF <saved:waiting> is empty → STOP. Say: "No release of <input:issueId> awaits approval in session <input:sessionId>."
+   IF <saved:waiting> has 2 or more ids → STOP. Say: "Several releases of <input:issueId> await approval: <saved:waiting>. Which one?"
+   SAVE: releaseId = the one id in <saved:waiting>, all 64 characters copied exactly
+2. CALL {{tool:get_aish_release}} {"releaseId":"<saved:releaseId>"} [A]
+   SAVE: projectId = result.release.projectId; status = result.release.status; jobId, environment, target, executorUserId, image, revision, rollbackImage, healthUrl = those fields of result.release.package
+   IF <saved:status> != "awaiting-approval" → STOP. Say: "Release <saved:releaseId> is <saved:status>; it is not waiting for approval."
+3. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "<input:ownerName>, decision needed: approve the sealed <saved:environment> release <saved:releaseId> of activity <input:issueId>? Context: session <input:sessionId> executing on approved plan <saved:planHash>, job <saved:jobId>, image <saved:image>, revision <saved:revision>, target <saved:target>, executor <saved:executorUserId>, rollback <saved:rollbackImage>, health <saved:healthUrl>. Options: A) approve: the executor may claim it and deploy it once to <saved:environment>; undo only by rolling back to <saved:rollbackImage>; B) reject or ask for changes: nothing is deployed; a change needs a new package; C) do nothing: it stays awaiting-approval and the authorization expires with the session. Recommendation: A, if this package is what you want deployed. To proceed, reply here yourself with A, B or C and your reason (8+ characters); on A I will run approve_aish_release with releaseId <saved:releaseId>, expectedPackageHash <saved:releaseId> and your words as reason."
+   The order names this release (or "this release" in a reply to the request above) and is typed by the owner in this conversation, on the owner's own LPM user API key. A relayed order ("X said ok", WhatsApp, e-mail), the requester's or the executor's "yes", or an agent credential is no order. Never write the reason yourself.
+4. CALL {{tool:approve_aish_release}} {"releaseId":"<saved:releaseId>","expectedPackageHash":"<saved:releaseId>","reason":"<input:ownerOrder>"} [O]
+   IF the call returns an error → STOP. Say: "approve_aish_release failed: <error text>. ("An agent cannot approve its own release." = only the owner's user credential approves; "preflight is stale" = evidence changed: a new job and package are needed; "authorization expired" = a new reviewed plan, lpm-aish-jobs.) Release <saved:releaseId> is not approved."
+   VERIFY: CALL {{tool:get_aish_release}} {"releaseId":"<saved:releaseId>"} [A]
+   IF the call returns an error or result.release.status != "approved" → STOP. Say: "Release <saved:releaseId> is <result.release.status>, not approved."
+   SAVE: status = result.release.status; expiresAt = result.release.approval.expiresAt
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:projectId>/<input:issueId>; session <input:sessionId>; job <saved:jobId>; release <saved:releaseId>
+Done: <release approved, valid until <saved:expiresAt>; owner order: "<input:ownerOrder>" | release read, status <saved:status>, nothing approved>
+Evidence: get_aish_release → status <saved:status>, environment <saved:environment>, image <saved:image>; owner order: <"<input:ownerOrder>" | none in this conversation (a relayed claim is not accepted)>
+Pending: <none | <input:ownerName> answers the decision request with their own credential | the item in the STOP text — who acts>
+Next: <the ASK or STOP text that ended the run | run playbook release-deploy as executor <saved:executorUserId>>
+```
+release: awaiting-approval | approved | claimed | succeeded | failed, from your last get_aish_release. Copy the 64-character releaseId exactly; never shorten it. Approval never deploys. Never claim an approval unless the step 4 VERIFY showed approved.

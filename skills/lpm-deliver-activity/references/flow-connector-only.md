@@ -1,0 +1,40 @@
+# Playbook: connector-only
+Use when: attach or close on a ChatGPT/Claude connector
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| issueId | the user | STOP. Say: "Which LPM activity? (id or title)" |
+| proof | the links, file names and "<test> → <result>" lines the user gave | "none given" |
+| stamp | the current UTC time as yyyymmddHHMM | — |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was written."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential != "oauth" and the user wants to close → switch to playbook close.
+   IF result.credential != "oauth" → switch to playbook evidence.
+   IF result.scopes does not contain "portfolio:manage" → STOP. Say: "<the howToEnable text of the portfolio:manage item of result.unavailableToolGroups>. Remove and reinstall the connector and tick that box; disconnect and connect is not enough."
+2. CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<input:issueId>"} [A]
+   SAVE: title = result.title; status = result.status; workspaceId = result.workspaceId
+3. SAVE: note = this text, filled, in the user's language:
+   ```text
+   Evidence pending: API key or web UI.
+   Proof offered: <input:proof>
+   Not closed: the files must be attached as evidence first.
+   ```
+4. CALL {{tool:create_comment}} {"projectId":"<input:projectId>","issueId":"<input:issueId>","content":"<saved:note>","idempotencyKey":"evpending-<input:issueId>-<input:stamp>"} [A]
+   SAVE: commentId = the id in "Comment created with ID: <id>"
+   VERIFY: CALL {{tool:list_comments}} {"projectId":"<input:projectId>","issueId":"<input:issueId>"} [A]
+   IF the call returns an error or item <saved:commentId> is missing or has other text → STOP. Say: "Comment <saved:commentId> is not listed with the note."
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<input:projectId>/<input:issueId> <saved:title>
+Done: comment <saved:commentId> (evidence pending) | nothing written; status <saved:status>
+Evidence: none attached (a connector has no evidence tools)
+Pending: attach <input:proof> as files — you, with an LPM API key or the web UI
+Next: <the STOP text that ended the run | attach the files in the LPM web UI, then run playbook close with an API key>
+```
+status: backlog | todo | in-progress | done | canceled, from step 2; this playbook never sets done. Never claim that evidence is attached.

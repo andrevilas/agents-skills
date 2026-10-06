@@ -608,7 +608,7 @@
       },
       {
         "when": "Connector: JSON-RPC -32003 'The OAuth scope \"roadmap:manage\" is required for ...'",
-        "fix": "Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes."
+        "fix": "Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes."
       },
       {
         "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
@@ -843,7 +843,7 @@
       },
       {
         "when": "Connector: JSON-RPC -32003 'The OAuth scope \"roadmap:manage\" is required for ...'",
-        "fix": "Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes."
+        "fix": "Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes."
       },
       {
         "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
@@ -1857,7 +1857,7 @@
       },
       {
         "when": "Connector: JSON-RPC -32003 'The OAuth scope \"roadmap:manage\" is required for ...'",
-        "fix": "Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes."
+        "fix": "Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes."
       },
       {
         "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",
@@ -2087,7 +2087,7 @@
       },
       {
         "when": "Connector: JSON-RPC -32003 'The OAuth scope \"roadmap:manage\" is required for ...'",
-        "fix": "Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes."
+        "fix": "Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes."
       },
       {
         "when": "Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id)",

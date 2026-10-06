@@ -1,0 +1,57 @@
+# Playbook: agent-setup
+Use when: connect or configure LPM in an agent, fix a `*.run.app` URL, or verify a new setup
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| agent | the user: "codex", "claude-code", "antigravity", "gemini-cli", "cursor", "chatgpt" (ChatGPT or Claude.ai connector) or "lpm-cli" | STOP. Say: "Which agent do you use? (Codex, Claude Code, Antigravity, Gemini CLI, Cursor, ChatGPT/Claude connector, lpm CLI)" |
+| access | the user: "api-key" (personal LPM API key), "agent-credential" (`lpm_mcp_…`) or "oauth" (no key) | "oauth" for chatgpt; else "api-key" |
+| phase | "verify" when the user says the setup is done and the agent was restarted | "setup" |
+| keyInChat | "yes" if the user pasted, or offers to paste, a key or credential in this chat | "no" |
+| configText | the current LPM entry of the agent's MCP config, if the user showed it | "none" |
+
+## Steps
+Every CALL or RUN with no error line: IF it returns an error → STOP. Say: "<tool or command> failed: <error text>. The setup is not verified."
+1. IF <input:keyInChat> == "yes" → STOP. Say: "Do not paste keys in chat. If you already did, that key is in the chat log: revoke it and create a new one (skill lpm-access). Put the key only in the env var LPM_API_KEY (an lpm_mcp_ credential: LPM_MCP_CREDENTIAL), then tell me."
+   Never repeat, print or store a key value; the commands below read it from the env var.
+2. IF <input:phase> == "verify" and <input:agent> == "lpm-cli" → go to step 8.
+   IF <input:phase> == "verify" → go to step 6.
+3. SAVE: setup = the line below whose agent and access match (copy it exactly; for agent-credential on claude-code, antigravity or gemini-cli use the api-key line with $LPM_MCP_CREDENTIAL in place of $LPM_API_KEY)
+   ```text
+   codex, api-key: in ~/.codex/config.toml add the table [mcp_servers.LPM] with url = "https://lpm.rocks/mcp" and env_http_headers = { "x-api-key" = "LPM_API_KEY" }; start Codex with LPM_API_KEY set
+   codex, agent-credential: codex mcp add LPM --url https://lpm.rocks/mcp --bearer-token-env-var LPM_MCP_CREDENTIAL
+   claude-code, api-key: claude mcp add --transport http --scope user lpm https://lpm.rocks/mcp --header "x-api-key: $LPM_API_KEY"
+   claude-code, oauth: claude mcp add --transport http --scope user lpm https://lpm.rocks/mcp, then authenticate in /mcp
+   antigravity, api-key: agy mcp add --header "x-api-key: $LPM_API_KEY" lpm https://lpm.rocks/mcp
+   gemini-cli, api-key: gemini mcp add --scope user --transport http --header "x-api-key: $LPM_API_KEY" lpm https://lpm.rocks/mcp
+   cursor, api-key: (umask 077; LPM_API_URL=https://lpm.rocks lpm mcp cursor-config > ~/.lpm-cursor.json), merge only its mcpServers.lpm into ~/.cursor/mcp.json, then delete ~/.lpm-cursor.json
+   chatgpt, oauth: add a connector with URL https://lpm.rocks/mcp; on "Autorizar uma conexão" log in, choose the workspace, tick "Gestão de atividades dos projetos" under "Permissões adicionais (opcional)" to create or update activities, click "Autorizar acesso"
+   lpm-cli, api-key: lpm auth login --api-key "$LPM_API_KEY" --base-url https://lpm.rocks
+   ```
+   IF no line matches → STOP. Say: "<input:agent> with <input:access> has no setup here. Use https://lpm.rocks/mcp with the header x-api-key read from the env var LPM_API_KEY."
+4. SAVE: urlFix = "In the existing LPM entry change only the URL to https://lpm.rocks/mcp; keep every other server entry." when <input:configText> contains "run.app", else "Keep every other server entry unchanged."
+5. SAVE: check = "codex mcp list" for codex, "claude mcp list" for claude-code, "agy mcp list" for antigravity, "gemini mcp list" for gemini-cli, "lpm auth status" for lpm-cli, "the tool list in a new chat" for cursor and chatgpt; go to Answer.
+6. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF the call returns an error → go to step 7.
+   SAVE: credential = result.credential; count = result.availableToolCount, else result.allowedToolCount
+   IF <saved:count> is empty or 0 → STOP. Say: "The agent reaches LPM as <saved:credential> but has 0 tools. The key owner must allow tools on the key (skill lpm-access)."
+   IF <saved:count> > 0 → go to Answer.
+7. RUN `lpm mcp status`
+   IF the command fails → STOP. Say: "The agent cannot reach LPM: <error text>. Check the URL https://lpm.rocks/mcp, the header x-api-key (a personal key sent as Authorization: Bearer is rejected), and that the agent was restarted with the env var set."
+   SAVE: credential = "agent_credential"; count = the availableTools number it prints
+   IF <saved:count> is empty or 0 → STOP. Say: "lpm mcp status shows 0 tools. The workspace owner must allow tools on this credential."
+   IF <saved:count> > 0 → go to Answer.
+8. RUN `lpm auth status`
+   IF the command fails or its output does not contain "Authenticated against https://lpm.rocks" → STOP. Say: "Run: lpm auth login --api-key "$LPM_API_KEY" --base-url https://lpm.rocks (the CLI default is http://localhost:4173), then lpm auth status."
+   SAVE: credential = "api_key"; count = the number after "Available MCP tools:"
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: agent <input:agent>, access <input:access>, endpoint https://lpm.rocks/mcp
+Done: setup steps given, nothing verified yet | verified: <saved:credential>, <saved:count> tools
+Evidence: get_mcp_connection_info → <saved:count> tools | `lpm mcp status` → <saved:count> tools | `lpm auth status` → <saved:count> tools | none
+Pending: you: <saved:setup>; <saved:urlFix>; keep the key only in the env var; restart the agent and check with <saved:check> | none
+Next: <the STOP text that ended the run | after the restart, ask me to verify the LPM connection | none — connected>
+```
+credential: oauth | api_key | agent_credential | session. Never claim the agent is connected unless step 6, 7 or 8 showed more than 0 tools; never write a key into a file inside a git repository.

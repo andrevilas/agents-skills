@@ -6,13 +6,13 @@
   "kind": "tools",
   "invocation": "implicit",
   "description": "Use when a scope/business decision must be raised or recorded in an LPM governance thread (requirement, baseline, roadmap item), for the decision inbox (decisões pendentes), or to turn a decided thread into an activity, requirement or change set. Not for deciding a change request (use lpm-roadmap).",
-  "doneWhen": "The resolution context (connector: `list_governance_threads` → `latestMessagePreview`) shows the expected status and `decisionOutcome`, with `actionTargetId` when an artifact was created.",
-  "authorityCeiling": "Threads and replies [A]; `update_governance_thread` [C]; reopening or recording a decision [O], and only what an authorized human said.",
+  "doneWhen": "The re-read shows the expected status and decisionOutcome, with actionTargetId once an artifact exists.",
+  "authorityCeiling": "Reads, threads, replies and notes [A]; thread status, decider or title [C]; recording, reopening and linking a decision [O], only on the decider's order.",
   "jobs": [
     "quais decisões estão pendentes no projeto <P>?",
     "what governance decisions are waiting across workspace <W>?",
     "abra uma thread de governança sobre o requisito <R> com opções e recomendação",
-    "reply to governance thread <T> with the evidence the owner asked for",
+    "reply to governance thread <T> with the facts the owner asked for",
     "o dono decidiu criar a atividade; registre a decisão na thread <T>",
     "turn the decision of thread <T> into a requirement and link it back",
     "who has to decide this, and which governance roles are uncovered?"
@@ -101,42 +101,58 @@
     "create_comment",
     "create_issue",
     "create_requirement",
+    "get_issue",
+    "get_mcp_connection_info",
     "get_project",
     "get_workspace_roadmap_change_request",
     "list_comments",
+    "list_issues",
     "list_missing_governance_assignments",
-    "list_project_assignable_members"
+    "list_project_assignable_members",
+    "list_requirements"
   ],
   "cli": [],
-  "sharedRefs": [
-    {
-      "name": "authority-and-owner-decisions",
-      "loadWhen": "before recording a decision or writing a decision request",
-      "inlineSummary": false
-    },
-    {
-      "name": "idempotency-and-retries",
-      "loadWhen": "a thread create, reply or artifact create timed out or returned an unclear result",
-      "inlineSummary": false
-    },
-    {
-      "name": "ai-cost-and-budgets",
-      "loadWhen": "the decision enables, expands or cuts AI or AISH spend",
-      "inlineSummary": false
-    }
-  ],
+  "sharedRefs": [],
   "references": [
     {
-      "file": "references/flow-decision.md",
-      "loadWhen": "decision rows 6 and 7"
+      "file": "references/flow-triage.md",
+      "loadWhen": "playbook triage: pending decisions of one project"
     },
     {
-      "file": "references/flow-write.md",
-      "loadWhen": "decision rows 4 and 5"
+      "file": "references/flow-explain.md",
+      "loadWhen": "playbook explain: explain one thread"
+    },
+    {
+      "file": "references/flow-open-thread.md",
+      "loadWhen": "playbook open-thread: open a thread asking for a decision"
+    },
+    {
+      "file": "references/flow-reply.md",
+      "loadWhen": "playbook reply: reply in a thread"
+    },
+    {
+      "file": "references/flow-update-thread.md",
+      "loadWhen": "playbook update-thread: change a thread's status, decider or title"
+    },
+    {
+      "file": "references/flow-reopen.md",
+      "loadWhen": "playbook reopen: reopen a decided thread"
+    },
+    {
+      "file": "references/flow-record-decision.md",
+      "loadWhen": "playbook record-decision: record a decision, or ask the decider to confirm it"
+    },
+    {
+      "file": "references/flow-create-artifact.md",
+      "loadWhen": "playbook create-artifact: create or link a decided artifact"
+    },
+    {
+      "file": "references/flow-activity-note.md",
+      "loadWhen": "playbook activity-note: a note on one activity"
     },
     {
       "file": "references/thread-model.md",
-      "loadWhen": "before creating or resolving a thread"
+      "loadWhen": "background: thread model and the LPM limits the playbooks route around"
     }
   ],
   "behaviorContracts": [

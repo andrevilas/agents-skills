@@ -6,8 +6,8 @@
   "kind": "tools",
   "invocation": "implicit",
   "description": "Use when handling LPM requirements (requisitos) and scope (escopo): create, edit, group, link requirements, check drift, reconcile orphans, review change sets before publishing, publish a baseline on owner order. Not for roadmap items or change requests (use lpm-roadmap).",
-  "doneWhen": "Requirements reflect the request and, when publication was authorized, the scope context shows the new current baseline with no pending delta.",
-  "authorityCeiling": "Reads and drafts [A]; requirement edits, reconciliation and change-set moves [C]; change-set approval and baseline publication [O].",
+  "doneWhen": "Requirements match the request; an owner-ordered baseline is current with no pending delta.",
+  "authorityCeiling": "Reads [A]; scope edits [C]; change-set approval and baselines [O].",
   "jobs": [
     "o escopo do projeto <P> mudou desde a baseline? já dá para publicar?",
     "crie o requisito <título> e vincule à atividade <id>",
@@ -69,7 +69,9 @@
   "uses": [
     "create_governance_thread",
     "get_help_article",
+    "get_mcp_connection_info",
     "get_project_execution_context",
+    "list_governance_threads",
     "list_issues",
     "list_project_knowledge_items",
     "list_workspace_roadmap_materializations",
@@ -81,19 +83,18 @@
     "requirements list",
     "requirements update"
   ],
-  "sharedRefs": [
-    { "name": "authority-and-owner-decisions", "loadWhen": "before an [O] step or a decision request", "inlineSummary": false},
-    { "name": "idempotency-and-retries", "loadWhen": "a write timed out or was unclear", "inlineSummary": false},
-    { "name": "enums", "loadWhen": "an enum value is unclear", "inlineSummary": false}
-  ],
+  "sharedRefs": [],
   "references": [
-    { "file": "references/requirement-fields.md", "loadWhen": "before a requirement write" },
-    { "file": "references/change-set-state-machine.md", "loadWhen": "before any change-set write" },
-    { "file": "references/materiality-and-gate.md", "loadWhen": "the gate blocks or materiality needs explaining" },
-    { "file": "references/publication-checklist.md", "loadWhen": "publishing a baseline" },
-    { "file": "references/flow-requirements.md", "loadWhen": "rows 3-6" },
-    { "file": "references/flow-change-set.md", "loadWhen": "rows 7-9" },
-    { "file": "references/flow-baseline.md", "loadWhen": "rows 10-11" }
+    { "file": "references/flow-scope-status.md", "loadWhen": "playbook scope-status: status, drift or traceability (read-only)" },
+    { "file": "references/flow-add-requirement.md", "loadWhen": "playbook add-requirement: add a requirement" },
+    { "file": "references/flow-edit-requirement.md", "loadWhen": "playbook edit-requirement: edit, link, regroup or set the status of a requirement" },
+    { "file": "references/flow-remove-requirement.md", "loadWhen": "playbook remove-requirement: remove a requirement (obsolete or delete)" },
+    { "file": "references/flow-groups-and-orphans.md", "loadWhen": "playbook groups-and-orphans: requirement groups, or attach orphan requirements" },
+    { "file": "references/flow-change-set.md", "loadWhen": "playbook change-set: create a live change set, or move it to review/draft" },
+    { "file": "references/flow-change-set-decision.md", "loadWhen": "playbook change-set-decision: the owner approves or rejects a change set" },
+    { "file": "references/flow-proposal.md", "loadWhen": "playbook proposal: propose rewrites or copies (live scope untouched)" },
+    { "file": "references/flow-publish-baseline.md", "loadWhen": "playbook publish-baseline: publish a baseline on the owner's order" },
+    { "file": "references/flow-baseline-records.md", "loadWhen": "playbook baseline-records: rename, restore or delete a baseline (owner)" }
   ],
   "behaviorContracts": ["missing-tool-fallback"],
   "codex": {

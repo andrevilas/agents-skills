@@ -158,7 +158,7 @@ test("routing table: rows by order, internal STOP text, legacy and fallback rows
   }
   assert.ok(index.includes("| `lpm-start` | `lpm-start.md` |"));
   assert.ok(index.includes("then exactly one `<id>.md`"));
-  assert.ok(outputs.get("dist/generic/AGENTS-snippet.md").includes("LPM: read `<dest>/INDEX.md` first, then exactly one `<id>.md`."));
+  assert.ok(outputs.get("dist/generic/AGENTS-snippet.md").includes("LPM: read `<dest>/INDEX.md` first, then exactly one `<id>.md`, and the one playbook it names in `<id>.flows.md`."));
 });
 
 test("collision rows are appended to the affected skill's Do not use table", () => {

@@ -29,6 +29,7 @@
       ],
       "generic": [
         "dist/generic/<id>.md",
+        "dist/generic/<id>.flows.md",
         "dist/generic/<id>.refs.md",
         "dist/generic/<id>.tools.md"
       ]

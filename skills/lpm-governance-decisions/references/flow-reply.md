@@ -1,0 +1,39 @@
+# Playbook: reply
+Use when: reply in a thread
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| threadId | the user, `items[].threadId` of an inbox, or `items[].id` of `list_governance_threads` | STOP. Say: "Which thread? (id or title)" |
+| text | the reply to post, from the user or written from facts you read (ids included) | STOP. Say: "What should the reply say?" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "No reply was posted: <tool> failed: <error text>."
+1. IF <input:text> says that a decision was made ("decidiu", "decided", "aprovado", "approved") → switch to playbook record-decision.
+   A reply never records a decision: only playbook record-decision handles one.
+2. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" and result.scopes does not contain "portfolio:manage" → STOP. Say: "<the howToEnable text of the portfolio:manage item of result.unavailableToolGroups>. Remove and reinstall the connector and tick that box; disconnect and connect is not enough."
+   IF result.credential == "oauth" → go to step 4.
+3. CALL {{tool:get_governance_thread_resolution_context}} {"projectId":"<input:projectId>","threadId":"<input:threadId>","messageLimitCount":100} [A]
+   SAVE: workspaceId = result.project.workspaceId; status = result.thread.status; targetType, targetId = those fields of result.traceability
+   GO TO step 5
+4. CALL {{tool:list_governance_threads}} {"projectId":"<input:projectId>","limitCount":100} [A]
+   SAVE: workspaceId = workspaceId of the item whose id == <input:threadId>; status, targetType, targetId = those fields of that item
+   IF no item has id == <input:threadId> → STOP. Say: "Thread <input:threadId> is not among the 100 most recent threads of <input:projectId>; check the id."
+5. CALL {{tool:reply_governance_thread}} {"projectId":"<input:projectId>","threadId":"<input:threadId>","content":"<input:text>"} [A]
+   IF the call returns an error → STOP. Say: "No reply was posted: <error text>. Do not retry before checking the thread: a retry posts the message twice."
+   SAVE: messageId = the id in "Governance thread reply created with ID: <id>"
+   VERIFY: CALL {{tool:list_governance_threads}} {"projectId":"<input:projectId>","targetType":"<saved:targetType>","targetId":"<saved:targetId>","limitCount":100} [A]
+   IF the call returns an error or no item has id == <input:threadId> with a latestMessagePreview that starts with the first 100 characters of <input:text> → STOP. Say: "Reply <saved:messageId> is not shown on <input:threadId>; do not post it again."
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<input:projectId>/<input:threadId> on <saved:targetType> <saved:targetId>
+Done: <reply <saved:messageId> posted | nothing posted>; status <saved:status> (a reply never changes it)
+Evidence: <latestMessagePreview of <input:threadId> starts with the reply | none>
+Pending: <the decider answers <input:threadId> | none>
+Next: <the ASK or STOP text that ended the run | one action>
+```
+status: open | answered | decision-needed | resolved | closed, from step 3 or 4. Never claim the reply is posted unless the VERIFY showed it.

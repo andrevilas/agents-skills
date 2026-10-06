@@ -4,7 +4,9 @@
   "rule": "`build` copies each contract into coverage.json `contracts[]` with `renderIn` resolved to paths: the 4 rendered files of the owner of `anchorTool` (scope `owner-of:<tool>`) or of every skill (scope `every-skill`), plus the 4 rendered files of each id in `skills`. `lpmRequires` is the exact §7.1 content; the published `tools`/`phrases`/files must be a superset of it. Tool matches use /(?<![a-z0-9_])<tool>(?![a-z0-9_])/; phrases are substrings.",
   "policy": {
     "schemaDrift": "warn",
-    "note": "§10 decision 3: warn for the first month, then fail (copied into coverage.json policy)"
+    "note": "§10 decision 3: warn for the first month, then fail (copied into coverage.json policy)",
+    "playbookRouter": "warn",
+    "playbookRouterNote": "playbook-standard.md §8.1: V20 reports a kind-tools skill whose §5 has no | Playbook | Use when | File | index; set \"fail\" once every skill is migrated (§11)"
   },
   "renderedFiles": {
     "antigravity": "dist/antigravity/<id>/SKILL.md",

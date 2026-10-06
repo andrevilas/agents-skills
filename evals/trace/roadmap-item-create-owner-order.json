@@ -2,7 +2,7 @@
   "id": "roadmap-item-create-owner-order",
   "title": "Roadmap item create in enforce mode on the owner's explicit order: duplicate check, create_workspace_roadmap_item as a draft (no lifecycle, never changeType create), list read-back",
   "skill": "lpm-roadmap",
-  "source": "lpm-roadmap §4 row 10 → references/flow-structure-write.md steps 1-3, 6, 11",
+  "source": "lpm-roadmap §4 row 10 → references/flow-create-item.md steps 2-3 (duplicate check), 4 (owner order), 5 (create as draft + VERIFY)",
   "request": "Workspace ws_trace (roadmap governance mode: enforce), roadmap rm_1. Add a new roadmap item \"Offline mode\" (priority medium) to the roadmap.",
   "ownerInstruction": "I am the workspace owner and I order you to create the roadmap item \"Offline mode\" (priority medium) in roadmap rm_1 of workspace ws_trace now.",
   "fixtures": {

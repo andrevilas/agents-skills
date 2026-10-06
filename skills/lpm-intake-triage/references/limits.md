@@ -1,5 +1,5 @@
 # Limits and CLI
-Load when: when the request needs something no tool here covers
+Load when: no tool fits; CLI
 Applies to: lpm-intake-triage    Source: lpm `src/cli/lpm.ts` (l.309-317, 945-1121), `server.ts` EvolutionAPI channel routes (l.42847-42900), `upsertEvolutionApiWebhookChannelCommand`; digest `legacy-workspace-routing-operator.md` §2.2-§3; CLI snapshot `operational-intake *`
 ## Summary
 - No MCP tool creates, lists, reads or re-opens a workspace intake entry: use the protocol code or the id the user gives.

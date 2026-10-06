@@ -1,0 +1,34 @@
+# Playbook: reopen
+Use when: reopen a decided thread
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| threadId | the user, or `items[].id` of `list_governance_threads` | STOP. Say: "Which thread? (id or title)" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "Nothing was reopened: <tool> failed: <error text>."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → STOP. Say: "Reopening a thread needs an LPM API key (profile full or requirements), or the LPM web UI."
+2. CALL {{tool:get_governance_thread_resolution_context}} {"projectId":"<input:projectId>","threadId":"<input:threadId>","messageLimitCount":100} [A]
+   SAVE: workspaceId = result.project.workspaceId; oldStatus = result.thread.status; heldJobs = result.thread.blockedAishJobIds, else "none"; erased = result.decision.outcome.type and "<result.decision.outcome.summary>", else "no outcome"
+   IF <saved:oldStatus> is neither "resolved" nor "closed" → STOP. Say: "<input:threadId> is <saved:oldStatus>; it is not decided, so there is nothing to reopen."
+3. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Reopening <input:threadId> erases its decision (<saved:erased>); jobs <saved:heldJobs> would be held again and need approval again. Only the decider (project owner, product owner or delivery lead) can order it: \"reopen <input:threadId>\"."
+4. CALL {{tool:update_governance_thread}} {"projectId":"<input:projectId>","threadId":"<input:threadId>","status":"open","decisionOutcome":null} [O]
+   IF the call returns an error that contains "must be queued" → STOP. Say: "Not reopened: the held jobs already ran. Reopen it in the LPM web UI or ask the owner."
+   IF the call returns any other error → STOP. Say: "Not reopened: <error text>."
+   VERIFY: CALL {{tool:get_governance_thread_resolution_context}} {"projectId":"<input:projectId>","threadId":"<input:threadId>","messageLimitCount":100} [A]
+   IF the call returns an error or result.thread.status != "open" or result.decision.outcome is set → STOP. Say: "<input:threadId> is <result.thread.status>; it was not reopened."
+   SAVE: status = result.thread.status
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<input:projectId>/<input:threadId>
+Done: <reopened: status <saved:oldStatus> → <saved:status>; erased <saved:erased> | nothing changed>
+Evidence: <the order "<the quoted order>"; get_governance_thread_resolution_context shows status open and no outcome | none>
+Pending: <jobs <saved:heldJobs> held again; they need approval again in lpm-aish-jobs | none>
+Next: <the ASK or STOP text that ended the run | the decider decides again; then playbook record-decision>
+```
+status: open | answered | decision-needed | resolved | closed, from step 2 or the VERIFY. Never claim the thread is reopened unless the VERIFY showed status open.

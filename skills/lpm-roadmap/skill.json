@@ -7,7 +7,7 @@
   "invocation": "implicit",
   "description": "Use when reading, tracing an LPM roadmap (rastreabilidade), creating a roadmap, one item or a capability (even on owner order), or change requests (pedido de mudança): submit, review, decide, apply. Not for direct owner commits (use lpm-roadmap-owner-ops) or change sets (use lpm-requirements-scope).",
   "doneWhen": "The roadmap read is reported, or the request is in the asked state and a re-read confirms it.",
-  "authorityCeiling": "Submit/revise/withdraw [C]; review, apply, batch and structure writes [O] (GOV-MAX v1); the rest [A].",
+  "authorityCeiling": "Submit/revise/withdraw [C]; review, apply and structure writes [O] (GOV-MAX v1); the rest [A].",
   "jobs": [
     "show the LPM roadmap overview of this workspace",
     "qual a rastreabilidade do item <título>? onde ele está sendo executado?",
@@ -100,7 +100,8 @@
   "uses": [
     "list_workspace_members",
     "list_workspace_projects",
-    "get_workspace"
+    "get_workspace",
+    "get_mcp_connection_info"
   ],
   "cli": [
     "roadmap status",
@@ -114,30 +115,54 @@
   "sharedRefs": [
     {
       "name": "authority-and-owner-decisions",
-      "loadWhen": "an [O] step is next",
+      "loadWhen": "background on [O] steps",
       "inlineSummary": false
     }
   ],
   "references": [
     {
-      "file": "references/change-request-lifecycle.md",
-      "loadWhen": "a change-request write is next"
+      "file": "references/flow-trace.md",
+      "loadWhen": "playbook trace: trace an item, or a project's roadmap work"
+    },
+    {
+      "file": "references/flow-propose-link.md",
+      "loadWhen": "playbook propose-link: change request: allocate or link one item"
+    },
+    {
+      "file": "references/flow-propose-change.md",
+      "loadWhen": "playbook propose-change: change request: edit, prioritize, lifecycle, archive or restore one item"
+    },
+    {
+      "file": "references/flow-comment.md",
+      "loadWhen": "playbook comment: comment on a change request"
+    },
+    {
+      "file": "references/flow-revise-or-withdraw.md",
+      "loadWhen": "playbook revise-or-withdraw: revise or withdraw a change request"
+    },
+    {
+      "file": "references/flow-review.md",
+      "loadWhen": "playbook review: record the owner's review decision"
+    },
+    {
+      "file": "references/flow-apply.md",
+      "loadWhen": "playbook apply: apply an approved change request"
+    },
+    {
+      "file": "references/flow-capability.md",
+      "loadWhen": "playbook capability: create, edit or archive a capability"
+    },
+    {
+      "file": "references/flow-create-item.md",
+      "loadWhen": "playbook create-item: create a roadmap item (never a change request)"
+    },
+    {
+      "file": "references/flow-roadmap-header.md",
+      "loadWhen": "playbook roadmap-header: create or edit a roadmap header"
     },
     {
       "file": "references/change-request-facts.md",
-      "loadWhen": "a patch, status or error code is unclear"
-    },
-    {
-      "file": "references/traceability.md",
-      "loadWhen": "tracing an item or auditing unlinked work"
-    },
-    {
-      "file": "references/capabilities-vs-executive.md",
-      "loadWhen": "the request mentions capabilities"
-    },
-    {
-      "file": "references/flow-structure-write.md",
-      "loadWhen": "decision row 10 applies"
+      "loadWhen": "background: statuses, quorum, error codes"
     }
   ],
   "behaviorContracts": [

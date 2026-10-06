@@ -1,0 +1,47 @@
+# Playbook: update-thread
+Use when: change a thread's status, decider or title
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| threadId | the user, `items[].threadId` of an inbox, or `items[].id` of `list_governance_threads` | STOP. Say: "Which thread? (id or title)" |
+| status | "answered" or "decision-needed" from the user; "resolved", "closed" or "open" when the user asked for those | "same" |
+| assignee | the decider's role ("project-owner", "product-owner", "delivery-lead") or userId, from the user | "same" |
+| title | the new title from the user | "same" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "Nothing was changed: <tool> failed: <error text>."
+1. IF <input:status> is "resolved" or "closed" → switch to playbook record-decision.
+   IF <input:status> == "open" → switch to playbook reopen.
+   A bare status change never records a decision.
+2. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → STOP. Say: "Changing a thread needs an LPM API key (profile full or requirements), or the LPM web UI."
+3. CALL {{tool:get_governance_thread_resolution_context}} {"projectId":"<input:projectId>","threadId":"<input:threadId>","messageLimitCount":100} [A]
+   SAVE: workspaceId = result.project.workspaceId; oldStatus = result.thread.status; oldAssignee = result.decision.assignedTo, else ""; oldTitle = result.thread.title, else ""
+   IF <saved:oldStatus> is "resolved" or "closed" → STOP. Say: "<input:threadId> is <saved:oldStatus>: its decision is recorded. To change it, the decider must order a reopen (playbook reopen)."
+4. CALL {{tool:get_project}} {"projectId":"<input:projectId>"} [A]
+   SAVE: assignments = each "<role> <userId>" of result.governanceAssignments
+   SAVE: newAssignee = the userId of the item whose role == <input:assignee> or whose userId == <input:assignee>; <saved:oldAssignee> when <input:assignee> == "same"
+   IF <input:assignee> != "same" and <saved:newAssignee> is empty → STOP. Say: "<input:assignee> holds no governance role here. Pick one: <saved:assignments>."
+   SAVE: newStatus = <input:status>, or <saved:oldStatus> when "same"; newTitle = <input:title>, or <saved:oldTitle> when "same"
+   IF <saved:newStatus> == "decision-needed" and <saved:newAssignee> is empty → STOP. Say: "Who must decide <input:threadId>? <saved:assignments>"
+   The assignee is always a userId from this call, never a person's name.
+5. ASK: "Set thread <input:threadId>: status <saved:oldStatus> → <saved:newStatus>, decider <saved:oldAssignee> → <saved:newAssignee>, title \"<saved:oldTitle>\" → \"<saved:newTitle>\"? (yes/no)" — continue only if the user says yes; otherwise STOP.
+6. CALL {{tool:update_governance_thread}} {"projectId":"<input:projectId>","threadId":"<input:threadId>","status":"<saved:newStatus>","assignedTo":"<saved:newAssignee>","title":"<saved:newTitle>"} [C]
+   IF the call returns an error that contains "permission" → STOP. Say: "Not changed: this credential has no governance role. Ask the project owner to change it, or to grant product-owner or delivery-lead."
+   IF the call returns any other error → STOP. Say: "Not changed: <error text>."
+   VERIFY: CALL {{tool:get_governance_thread_resolution_context}} {"projectId":"<input:projectId>","threadId":"<input:threadId>","messageLimitCount":100} [A]
+   IF the call returns an error or result.thread.status != <saved:newStatus> or result.decision.assignedTo != <saved:newAssignee> (empty = null) or result.thread.title != <saved:newTitle> (empty = null) → STOP. Say: "<input:threadId> does not show the change: status <result.thread.status>, decider <result.decision.assignedTo>."
+   SAVE: status = result.thread.status
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<input:projectId>/<input:threadId>
+Done: <status <saved:oldStatus> → <saved:status>; decider <saved:newAssignee>; title "<saved:newTitle>" | nothing changed>
+Evidence: <get_governance_thread_resolution_context shows the new values | none>
+Pending: <<saved:newAssignee> decides <input:threadId> | none>
+Next: <the ASK or STOP text that ended the run | the decider decides; then playbook record-decision>
+```
+status: open | answered | decision-needed | resolved | closed, from step 3 or the VERIFY. Never claim a change the VERIFY did not show; never write a person's name for a userId.

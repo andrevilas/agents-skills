@@ -1,44 +1,45 @@
-# Flow: TSV roadmap import
-Load when: SKILL.md row 9
+# Playbook: import
+Use when: import a TSV file of roadmap items
+{{partial:playbook-rules}}
 
-## Preconditions
-1. SKILL.md P1 passed: the owner's order is quoted and the mode is not `enforce` (enforce → {{ref:enforce-mode}}: decision request, never "needs a change request"). SKILL.md row 1 (read-only): step 1 only, no P1, no write.
-2. API key whose profile lists the tool (tools.md): import commit, resolve and suggest need `full`, `planning` or `custom`; a roadmap-owner-operator agent credential runs only the preview.
-3. Load {{ref:import-format}}; the owner's file is TAB-separated text with a title column. TSV text, file name (= sourceRef) and roadmap title come from the owner; an existing roadmapId from SKILL.md §3.
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user, or skill lpm-start | STOP. Say: "Which LPM workspace?" |
+| order | the owner's message, quoted verbatim: the speaker says they are the workspace owner and orders this import | STOP. Say: "Importing a roadmap is the workspace owner's decision. Nothing was imported." |
+| content | the TSV text the owner gave: TAB-separated, first line = headers, one item per row, a title column (title, titulo, name, nome, funcionalidade) | STOP. Say: "Send the file as TAB-separated text with a title column." |
+| sourceRef | the file name the owner gave | "pasted.tsv" |
+| roadmap | the existing roadmap title or id to import into, or "new" | "new" |
+| title | the new roadmap's title from the order | <input:sourceRef> |
 
 ## Steps
-1. {{tool:preview_workspace_roadmap_import}}(workspaceId, content=<TSV text>, sourceRef=<file name>) [A] → keep `rowCount`, `rows`, `warnings`.
-2. `rowCount == 0` → STOP: say "The file has no importable rows: it must be TAB-separated with a title column."
-3. Show `rowCount`, `warnings`, priorities and each row's `dependsOn` (a `blocks` column means the row depends on the reference). Wait for "import".
-4. {{tool:commit_workspace_roadmap_import}}(workspaceId, content=step 1 text, sourceRef=step 1 value, roadmapId=<existing roadmap from SKILL.md §3, or omit for a new one>, title=<owner's title>, confirmed=true) [O] → keep `roadmapId`, `createdItemIds`, `importedRows`.
-5. Timeout or error on step 4 → existing roadmap: {{tool:list_workspace_roadmap_items}}(workspaceId, roadmapId) and retry once with the same roadmapId (existing rows are skipped). New roadmap: {{tool:get_workspace_roadmap_overview}}(workspaceId, compact=true) → `roadmaps[]` with `sourceRef` == step 1 sourceRef (or `title` == the owner's title) created in this run. Found → do NOT retry; use its `id` as roadmapId, step 6 (one atomic batch: it holds every row). None → retry once with the identical content and sourceRef.
-6. Verify: {{tool:list_workspace_roadmap_items}}(workspaceId, roadmapId, compact=true) → new roadmap: item count == `rowCount`; existing roadmap: every `createdItemIds` id is listed.
-7. {{tool:resolve_workspace_roadmap_dependencies}}(workspaceId, roadmapId) [O] without `confirmed` (read-only preview) → keep `candidates`, `unresolved`, `cycles`.
-8. `cycles` non-empty → report them and the `unresolved` references; go to step 11.
-9. Show `candidates`; the owner picks. {{tool:resolve_workspace_roadmap_dependencies}}(workspaceId, roadmapId, confirmed=true, selectedDependencyKeys=["<sourceItemId>:<targetItemId>:depends_on"]) [O] → keep `createdLinkIds`.
-10. Verify: {{tool:list_workspace_roadmap_item_links}}(workspaceId, roadmapId) lists every `createdLinkIds` id.
-11. {{tool:suggest_workspace_roadmap_allocations}}(workspaceId, roadmapId) [O] without `confirmed` (read-only preview) → keep `candidates`.
-12. Show project, role, `confidence`, rationale per item; `confidence <= 0.49` → ask the owner for the project. At most one `primary` per item.
-13. {{tool:suggest_workspace_roadmap_allocations}}(workspaceId, roadmapId, confirmed=true, selectedAllocationKeys=["<itemId>:<projectId>"] from `candidates[]` only) [O] → keep `createdAllocationIds`. The owner names a project not in `candidates[]` for that item → never put it in selectedAllocationKeys (the commit silently skips it); {{tool:create_workspace_roadmap_allocation}}(workspaceId, roadmapId, itemId, projectId, role primary) via {{ref:flow-direct-edits}} B.
-14. Verify: {{tool:list_workspace_roadmap_allocations}}(workspaceId, roadmapId) lists every `createdAllocationIds` id (and each step 13 direct allocation) with `status` active.
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was imported."
+1. CALL {{tool:get_workspace}} {"workspaceId":"<input:workspaceId>"} [A]
+   SAVE: mode = result.roadmapGovernanceMode, else "off" when result.roadmapGovernanceEnabled == false, else "shadow"
+2. CALL {{tool:get_workspace_roadmap_overview}} {"workspaceId":"<input:workspaceId>","compact":true,"includeArchived":true} [A]
+   Always make this call: it also catches a lost earlier import.
+   SAVE: roadmapId = "" when <input:roadmap> == "new", else the id of the one roadmaps[] entry whose title or id equals <input:roadmap>
+   IF <input:roadmap> != "new" and 0 or 2+ entries match → STOP. Say: "Which roadmap: <the matching titles with ids>?"
+   IF <input:roadmap> == "new" and a roadmaps[] entry has sourceRef == <input:sourceRef> → STOP. Say: "Roadmap <id> already came from <input:sourceRef> (one import is one batch). Import into it again (existing rows are skipped) or use another file name?"
+3. CALL {{tool:preview_workspace_roadmap_import}} {"workspaceId":"<input:workspaceId>","content":"<input:content>","sourceRef":"<input:sourceRef>"} [A]
+   SAVE: rowCount = result.rowCount; warnings = result.warnings; summary = each row's title, priority and dependsOn
+   IF <saved:rowCount> == 0 → STOP. Say: "The file has no importable rows: it must be TAB-separated with a header row that has a title column. Convert CSV to TSV and send it again. Nothing was imported."
+   SAVE: target = "roadmap <saved:roadmapId>" when <saved:roadmapId> is not empty, else "a new draft roadmap '<input:title>'"; note = in enforce: "LPM has no change request that imports items and does not block an import; this direct import runs on your order", else ""
+4. ASK: "Import <saved:rowCount> rows into <saved:target>? Warnings: <saved:warnings>. Rows: <saved:summary> (a 'blocks' column is read as 'depends on'). Items start as imported. <saved:note> (yes/no)" — continue only if the user says yes; otherwise STOP.
+5. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Decision needed: import <saved:rowCount> rows into <saved:target>?"
+6. CALL {{tool:commit_workspace_roadmap_import}} {"workspaceId":"<input:workspaceId>","content":"<input:content>","sourceRef":"<input:sourceRef>","roadmapId":"<saved:roadmapId>","title":"<input:title>","confirmed":true} [O] (content and sourceRef exactly as in step 3; roadmapId "" makes a new roadmap)
+   IF the call returns an error → STOP. Say: "Import failed: <error text>. Do not retry blindly: run this playbook again; step 2 finds a roadmap that this import created."
+   SAVE: newRoadmapId = result.roadmapId; created = result.createdItemIds; importedRows = result.importedRows (rows read, not rows created)
+   VERIFY: CALL {{tool:list_workspace_roadmap_items}} {"workspaceId":"<input:workspaceId>","roadmapId":"<saved:newRoadmapId>","compact":true} [A]
+   IF the call returns an error or an id of <saved:created> is not listed → STOP. Say: "Imported into <saved:newRoadmapId>, but item <id> is not listed."
+   SAVE: listed = the number of items listed; skipped = <saved:importedRows> minus the count of <saved:created> (rows already in that roadmap)
 
-## Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| the order covers the import only | stop after step 6; ask "Resolve the dependency column and suggest project allocations now? (yes/no)" |
-| `confidence <= 0.49` | "No project matched <item>. Which project owns it?" |
-| the owner's project is not a candidate for the item | direct allocation (step 13), not a selected key |
-| two `primary` candidates for one item | "Which project is the primary for <item>: <A> or <B>?" |
-| `cycles` non-empty | "These items depend on each other in a loop: <ids>. Which reference is wrong?" |
-
-## Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| commit | {{tool:list_workspace_roadmap_items}} | count == `rowCount` (new roadmap) or all `createdItemIds` listed |
-| dependencies | {{tool:list_workspace_roadmap_item_links}} | all `createdLinkIds` listed |
-| allocations | {{tool:list_workspace_roadmap_allocations}} | all `createdAllocationIds` listed, one active primary per item |
-
-## Report fields
-- roadmapId, `rowCount`, created item count, skipped rows (warnings)
-- links created, `unresolved` references, cycles
-- allocations created, items left without a project
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:workspaceId> / <saved:newRoadmapId> (mode <saved:mode>); owner order: "<input:order>"
+Done: <commit_workspace_roadmap_import: <the count of <saved:created>> items created as imported, <saved:skipped> rows skipped | nothing imported>; <saved:note>
+Evidence: <list_workspace_roadmap_items <saved:newRoadmapId>: <saved:listed> items, every created id listed | none>
+Pending: <none | warnings <saved:warnings>>
+Next: <the ASK or STOP text that ended the run | playbook import-links for <saved:newRoadmapId>: dependency column and project allocations (needs your order)>
+```
+Imported items start with lifecycle imported; approving one takes two gates (reviewed, then approved). Never claim an item count that the VERIFY in step 6 did not show.

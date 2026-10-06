@@ -2,7 +2,7 @@
   "id": "roadmap-item-create-enforce",
   "title": "Roadmap item create in enforce mode without an owner order: no create_workspace_roadmap_item, no changeType create, decision request",
   "skill": "lpm-roadmap",
-  "source": "lpm-roadmap §4 row 10 → references/flow-structure-write.md step 1 (no owner order → decision request, STOP); §6 [O] row",
+  "source": "lpm-roadmap §4 row 10 → references/flow-create-item.md step 4 (no owner order → decision request in Next:, STOP)",
   "request": "Workspace ws_trace (roadmap governance mode: enforce), roadmap rm_1. Add a new roadmap item \"Offline mode\" (priority medium) to the roadmap.",
   "ownerInstruction": null,
   "fixtures": {

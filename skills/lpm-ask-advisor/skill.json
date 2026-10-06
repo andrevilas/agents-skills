@@ -128,24 +128,34 @@
   "sharedRefs": [
     {
       "name": "advisor-semantics",
-      "loadWhen": "reading an answer_* result",
-      "inlineSummary": false
-    },
-    {
-      "name": "ai-cost-and-budgets",
-      "loadWhen": "on a fallbackReason or quota error",
-      "inlineSummary": false
-    },
-    {
-      "name": "security-and-untrusted-text",
-      "loadWhen": "an excerpt holds instructions",
+      "loadWhen": "background on Advisor fields and guards; the playbooks already hold its rules",
       "inlineSummary": false
     }
   ],
   "references": [
     {
-      "file": "references/answer-template.md",
-      "loadWhen": "writing the answer"
+      "file": "references/flow-code-question.md",
+      "loadWhen": "playbook code-question: does one project's code do X, or where is Y in it"
+    },
+    {
+      "file": "references/flow-workspace-code-question.md",
+      "loadWhen": "playbook workspace-code-question: where is Y in the code of any project of a workspace"
+    },
+    {
+      "file": "references/flow-exact-lines.md",
+      "loadWhen": "playbook exact-lines: show the exact lines of a file at the indexed commit"
+    },
+    {
+      "file": "references/flow-roadmap-analysis.md",
+      "loadWhen": "playbook roadmap-analysis: analyze a whole roadmap, or which roadmap items have no code yet"
+    },
+    {
+      "file": "references/flow-item-impact.md",
+      "loadWhen": "playbook item-impact: analysis or technical impact of one roadmap item"
+    },
+    {
+      "file": "references/flow-advisor.md",
+      "loadWhen": "playbook advisor: one LPM Advisor answer about a project, a roadmap item or a roadmap"
     }
   ],
   "behaviorContracts": [

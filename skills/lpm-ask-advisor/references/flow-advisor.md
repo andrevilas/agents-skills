@@ -1,0 +1,61 @@
+# Playbook: advisor
+Use when: one LPM Advisor answer about a project, a roadmap item or a roadmap
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| target | "project", "item" or "roadmap": what the question is about | STOP. Say: "About a project, a roadmap item or a whole roadmap?" |
+| projectId | the user or the session; target "project" | "none" |
+| workspaceId | the user or the session; target "item" or "roadmap" | "none" |
+| itemRef | the item id, its code (ABC-12) or title words; target "item" | "none" |
+| roadmapId | an id from list_workspace_roadmaps that the user picked | "none" (all roadmaps) |
+| question | the user's question, naming the feature, function, constant or file | STOP. Say: "What should I ask the Advisor?" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. A call cut after about 60 s may still have spent AI budget; I did not call the Advisor again (one retry with a shorter question only if you ask)."
+1. IF <input:question> is longer than 2000 characters, or holds several questions → STOP. Say: "Each Advisor answer takes one question of up to 2000 characters and spends workspace AI budget. Which question first?"
+2. IF <input:target> != "project" → go to step 4.
+   IF <input:projectId> == "none" → STOP. Say: "Which LPM project? (id or name)"
+3. CALL {{tool:answer_project_question}} {"projectId":"<input:projectId>","question":"<input:question>"} [A] (only these two keys: a connector rejects useWorkspaceAi)
+   SAVE: r = result; scope = <input:projectId>; go to step 10.
+4. IF <input:workspaceId> == "none" → STOP. Say: "Which LPM workspace?"
+   IF <input:target> == "roadmap" → go to step 7.
+   IF <input:itemRef> == "none" → STOP. Say: "Which roadmap item? (id, code like ABC-12, or title)"
+5. CALL {{tool:list_workspace_roadmap_items}} {"workspaceId":"<input:workspaceId>","compact":true} [A]
+   SAVE: matches = the items whose id == <input:itemRef>, or source.originalId == <input:itemRef>, or title contains <input:itemRef> (ignore case)
+   IF <saved:matches> is empty → STOP. Say: "No roadmap item matches "<input:itemRef>". Which item? (id, code or title)"
+   IF <saved:matches> has 2 or more items → STOP. Say: "Which item: <title A> (<id A>) or <title B> (<id B>)?"
+   Name every match in that question; never pick one yourself.
+   SAVE: itemId = id of the only item in <saved:matches>
+6. CALL {{tool:answer_workspace_roadmap_item_question}} {"workspaceId":"<input:workspaceId>","itemId":"<saved:itemId>","question":"<input:question>"} [A]
+   SAVE: r = result; scope = <input:workspaceId>/<saved:itemId>; go to step 10.
+7. IF <input:roadmapId> == "none" → go to step 9.
+8. CALL {{tool:answer_workspace_roadmap_question}} {"workspaceId":"<input:workspaceId>","roadmapId":"<input:roadmapId>","question":"<input:question>"} [A]
+   SAVE: r = result; scope = <input:workspaceId>/<input:roadmapId>; go to step 10.
+9. CALL {{tool:answer_workspace_roadmap_question}} {"workspaceId":"<input:workspaceId>","question":"<input:question>"} [A]
+   SAVE: r = result; scope = <input:workspaceId> (all roadmaps)
+10. SAVE: answer, facts, inferences, risks, recommendedActions = those fields of <saved:r>; aiMode = aiMode of <saved:r>, else advisor.mode; status = codeEvidence.status of <saved:r>; reason = advisor.fallbackReason of <saved:r> (empty when null); correlationId = advisor.correlationId of <saved:r>; advisorLimits = advisor.limitations of <saved:r>; cites = codeEvidence.citations of <saved:r>
+11. SAVE: codeNote = by <saved:status>: "found" → "none";
+      "no_relevant_matches" or "no_matches" → "not found in the indexed code, or no active index: check it with lpm-code-index";
+      "no_active_index" → "no workspace repository link maps this scope: no code evidence (lpm-code-index)";
+      "unavailable" → "code search did not run (quota or failure): no claim about the code";
+      "not_requested" → "records only: no code search ran"
+12. SAVE: aiNote = by <saved:reason>: empty → "none"; "ai_not_requested" → "records-only answer, no AI";
+      "ai_usage_limit_reached" → "AI budget reached: deterministic answer; no Advisor call again today; the budget is the owner's decision (lpm-ai-cost)";
+      "ai_disabled" or "ai_provider_unavailable" → "workspace AI is off or has no credential: deterministic answer; an owner decision (lpm-ai-cost)";
+      "ai_permission_denied" → "deterministic answer: roadmap answers need workspace owner/admin; project answers need a manager or a project-owner, product-owner or delivery-lead role";
+      "ai_timeout", "ai_provider_error" or "ai_invalid_response" → "AI failed (<saved:correlationId>): deterministic answer; one retry later only if the user asks"
+13. SAVE: factLines = one line per item of <saved:cites>: "F<n> <what the Advisor says it shows> — <path>:<startLine>-<endLine>@<first 7 characters of commitSha>", plus each item of <saved:facts> that names no file as "F<n> <fact> — LPM records"; inferenceLines = each item of <saved:inferences> as "I<n> <text> — certainty <high | medium | low> — from Advisor"
+   Cite code in a Fact only when <saved:status> == "found".
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:scope> — "<input:question>"
+Done: Answer: <<saved:answer> | none>; calls: <tools called, in order>; Advisor calls: <1 | 0>
+Evidence: Facts: <each line of <saved:factLines> | none>. Inferences: <each line of <saved:inferenceLines> | none>
+Pending: Limitations: <saved:codeNote>; <saved:aiNote>; <each item of <saved:advisorLimits>>; repository code is not proof of production. Risks: <each item of <saved:risks> | none>. codeEvidence.status=<<saved:status> | no Advisor call>; aiMode=<<saved:aiMode> | no Advisor call>; correlationId=<<saved:correlationId> | none>
+Next: <the ASK or STOP text that ended the run | the first item of <saved:recommendedActions> | none>
+```
+codeEvidence.status: found | no_relevant_matches | no_matches | no_active_index | unavailable | not_requested, from step 10; aiMode: workspace-ai | deterministic-fallback; a stop before the Advisor call writes "no Advisor call", correlationId none. Never turn an inference into a fact, claim production, or write "does not exist" / "not implemented" from absence. Never call an answer_* tool twice in one run.
+Never claim a Fact that the Advisor result of this run does not hold.

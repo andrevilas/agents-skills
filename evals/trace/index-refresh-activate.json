@@ -2,7 +2,7 @@
   "id": "index-refresh-activate",
   "title": "Index refresh + activate: status, preview commit, one refresh, one activate with the read generation, status read-back",
   "skill": "lpm-code-index",
-  "source": "lpm-code-index §4 row 4 → P2 Refresh and activate (+ references/code-index-lifecycle.md)",
+  "source": "lpm-code-index §4 row 4 → playbook refresh (references/flow-refresh.md)",
   "request": "Workspace ws_trace. The code index of repository link rl_7 (https://github.com/trace-org/trace-app, branch main) is stale. Refresh it and make the new index active. I confirm both steps.",
   "ownerInstruction": null,
   "fixtures": {
@@ -25,12 +25,17 @@
     ],
     "reconcile_workspace_code_indexes": {
       "workspaceId": "ws_trace",
-      "repositories": [
+      "checkedAt": "2026-10-06T12:00:00.000Z",
+      "results": [
         {
           "repositoryLinkId": "rl_7",
           "state": "stale",
           "indexedCommitSha": "1111111111111111111111111111111111111111",
-          "repositoryCommitSha": "2222222222222222222222222222222222222222"
+          "repositoryCommitSha": "2222222222222222222222222222222222222222",
+          "repositoryUrl": "https://github.com/trace-org/trace-app",
+          "branch": "main",
+          "selectedFileCount": 120,
+          "truncated": false
         }
       ]
     },
@@ -221,9 +226,20 @@
     "maxCalls": {
       "refresh_repository_code_index": 1,
       "activate_repository_code_index": 1
+    },
+    "answer": {
+      "mustInclude": [
+        "iv_new",
+        "rl_7",
+        "state after: current",
+        "2222222222222222222222222222222222222222"
+      ],
+      "mustNotInclude": [
+        "verifications passed",
+        "all checks pass",
+        "Next: complete"
+      ]
     }
   },
-  "requireArgs": [
-    "activate_repository_code_index"
-  ]
+  "requireArgs": true
 }

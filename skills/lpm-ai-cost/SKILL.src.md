@@ -45,24 +45,14 @@ Do not use:
 
 ## 5. Procedures
 ### P1 Workspace AI — row 7
-1. {{tool:get_workspace_ai_config}}(workspaceId) → `enabled`, `defaultProvider`, `models`, `featureFlags`, `usageLimits` (`null` = no limit).
-2. Models → {{tool:list_workspace_ai_provider_models}}(workspaceId, provider=`defaultProvider`, operation=the `models` key; "requirementsDocumentAnalysis" = Advisor model).
-3. Spend, or how much of a usage limit is used → the §9 "not available over MCP" row.
-4. `fallbackReason` → its row in {{ref:workspace-ai-policy}}. For `ai_usage_limit_reached`, `workspace_ai_budget_exceeded` or `ai_disabled` do every sub-step:
-   - 4a. Map `advisor.fallbackDetail` (or the error) there; quote the named `usageLimits` value or setting from step 1.
-   - 4b. Limit: it resets at 00:00 UTC (daily) or at the next UTC month start (`monthlyTokenBudget`).
-   - 4c. Limit: consumption is not over MCP → `Pending: not over MCP: consumption today (web UI, AI cost governance)`.
-   - 4d. §8 `Next:` = P2 offer in one line (any new value "proposed").
-   - Never repeat the AI call.
+1. Open {{ref:flow-ai-status}} and follow its steps, including the budget reset and missing-consumption explanation.
+2. Report its Answer block; never repeat the failed AI call.
 ### P2 Decision request — row 3
 1. Fill {{ref:authority-and-owner-decisions#decision-request}} with this run's numbers: options, one recommendation, 7 AI-enablement fields (feature scope, benefit, budget/limit, fallback, owner, review date, rollback trigger; the last 3 as "proposed: <value>" or "owner to set", never facts). Row-2 change → the Advisor warning.
 2. Send it in chat; STOP. Posting on a governance thread → {{skill:lpm-governance-decisions}}.
-### P3 Owner-ordered AI config — rows 2 ("yes"), 4
-1. Quote the owner's order (field, value); a value missing → ask, never choose it.
-2. {{tool:get_workspace_ai_config}}(workspaceId) → `enabled`, `defaultProvider`, `allowedProviders`, `models`, `featureFlags`, `usageLimits` = `before`. Re-read after the row-2 "yes"; never reuse an earlier turn's read as `before`.
-3. Model → {{tool:list_workspace_ai_provider_models}}(workspaceId, provider=`before.defaultProvider`, operation=the ordered `models` key) → an id with `supportsOperation == true` (nickname, empty list → {{ref:workspace-ai-policy}}). Limit → number ≥ 0 ("no limit" → STOP; 0 needs the row-2 "yes").
-4. {{tool:update_workspace_ai_config}}(workspaceId, the 6 fields of `before` with the ordered one changed) [O].
-5. Verify: §7.
+### P3 Owner-ordered AI config — rows 2, 4
+1. Open {{ref:flow-change-ai-config}}. Pass the existing owner order and any Advisor-disable confirmation from this conversation; do not ask twice.
+2. Verify: the playbook re-reads every policy field and preserves fields outside the order.
 
 ## 6. Stop and ask
 | Situation | Do / ask exactly |

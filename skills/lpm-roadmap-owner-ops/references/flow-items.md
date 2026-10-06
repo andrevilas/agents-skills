@@ -1,0 +1,58 @@
+# Playbook: items
+Use when: update, archive or restore items, or archive a roadmap
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user, or skill lpm-start | STOP. Say: "Which LPM workspace?" |
+| order | the owner's message, quoted verbatim: the speaker says they are the workspace owner and orders this change | STOP. This belongs to skill {{skill:lpm-roadmap}}. Say: "There is no owner order, so I can only propose this change; nothing was changed." |
+| roadmap | the roadmap title or id the user named | STOP. Say: "Which roadmap?" |
+| items | the item titles or ids the user named | "none" for archive-roadmap; else STOP. Say: "Which items?" |
+| change | "update", "archive", "restore" or "archive-roadmap" | STOP. Say: "Update, archive or restore?" |
+| fields | for update: the new values the order gives (title, description, category, priority urgent/high/medium/low/none, roadmapId of an active roadmap to move to) | "none" |
+| reason | the owner's words after "Motivo:", "porque", "because", verbatim | "none" for update; else STOP. Say: "Why? The reason is stored." |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing more was changed."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → STOP. This belongs to skill {{skill:lpm-roadmap}}. Say: "Direct item writes need an LPM API key; here I can only propose a change request."
+2. CALL {{tool:get_workspace}} {"workspaceId":"<input:workspaceId>"} [A]
+   Always make this call, even when the order says "do it".
+   SAVE: mode = result.roadmapGovernanceMode, else "off" when result.roadmapGovernanceEnabled == false, else "shadow"
+3. CALL {{tool:get_workspace_roadmap_overview}} {"workspaceId":"<input:workspaceId>","compact":true,"includeArchived":true} [A]
+   SAVE: roadmapId = id of the one roadmaps[] entry whose title or id equals <input:roadmap>; itemIds = for each of <input:items>, the id of the one items[] entry with that title or id and roadmapId == <saved:roadmapId>
+   IF a name matches 0 or 2+ entries → STOP. Say: "Which one do you mean: <the matching titles with ids>?"
+   IF <input:change> == "archive-roadmap" → go to step 9.
+   IF <saved:mode> == "enforce" → STOP. This belongs to skill {{skill:lpm-roadmap}}. Say: "<input:workspaceId> is in enforce: LPM blocks direct item writes; a change request (changeType edit, prioritize, archive or restore) does this. Nothing was changed."
+4. CALL {{tool:preview_workspace_roadmap_item_bulk}} {"workspaceId":"<input:workspaceId>","itemIds":"<saved:itemIds>","operation":"<input:change>"} [A] (itemIds as a JSON array)
+   SAVE: keep = <saved:itemIds> minus result.missingItemIds; for update also minus each result.items[] entry with isArchived true or lifecycle "materialized"; dropped = the removed ids, each with its reason (missing, archived, materialized)
+   VERIFY: CALL {{tool:list_workspace_roadmap_items}} {"workspaceId":"<input:workspaceId>","roadmapId":"<saved:roadmapId>","compact":true,"includeArchived":true} [A]
+   IF the call returns an error or an id of <saved:keep> is not listed → STOP. Say: "Item <id> is not in roadmap <saved:roadmapId>. Nothing was changed."
+   IF <saved:keep> is empty → STOP. Say: "No item can take this change: <saved:dropped>. Nothing was changed."
+5. SAVE: updates = for update, a JSON object with only the fields of <input:fields>; for archive or restore, {}; call = "commit_workspace_roadmap_item_bulk(workspaceId=<input:workspaceId>, itemIds=<saved:keep>, operation=<input:change>, updates=<saved:updates>, reason='<input:reason>', confirmed=true)"
+   IF <saved:updates> has "title" and <saved:keep> has 2+ ids → STOP. Say: "A bulk update gives every item the same title. Which single item gets it?"
+6. ASK: "Apply <saved:call> now? It skips change-request review. (yes/no)" — continue only if the user says yes; otherwise STOP.
+7. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Decision needed: <saved:call>. It skips change-request review. Reply as the workspace owner."
+8. CALL {{tool:commit_workspace_roadmap_item_bulk}} {"workspaceId":"<input:workspaceId>","itemIds":"<saved:keep>","operation":"<input:change>","updates":"<saved:updates>","reason":"<input:reason>","confirmed":true} [O] (itemIds and updates as JSON; no idempotencyKey: after a timeout re-read before any retry)
+   SAVE: updatedCount = result.updatedCount
+   VERIFY: CALL {{tool:list_workspace_roadmap_items}} {"workspaceId":"<input:workspaceId>","roadmapId":"<saved:roadmapId>","compact":true,"includeArchived":true} [A]
+   IF the call returns an error or <saved:updatedCount> != the count of <saved:keep> or an item of <saved:keep> does not show isArchived true (archive), false (restore) or <saved:updates> (update) → STOP. Say: "The re-read does not show the change on <id>: <value read>."
+   SAVE: readBack = each id of <saved:keep> with isArchived, lifecycle and the changed fields as read
+   GO TO Answer
+9. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Decision needed: archive roadmap <saved:roadmapId> (reason '<input:reason>')? Its items, links and allocations stay. Reply as the workspace owner."
+   IF <saved:mode> == "enforce" → ASK: "<input:workspaceId> is in enforce, but LPM has no change request for a roadmap archive and does not block it. Archive roadmap <saved:roadmapId> now? Items, links and allocations stay. (yes/no)" — continue only if the user says yes; otherwise STOP.
+10. CALL {{tool:archive_workspace_roadmap}} {"workspaceId":"<input:workspaceId>","roadmapId":"<saved:roadmapId>","reason":"<input:reason>"} [O]
+   VERIFY: CALL {{tool:get_workspace_roadmap_overview}} {"workspaceId":"<input:workspaceId>","compact":true,"includeArchived":true} [A]
+   IF the call returns an error or the roadmaps[] entry <saved:roadmapId> has status != "archived" → STOP. Say: "Roadmap <saved:roadmapId> still shows status <status>."
+   SAVE: keep = [<saved:roadmapId>]; dropped = "none"; readBack = "roadmap <saved:roadmapId> status archived"
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:workspaceId> / <saved:roadmapId> / <saved:keep> (mode <saved:mode>); owner order: "<input:order>"
+Done: <commit_workspace_roadmap_item_bulk <input:change>: <saved:updatedCount> items (lifecycle unchanged) | archive_workspace_roadmap <saved:roadmapId> | nothing changed>
+Evidence: <list_workspace_roadmap_items or get_workspace_roadmap_overview: <saved:readBack> | none>
+Pending: <none | dropped <saved:dropped>>
+Next: <the ASK or STOP text that ended the run | undo = this playbook with change restore and a reason | none>
+```
+mode: off | shadow | enforce, from step 2. Archived items keep their lifecycle. Never claim a change that a VERIFY above did not show.

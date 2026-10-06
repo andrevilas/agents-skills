@@ -1,41 +1,74 @@
-# Flow: governance mode and roadmap migrations
-Load when: SKILL.md rows 11–12
+# Playbook: governance
+Use when: change the governance mode, or run the enforce window the owner chose
+{{partial:playbook-rules}}
 
-## Preconditions
-1. SKILL.md P1 passed: the owner's order naming the mode, migration or run is quoted. These rows run in every mode. SKILL.md row 1 (read-only): step 4 only, no P1, no write.
-2. API key whose profile lists the tool (tools.md): mode and governance migration `full`, `portfolio` or `custom`; v2 migration `full` or `custom`.
-3. Load {{ref:migrations}}; P1 step 2 kept `roadmapGovernanceMode`, `updatedAt` and `roadmapGovernancePolicy.soloMaterialAlertThreshold` (missing → 5).
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user, or skill lpm-start | STOP. Say: "Which LPM workspace?" |
+| order | the owner's message, quoted verbatim: the speaker says they are the workspace owner and orders this | STOP. Say: "This is the workspace owner's decision." |
+| mode | "off", "shadow" or "enforce" named in the order ("pode fazer direto" is none); "window" when playbook dependency or allocation switched here or the owner replied "A" below | STOP. Say: "Which mode: off, shadow or enforce?" |
+| kind | window: "dependency" or "allocation" | "none" |
+| entityId | window: the linkId or allocationId saved there | "none" |
+| newValue | window: the type or role saved there | "none" |
+| newStatus | window: the status saved there | "none" |
+| rationale | the owner's reason, verbatim | the quoted order |
+| pick | "A" only when the owner replied "A" to the decision request | "none" |
+| stamp | the current UTC date and time, yyyymmddHHMM | STOP. Say: "Current UTC time (yyyymmddHHMM)?" |
 
 ## Steps
-1. Mode (row 11): say "<previousMode> → <mode>: <effect from the migrations ref>". Wait for "yes".
-2. {{tool:update_workspace_roadmap_governance_policy}}(workspaceId, mode=<owner's mode>, expectedUpdatedAt=`updatedAt`, soloMaterialAlertThreshold=<current value, or the owner's new value>, idempotencyKey="gov-mode-<workspaceId>-<mode>-<yyyymmddhhmm>") [O] → `result.mode` must equal the requested mode; else new key, step 2.
-3. Verify: {{tool:get_workspace}}(workspaceId) → `roadmapGovernanceMode` == mode. Mode-only request ends here.
-4. Migration (row 12): {{tool:preview_workspace_roadmap_governance_migration}}(workspaceId) [A] or {{tool:preview_workspace_roadmap_v2_migration}}(workspaceId) [A] → show the counts or rows.
-5. v2: `valid != true` or `mode != "migration-required"` → STOP: report the preview rows; no apply.
-6. Governance apply: {{tool:apply_workspace_roadmap_governance_migration}}(workspaceId, idempotencyKey="gov-migration-<workspaceId>-<yyyymmddhhmm>", confirmed=true) [O] → keep `id` (migrationId), `appliedWrites`. Retry after a timeout → SAME key; a new apply after a rollback → NEW key.
-7. v2 apply: {{tool:apply_workspace_roadmap_v2_migration}}(workspaceId, idempotencyKey="roadmap-v2-<workspaceId>-<yyyymmdd>", confirmed=true) [O] → keep `appliedItemIds`. No rollback exists.
-8. Rollback of a run the owner names: run the governance preview (step 4) → keep `roadmapItemsToSnapshot` + `legacyIssuesToClassify` as the before-rollback sum. Say "Rollback also deletes roadmap lineage added to those activities after the run." Wait for "yes". {{tool:rollback_workspace_roadmap_governance_migration}}(workspaceId, migrationId=<step 6 `id`, or the id the owner gives>, idempotencyKey="gov-rollback-<migrationId>", confirmed=true) [O] → keep `rolledBackWrites`.
-9. Verify: run the step 4 preview again → pass per § Verify.
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>."
+1. CALL {{tool:get_workspace}} {"workspaceId":"<input:workspaceId>"} [A]
+   SAVE: before = result.roadmapGovernanceMode, else "off" when result.roadmapGovernanceEnabled == false, else "shadow"; after = <saved:before>; wsUpdatedAt = result.updatedAt; threshold = result.roadmapGovernancePolicy.soloMaterialAlertThreshold, else 5; failed = ""; readBack = "none"; openMode = "shadow" when <input:mode> == "window", else <input:mode>
+   IF <input:mode> == "window" and <saved:before> != "enforce" → STOP. Say: "Mode is <saved:before>: run playbook <input:kind> again."
+   IF <input:mode> != "window" and <saved:before> == <input:mode> → go to Answer.
+   IF <input:mode> != "window" → go to step 3.
+2. SAVE: decision = this text, filled:
+   ```text
+   Decision needed: set <input:kind> <input:entityId> to <input:newValue>, status <input:newStatus>.
+   Context: enforce; LPM blocks this write (GOVERNANCE_REVIEW_REQUIRED) and has no change-request type for it.
+   Options: A) shadow, this write, enforce, in one run - a short window without review; reversible. B) wait for an LPM fix - no change. C) do nothing - no change.
+   Recommendation: A, as your order names this operation.
+   To proceed, reply "A" and I will run: update_workspace_roadmap_governance_policy(mode=shadow, expectedUpdatedAt=<saved:wsUpdatedAt>) → update_workspace_roadmap_<input:kind>(<input:entityId>, <input:newValue>, status=<input:newStatus>, rationale='<input:rationale>') → update_workspace_roadmap_governance_policy(mode=enforce), each with a new idempotencyKey
+   ```
+   IF <input:pick> != "A" → STOP. Say: "<saved:decision>"
+3. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Decision needed: mode <saved:before> → <saved:openMode>?"
+4. CALL {{tool:update_workspace_roadmap_governance_policy}} {"workspaceId":"<input:workspaceId>","mode":"<saved:openMode>","expectedUpdatedAt":"<saved:wsUpdatedAt>","soloMaterialAlertThreshold":"<saved:threshold>","idempotencyKey":"gov-<saved:openMode>-<input:workspaceId>-<input:stamp>"} [O]
+   IF the call returns an error → STOP. Say: "Mode not changed: <error text>."
+   IF result.mode != <saved:openMode> → STOP. Say: "LPM replayed an old run of this key; give me a new time stamp."
+   VERIFY: CALL {{tool:get_workspace}} {"workspaceId":"<input:workspaceId>"} [A]
+   IF the call returns an error or result.roadmapGovernanceMode != <saved:openMode> → STOP. Say: "Mode reads <result.roadmapGovernanceMode>; nothing else ran."
+   SAVE: after = <saved:openMode>; openedAt = result.updatedAt
+   IF <input:mode> != "window" → go to Answer.
+   IF <input:kind> == "dependency" → go to step 7.
+5. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "<saved:decision>"
+6. CALL {{tool:update_workspace_roadmap_allocation}} {"workspaceId":"<input:workspaceId>","allocationId":"<input:entityId>","role":"<input:newValue>","status":"<input:newStatus>","rationale":"<input:rationale>"} [O]
+   IF the call returns an error → SAVE: failed = "<error text>"; go to step 9.
+   VERIFY: CALL {{tool:get_workspace_roadmap_overview}} {"workspaceId":"<input:workspaceId>","compact":true,"includeArchived":true} [A]
+   IF the call returns an error or allocations[] entry <input:entityId> has status != <input:newStatus> → SAVE: failed = "re-read differs"; go to step 9.
+   SAVE: readBack = "<input:entityId> <input:newStatus>"
+   GO TO step 9
+7. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "<saved:decision>"
+8. CALL {{tool:update_workspace_roadmap_dependency}} {"workspaceId":"<input:workspaceId>","linkId":"<input:entityId>","type":"<input:newValue>","status":"<input:newStatus>","rationale":"<input:rationale>"} [O]
+   IF the call returns an error → SAVE: failed = "<error text>"; go to step 9.
+   VERIFY: CALL {{tool:get_workspace_roadmap_overview}} {"workspaceId":"<input:workspaceId>","compact":true,"includeArchived":true} [A]
+   IF the call returns an error or itemLinks[] entry <input:entityId> has status != <input:newStatus> → SAVE: failed = "re-read differs"; go to step 9.
+   SAVE: readBack = "<input:entityId> <input:newStatus>"
+9. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "URGENT: still in shadow. Reply yes to set enforce again."
+   Always run this step after step 4.
+10. CALL {{tool:update_workspace_roadmap_governance_policy}} {"workspaceId":"<input:workspaceId>","mode":"enforce","expectedUpdatedAt":"<saved:openedAt>","soloMaterialAlertThreshold":"<saved:threshold>","idempotencyKey":"gov-enforce-<input:workspaceId>-<input:stamp>"} [O]
+   IF the call returns an error → STOP. Say: "URGENT: still in shadow: <error text>. Run this playbook with mode enforce."
+   VERIFY: CALL {{tool:get_workspace}} {"workspaceId":"<input:workspaceId>"} [A]
+   IF the call returns an error or result.roadmapGovernanceMode != "enforce" → STOP. Say: "URGENT: mode reads <result.roadmapGovernanceMode>, not enforce."
+   SAVE: after = "enforce"
+   IF <saved:failed> is not empty → STOP. Say: "The write failed (<saved:failed>); the mode is back to enforce."
 
-## Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| before {{tool:update_workspace_roadmap_governance_policy}}, an apply or a rollback | "Run <tool> on workspace <name>? Effect: <line from {{ref:migrations}}>." |
-| the order names no mode, run or workspace | "Which workspace and which <mode / migration / run id>?" |
-| v2 preview `valid != true` | "The v2 migration cannot run: <preview rows>. No change was made." |
-| apply again after a rollback | use a NEW idempotencyKey with the current `<yyyymmddhhmm>` (the old one replays the old run and writes nothing) |
-| migrationId unknown | "Which migration run (id `migration_…`)? Or give the apply idempotencyKey and I replay it to get the id." |
-| `rolledBackWrites == 0` | "Run <migrationId> wrote nothing to undo, or the id is wrong. Recover the id by replaying apply with its original key?" |
-
-## Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| mode change | {{tool:get_workspace}} | `roadmapGovernanceMode` == requested mode |
-| governance apply | {{tool:preview_workspace_roadmap_governance_migration}} | `roadmapItemsToSnapshot == 0` and `legacyIssuesToClassify == 0` |
-| v2 apply | {{tool:preview_workspace_roadmap_v2_migration}} | `legacyItemCount == 0` (`rows` empty) and no `appliedItemIds` id in `rows`; `mode` is information only (it can stay `migration-required`) |
-| rollback | {{tool:preview_workspace_roadmap_governance_migration}} | `roadmapItemsToSnapshot` + `legacyIssuesToClassify` rose above the step 8 sum, by at most `rolledBackWrites` (deleted activities are not counted); report both sums |
-
-## Report fields
-- previousMode → mode, threshold sent
-- migration kind, migrationId, `appliedWrites` / `appliedItemIds`, `rolledBackWrites`
-- preview counts before and after (rollback: both sums)
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:workspaceId> (mode <saved:before> → <saved:after>); owner order: "<input:order>"
+Done: <mode <saved:before> → <saved:after> (threshold <saved:threshold> preserved) | window: shadow → <saved:readBack> → enforce | nothing changed>
+Evidence: <get_workspace roadmapGovernanceMode <saved:after>; <saved:readBack> | none>
+Pending: <none | owner decision | <saved:failed>>
+Next: <the ASK or STOP text that ended the run | none>
+```
+mode: off | shadow | enforce, from your last get_workspace. Never claim what a VERIFY above did not show.

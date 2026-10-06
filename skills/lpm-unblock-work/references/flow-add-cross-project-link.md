@@ -1,0 +1,59 @@
+# Playbook: add-cross-project-link
+Use when: X waits for U in another project
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the project of X: the user, or lpm-start | STOP. Say: "Which LPM project is the waiting activity in? (id or name)" |
+| workspaceId | the user, lpm-start, or step 3 | step 3 |
+| x | the activity that waits: its id or its exact title | STOP. Say: "Which activity is waiting? (id or exact title)" |
+| upProject | the project of U as the user named it: id or exact name | STOP. Say: "Which project is the activity that must finish first in?" |
+| u | the activity that must finish first: its id or its exact title | STOP. Say: "Which activity must finish first? (id or exact title)" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was linked."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → switch to playbook connector-only.
+2. CALL {{tool:list_issues}} {"projectId":"<input:projectId>","limitCount":100} [A]
+   SAVE: xid = id of the item whose id == <input:x>, else of the only item whose title == <input:x>, else <input:x> when result.nextCursor is not empty
+   IF <saved:xid> is empty → STOP. Say: "Which activity is '<input:x>'? <each item whose title contains it, as "<id>: <title>", or "none in <input:projectId>">. Send its id."
+3. CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<saved:xid>"} [A]
+   IF the call returns an error → STOP. Say: "<saved:xid> is not an activity of <input:projectId>. Send its id."
+   SAVE: xTitle = result.title; workspaceId = result.workspaceId, else <input:workspaceId>
+   IF result.isDeleted == true or result.status is "done" or "canceled" → STOP. Say: "<saved:xid> is <result.status>, not an open activity. Nothing was linked."
+   IF <saved:workspaceId> is empty → STOP. Say: "Which LPM workspace holds <input:projectId>?"
+4. CALL {{tool:list_workspace_projects}} {"workspaceId":"<saved:workspaceId>"} [A]
+   SAVE: upId = id of the item whose id == <input:upProject>, else of the only item whose name == <input:upProject>
+   IF <saved:upId> is empty → switch to playbook add-portfolio-link.
+   IF <saved:upId> == <input:projectId> → switch to playbook add-link.
+5. CALL {{tool:list_issues}} {"projectId":"<saved:upId>","limitCount":100} [A]
+   SAVE: uid = id of the item whose id == <input:u>, else of the only item whose title == <input:u>, else <input:u> when result.nextCursor is not empty
+   IF <saved:uid> is empty → STOP. Say: "Which activity is '<input:u>' in <saved:upId>? Send its id."
+6. CALL {{tool:get_issue}} {"projectId":"<saved:upId>","issueId":"<saved:uid>"} [A]
+   IF the call returns an error → STOP. Say: "<saved:uid> is not an activity of <saved:upId>. Send its id."
+   SAVE: uTitle = result.title; uStatus = result.status
+   IF result.isDeleted == true or <saved:uStatus> is "done" or "canceled" → STOP. Say: "<saved:uid> is already <saved:uStatus>, so it blocks nothing. Nothing was linked."
+7. CALL {{tool:list_workspace_issue_links}} {"workspaceId":"<saved:workspaceId>","sourceProjectId":"<saved:upId>"} [A]
+   Always make this call before creating: the server does not check duplicates.
+   IF an item has type "blocks", sourceIssueId == <saved:uid> and targetIssueId == <saved:xid> → SAVE: linkId = that item's id; outcome = "already linked, nothing created"; go to Answer.
+8. CALL {{tool:list_workspace_issue_links}} {"workspaceId":"<saved:workspaceId>","sourceProjectId":"<input:projectId>"} [A]
+   Always make this call: it finds the reverse link.
+   IF an item has type "blocks", sourceIssueId == <saved:xid> and targetIssueId == <saved:uid> → STOP. Say: "Link <that item's id> says <saved:xid> blocks <saved:uid>. Which must finish first? A link both ways blocks both. Nothing was linked."
+9. CALL {{tool:create_workspace_issue_link}} {"workspaceId":"<saved:workspaceId>","sourceProjectId":"<saved:upId>","sourceIssueId":"<saved:uid>","targetProjectId":"<input:projectId>","targetIssueId":"<saved:xid>","type":"blocks"} [A] (no idempotencyKey: this tool has none)
+   IF the call returns an error → STOP. Say: "Not linked: <error text>. Run this playbook again: it lists the links before creating."
+   SAVE: linkId = the id in "Workspace issue link created with ID: <id>"; outcome = "created"
+   VERIFY: CALL {{tool:list_workspace_issue_links}} {"workspaceId":"<saved:workspaceId>","sourceProjectId":"<saved:upId>"} [A]
+   IF the call returns an error or no item has id == <saved:linkId> → STOP. Say: "Link <saved:linkId> is not listed. Do not create it again; run this playbook again to check."
+   VERIFY: CALL {{tool:get_project_dependency_summary}} {"projectId":"<input:projectId>"} [A]
+   IF the call returns an error or no item of result.criticalBlockers has issueId == <saved:xid> → STOP. Say: "Link <saved:linkId> exists, but the dependency summary does not show <saved:xid> as blocked: <error text, or "not listed">."
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<input:projectId>/<saved:xid> <saved:xTitle>
+Done: <link <saved:linkId>: <saved:uid> "<saved:uTitle>" (project <saved:upId>) blocks <saved:xid>, <saved:outcome> | nothing linked>
+Evidence: <list_workspace_issue_links → <saved:linkId>; get_project_dependency_summary → criticalBlockers has <saved:xid> | list_workspace_issue_links → <saved:linkId> | none>
+Pending: <none — the block ends by itself when <saved:uid> is done or canceled | the STOP text>
+Next: <the STOP text that ended the run | finish <saved:uid> (<saved:uStatus>)>
+```
+uStatus: backlog | todo | in-progress, from step 6. list_blocked_project_issues never shows cross-project links (only the graph, the summary and the next-activity recommendation do); do not use it as proof. Never set a status "blocked". Never claim a link exists unless step 7 or a VERIFY listed its id.

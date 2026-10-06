@@ -319,23 +319,33 @@ Gotchas:
 Pairs with: `list_projects`, `get_project_execution_context`, `update_project`
 CLI: `lpm project get <projectId> [--json]`
 
-### `get_workspace_read_model` [A] · read · workspace:read · owner `lpm-review-health` · profiles: full, read-only, portfolio, planning, requirements, roadmap-owner-advisor, roadmap-owner-operator, custom · sensitive: no · idempotency: naturally idempotent
-Purpose: Returns the full aggregated workspace read model in one payload: the workspace record, the owner executive summary (ownerView) and the merged executive context.
-Use when: You need ownerView and executiveContext together in one call, e.g. for a full executive briefing to the owner; You need per-project executive summaries (ownerView.projects[]) or portfolio risk signals (ownerView.risks[]); You are on an OAuth connector (ChatGPT/Claude) and need the owner dashboard: get_workspace_owner_surface is not available there    Avoid when: You only need the owner dashboard numbers -> get_workspace_owner_surface (same data minus executiveContext, API key only); You only need mandate, roles and policies -> get_workspace_executive_context; You poll repeatedly or need roadmap, repository freshness and code-search budget -> get_workspace_owner_context_bundle with sinceVersion; You need to know what is missing -> generate_workspace_readiness_report or list_workspace_context_gaps
+### `list_workspace_projects` [A] · read · portfolio:read · owner `lpm-start` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
+Purpose: Lists the projects of a workspace (archived ones excluded unless requested).
+Use when: Finding a projectId inside a known workspace.; Mapping the projects of a workspace before creating cross-project links.    Avoid when: You also want to filter by team or prefer the shared listing used by the CLI ('lpm projects list --workspace-id'): use list_projects.; You need one project's details: use get_project.
 | Param | Req | Source (call → field) | Notes |
 |---|---|---|---|
-| workspaceId | yes | list_workspaces -> id | Firestore document ID. On an OAuth connector bound to a single workspace it may be omitted (the grant's workspace is used). |
-Preconditions: Caller is the workspace owner or an active workspace member (any role); On OAuth connectors the grant has scope workspace:read and covers this workspace
-Returns: {workspace{id, name, ownerId, description, access.canManage, ...}, ownerView{generatedAt, workspace{projectCount, memberCount, ...}, governance{projectsMissingProjectOwner, projectsMissingProductOwner, projectsMissingDeliveryLead}, portfolio{healthStatus healthy|watch|critical, blockedIssuesOpen, overdueIssues, completionRate, throughput30d, projectsWithoutCurrentBaseline}, finance{currency, currencyMode, forecastCost, actualCost, ...}, dependencies, activity, attention{priorityProjectCount, recommendedProject}, decisions{pendingCount, actionRequiredCount, items[]}, copilot{executiveBrief, readyQuestions[]}, projects[], risks[]}, executiveContext{mandate, governance, portfolio, delivery, financial, metadata}}. workspace.access.canManage=true means the caller can use owner/admin write tools.
+| workspaceId | yes | list_workspaces -> id |  |
+| includeArchived | no | constant | Boolean, default false. |
+Preconditions: The caller is the workspace owner or an active member (project-only or team-only access is denied).; OAuth: scope portfolio:read and the workspace in the grant.
+Returns: JSON array of full project records {id, name, key, description, workspaceId, teamId, ownerId, archived, ...}. id is the projectId.
 Errors → fix:
 | When | Fix |
 |---|---|
-| You do not have access to this workspace (also returned when the workspaceId does not exist) | Re-check the ID with list_workspaces; the caller must be the owner or an active member. |
-| RESPONSE_TOO_LARGE (result over the 1,000,000-byte MCP response cap; nothing is returned) | Use get_workspace_owner_surface or get_workspace_executive_context, or get_workspace_owner_context_bundle with detailLevel=compact. |
-| JSON-RPC -32003 (OAuth scope or API-key allow-list denied) | Call get_mcp_connection_info to see granted scopes/tools; on ChatGPT a new scope needs removing and reinstalling the connector and ticking the box. |
+| -32602 'You do not have access to this workspace' | You are not a workspace member; try list_projects (also returns projects you reach via team/ownership) or ask the owner. |
+| OAuth -32003 | The workspace is outside the grant; call get_mcp_connection_info. |
 Gotchas:
-- Heaviest read in this group: it loads every issue, cycle, milestone, baseline, requirement, governance thread, execution and ledger entry of every non-archived project.
-- Large workspaces can exceed the 1 MB response cap (error, not truncation). Cached about 5 s per user.
-- executiveContext is merged: stored values win, otherwise derived defaults are shown (mission falls back to workspace.description, operatingModel to 'workspace-first', workspace-owner role derived from the owner membership).
-- Archived projects are excluded.
-Pairs with: `list_workspaces`, `generate_workspace_readiness_report`, `list_workspace_context_gaps`
+- Returns full project records (can be large), unordered, no pagination.
+Pairs with: `list_workspaces`, `get_project`, `list_issues`
+
+### `get_mcp_connection_info` [A] · read · workspace:read · owner `lpm-start` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
+Purpose: Describes the caller's own MCP connection: credential type, granted scopes or tool count, workspace reach, and how to unlock missing tools.
+Use when: FIRST call when an expected tool is missing or a call returns -32003 (access denied).; The user asks what this connector can do or which permissions it has.; Before telling the user a feature is unavailable.    Avoid when: Workspace details: use get_workspace.; Managing your API keys: use list_api_keys.
+Preconditions: Any authenticated connection (OAuth or API key).
+Returns: OAuth: {credential:'oauth', scopes[], workspaceAccess (single|all), workspaceId (only when single), connectorRegisteredAt, accessTokenExpiresAt, availableToolCount, unavailableToolGroups[{scope, title, optional, tools[], howToEnable}]}. API key: {credential:'api_key', allowedToolCount, workspaceId:null, howToChange}.
+Gotchas:
+- howToEnable is Portuguese text for the end user: relay it as is.
+- On ChatGPT, disconnect/connect does NOT re-run OAuth or refresh the tool list: the connector must be removed and reinstalled and the optional box ticked (e.g. 'Gestão de atividades dos projetos' = portfolio:manage).
+- For API keys the allowed tools are set on the key by its owner (update_api_key). Returns no tokens.
+- Owner-agent credentials (lpm_mcp_...) cannot call it: it is not in the roadmap-owner profile tool lists.
+- 'lpm mcp status' only counts tools.
+Pairs with: `list_workspaces`

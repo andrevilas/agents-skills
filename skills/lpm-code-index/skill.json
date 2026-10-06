@@ -110,7 +110,8 @@
   "uses": [
     "search_workspace_code",
     "get_workspace_repository_context",
-    "get_workspace_repository_credential"
+    "get_workspace_repository_credential",
+    "get_mcp_connection_info"
   ],
   "cli": [
     "code-index status",
@@ -142,12 +143,44 @@
   ],
   "references": [
     {
-      "file": "references/code-index-lifecycle.md",
-      "loadWhen": "before any refresh, activate, rollback or purge"
+      "file": "references/flow-check.md",
+      "loadWhen": "playbook check: is the code index current, stale or missing; no_active_index"
     },
     {
-      "file": "references/flow-repository-links.md",
-      "loadWhen": "decision rows 1 (no_active_index), 2, 3, 8"
+      "file": "references/flow-link.md",
+      "loadWhen": "playbook link: link a new GitHub repository to the workspace or a project"
+    },
+    {
+      "file": "references/flow-scan.md",
+      "loadWhen": "playbook scan: scan a linked repository (branch, commit, languages)"
+    },
+    {
+      "file": "references/flow-refresh.md",
+      "loadWhen": "playbook refresh: build and activate a new code index (missing or stale)"
+    },
+    {
+      "file": "references/flow-rollback.md",
+      "loadWhen": "playbook rollback: put the previous code index version back"
+    },
+    {
+      "file": "references/flow-purge.md",
+      "loadWhen": "playbook purge: delete the content of one old index version"
+    },
+    {
+      "file": "references/flow-compare.md",
+      "loadWhen": "playbook compare: list files changed between two commits"
+    },
+    {
+      "file": "references/flow-change-link.md",
+      "loadWhen": "playbook change-link: change branch or project mappings, or unhide a link"
+    },
+    {
+      "file": "references/flow-unlink.md",
+      "loadWhen": "playbook unlink: archive a link, or hide it from agents"
+    },
+    {
+      "file": "references/code-index-lifecycle.md",
+      "loadWhen": "background facts: index states, caps, limits"
     }
   ],
   "behaviorContracts": [

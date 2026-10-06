@@ -2,7 +2,7 @@
   "id": "aish-job-approve",
   "title": "AISH job approve: owner order for one job, gate and funding checks, approve the exact manifest, read-back",
   "skill": "lpm-aish-jobs",
-  "source": "lpm-aish-jobs §4 row 4 → P2 Approve one job",
+  "source": "lpm-aish-jobs §4 row 4 → flow-approve-job",
   "request": "Project prj_trace. AISH job job_77 (\"Add CSV export tests\", activity iss_102) is queued and already funded. Approve its execution.",
   "ownerInstruction": "I am the project owner: approve AISH job job_77 to run, exactly as queued.",
   "fixtures": {

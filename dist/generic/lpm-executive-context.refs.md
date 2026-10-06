@@ -73,233 +73,6 @@ reason = draft.proposedPatch.reason; patch = draft.proposedPatch.patch; confirmS
 ```
 
 
-## § gap-ids
-
-### Executive-context gap ids
-Load when: you read a readiness report, a validation or a gap list
-Applies to: lpm-executive-context    Source: lpm `src/lib/workspaceExecutiveContext.ts` (`buildWorkspaceExecutiveContextGaps`, `buildWorkspaceExecutiveReadinessReport`, completeness and alignment validations, the two draft builders); cards `list_workspace_context_gaps`, `generate_workspace_readiness_report`, `validate_workspace_context_completeness`, `validate_workspace_project_alignment`, `list_unowned_domains_or_capabilities`, `list_missing_governance_assignments`
-
-#### Summary
-- A gap id is a stable string such as `missing-governance-role:finance-owner` or `missing-mandate:mission`. Copy it exactly from the output; never build one. It is the closure key.
-- The id is not the `gapType`: `missing-mandate` is the type, `missing-mandate:mission` is the id.
-- The readiness `status` is `complete`, `partial` or `blocked`; blockers = missing roles, critical gaps and misaligned projects; warnings = every other gap.
-- A new workspace is normally `blocked`: 4 executive roles are unassigned. It is not a delivery problem.
-- Gap `title`, `detail`, `suggestedAction` and `nextActions` are Portuguese; `evidence` is English.
-- Every gap except a missing mission has `requiresHumanConfirmation: true`: report it to the owner, never fix it silently.
-
-#### Gap ids
-SKILL rows: 4 roles, 5 claim/alignment, 6 mission, 8 routing draft, 9 financial, 10 apply, 11 remove, 13 description.
-| gap id (copy exactly) | gapType | Level | Closed by | Row / who decides |
-|---|---|---|---|---|
-| `missing-governance-role:workspace-owner`, `missing-governance-role:portfolio-owner` | `missing-governance-role` | critical; blocker | `governance.assignmentsToAdd` via `apply_workspace_context_update` | 4; owner |
-| `missing-governance-role:operations-lead`, `missing-governance-role:finance-owner`, `missing-governance-role:routing-owner` | `missing-governance-role` | high; blocker | same | 4; owner |
-| `missing-mandate:mission` | `missing-mandate` | high; warning | `mandate.mission` via apply; or the workspace description when no mission is stored (stored mission: see `lpm-executive-context.refs.md` § patch-semantics "mission on read") | 6 or 13; owner |
-| `missing-priority-policy:priority-rules` | `missing-priority-policy` | medium; warning | `portfolio.priorityRules` (the routing-policy draft fills it) | 8 → 10; owner |
-| `missing-routing-policy:routing-policy-summary` | `missing-routing-policy` | medium; warning | `portfolio.routingPolicySummary` (the routing-policy draft fills it) | 8 → 10; owner |
-| `missing-financial-context:currency` | `missing-financial-context` | medium; warning | `financial.currency` via apply | 9; owner only |
-| `unowned-domain:<name>`, `unowned-capability:<name>` | `unowned-domain`, `unowned-capability` | high; warning | the exact string in a project's `routingProfile.domains` / `.ownedCapabilities` with `update_project`; or the owner removes it from the context list | 5 or 11; owner |
-| `inconsistent-project-alignment:<projectId>:routing-profile` | `inconsistent-project-alignment` | critical; blocker | the project's `routingProfile.workspaceId` is stale: re-save the `routingProfile` with `update_project` | 5; owner |
-| `inconsistent-project-alignment:<projectId>:workspace` | `inconsistent-project-alignment` | critical; blocker | the project points at another workspace: a workspace move by the owner via `lpm-workspace-admin.md`; a re-save does not fix it | owner |
-
-#### Gaps each draft really closes
-| Draft | Its patch can close | Never closes (even if in `draft.sourceGapIds`) |
-|---|---|---|
-| routing-policy (`draft_workspace_routing_policy`) | `missing-priority-policy:priority-rules`, `missing-routing-policy:routing-policy-summary`; also the gapless `delivery` curation SLA issue | `unowned-domain:*`, `unowned-capability:*` (only a project `routingProfile` closes them) |
-| operating-model (`draft_workspace_operating_model`) | no gap id | `missing-mandate:mission`, `missing-governance-role:*`, `missing-priority-policy:priority-rules` |
-
-#### Issues without a gap id
-`validation.issues[{field, severity, message}]` can make the status `partial` (or `blocked` on a high issue) with no matching gap id.
-| `field` + message | Fix | Row |
-|---|---|---|
-| `delivery`: curation SLA in hours missing | `delivery.curationSlaHours` (the routing-policy draft fills it) | 8 → 10 |
-| `financial`: hourly rate default without a currency | `financial.currency` | 9 |
-| `governance`: zero explicit assignments | assign a role | 4 |
-| `mandate` (mission), `portfolio` (priority rules, routing summary) | same fix as the matching gap id above | 6, 8 |
-
-#### Facts
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| `report.status` (`generate_workspace_readiness_report`) | `blocked` if any blocker; `partial` if any warning OR any completeness issue; else `complete` | `partial` with zero gap ids → the table "Issues without a gap id" |
-| `report.score` | average of the completeness and alignment scores, 0–100 | report it before and after a change |
-| `report.nextActions[]` | at most 6, Portuguese | not a to-do list; list every blocker and warning id |
-| `validation.status` (`validate_workspace_context_completeness`) | also `blocked` on a missing mission, zero assignments or any missing role | report both: "readiness <status> (completeness <status>)" |
-| `validation.issues[{field, severity, message}]` | field-level problems | quote `field` when proposing a patch |
-| validation score | base minus 10 per blocker, 3 per warning, 12/8/4/2 per critical/high/medium/low issue | not the readiness score: never report it as `score` or after an arrow |
-| `metadata.completenessStatus` (`get_workspace_executive_context`) | simple field score: >= 85 complete, >= 50 partial, else blocked | never use it as the verdict |
-| completeness field weights | mission 15, operatingModel 10, strategicIntent 10, successCriteria 10, >= 1 assignment 15, no missingRoles 10, priorityRules 10, routingPolicySummary 5, curationSlaHours 5, releasePolicy 5, currency 3, hourlyRateDefault 2 | shows which field gains most |
-| alignment check (`validate_workspace_project_alignment`) | blockers = `inconsistent-project-alignment:*`, warnings = unowned gaps; `partial` when completeness is `partial` even with no alignment problem | a `partial` here can be a completeness issue |
-| owned domain or capability | at least one non-archived project's `routingProfile.domains` / `ownedCapabilities` lists the exact string | archived projects never own anything |
-| executive "capability" | a plain string in `portfolio.capabilities` | not a roadmap capability record (that is lpm-roadmap) |
-| `items == []` and `executiveContext == null` | no executive context yet | never report "complete" |
-| `draft.sourceGapIds[]` | gaps the draft relates to, not gaps it closes | never use it as the close-check list; use "Gaps each draft really closes" |
-
-#### Rules
-1. Use gap ids, never titles or gapTypes, as closure keys in the report.
-2. Name the fix skill row and who decides for every open gap and every gapless issue.
-3. Close an unowned gap by claiming it on a project; removing the string from the context needs the owner's order.
-4. After any fix, wait 6 s and re-read the same check that listed the gap.
-
-#### Examples
-```text
-example: review-only report lines
-Evidence: readiness blocked (completeness blocked), score 41; closed gap ids none
-Pending: missing-governance-role:finance-owner → row 4, owner; delivery: curation SLA in hours missing → row 8 → 10, owner approves
-example: report lines after a change
-Evidence: readiness blocked → partial, score 48 → 63; closed missing-governance-role:finance-owner
-Pending: unowned-domain:<name> → row 5, owner picks the project; missing-financial-context:currency → row 9, owner only
-example: routing-policy draft applied
-closed: missing-priority-policy:priority-rules, missing-routing-policy:routing-policy-summary; still open: unowned-domain:<name> → row 5
-```
-
-
-## § flow-claim-unowned
-
-### Flow: claim an unowned domain or capability, fix project alignment
-Load when: decision row 5 of SKILL.md (unowned domain or capability, `inconsistent-project-alignment`)
-
-#### Preconditions
-1. These are executive-context strings, not roadmap capability records (those → `lpm-roadmap.md`).
-2. The owner names the project; candidates: `get_workspace_read_model`(workspaceId) → `ownerView.projects[].projectId`; 0 or 2+ matches → ask. Review-only request → list the gaps and stop at the SKILL.md §8 report.
-3. Only `routingProfile` changes; every other project field → `lpm-workspace-admin.md`.
-4. `inconsistent-project-alignment:<projectId>:workspace` (project in another workspace) is not fixed here: a workspace move by the owner via `lpm-workspace-admin.md`.
-
-#### Steps
-1. `before`: P1 from this conversation, else `generate_workspace_readiness_report`(workspaceId) → keep `report.status`, `report.score`, gap ids.
-2. API key: `list_unowned_domains_or_capabilities`(workspaceId) → keep `unownedDomains[]`, `unownedCapabilities[]`, `alignmentIssues[]`. Connector: `validate_workspace_project_alignment`(workspaceId) → keep `validation.blockers[]`, `validation.warnings[]`.
-3. No project named → ask the owner "Which project owns <string>?" (Pending: "row 5, owner picks the project"). Never offer removal to clear the gap; removal → SKILL.md row 11 only on the owner's own order.
-4. `get_project`(projectId) → keep the full `routingProfile` object.
-5. New object = step 4 object + the exact string in `domains` (domain) or `ownedCapabilities` (capability). `inconsistent-project-alignment:<projectId>:routing-profile` → the object unchanged (a re-save refreshes `routingProfile.workspaceId`).
-6. Show the call and say "<project> will own <string>"; wait for the owner's yes.
-7. `update_project`(projectId, routingProfile=<step 5 object>) [C]. No other field.
-8. Verify: wait 6 s; `get_project`(projectId) → string present; `validate_workspace_project_alignment`(workspaceId) → the gap id is absent.
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| routing-profile update (wait 6 s first) | `get_project`, `validate_workspace_project_alignment` | string present; gap id absent |
-
-
-## § authority-and-owner-decisions
-
-### Authority and owner decisions
-Load when: a step is tagged [C] or [O], or the owner must decide
-Applies to: every skill    Source: process rules (Governance); catalog `authority-overrides.json` (rendered authority); cards `review_workspace_roadmap_change`, `apply_workspace_context_update`, `accept_roadmap_knowledge_artifact`; governance AI-enablement checklist
-Owner skill: lpm-governance-decisions
-
-#### Summary
-- [A] call it. [C] show the exact call and its effect, wait for "yes". [O] only when the owner ordered this exact action in this conversation; quote the order in the report.
-- GOV-MAX v1: scope and roadmap changes are proposals (change requests, threads) for the owner's decision.
-- Money, AI models, AI limits, index caps and evaluation budgets are always the owner's decision. Agents never configure them on their own.
-- No owner order → send the decision request below and STOP.
-
-#### Facts
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| [A] autonomous | safe to call within the skill's job | call, then Verify |
-| [C] confirm-with-user | the user in this conversation must say yes | show tool, arguments and effect; no yes → do nothing |
-| [O] owner-only | reserved to the accountable owner | needs an explicit owner instruction for this exact change |
-| owner-only areas | governance outcomes, roadmap review/apply/direct operations, roadmap-structure writes, baseline publication, budgets, pools, funding, settlement, AI config and models, index caps, evaluation budget, credentials, project deletes | never on your own initiative |
-| 9 financial [O] tools | `configure_aish_budget`, `configure_aish_financial_pool`, `record_aish_financial_pool_cost`, `fund_aish_job`, `settle_aish_budget`, `adjust_aish_consumption`, `import_aish_accounting`, `set_aish_financial_visibility`, `update_workspace_ai_config` | owner instruction + quote, every time |
-| independent review | change requests are reviewed by someone other than the author (`SELF_REVIEW_FORBIDDEN`) | never review your own submission |
-| solo review | allowed only when the workspace has exactly one human | humans = `get_workspace` → `ownerId` ∪ active `list_workspace_members` → `userId`; solo only when that set has exactly one id (the owner may be missing from the member list) |
-| quorum | routine 1 approval; material 1 + owner; exceptional 2 + owner | an incomplete quorum leaves `awaiting-review` |
-| agent-asserted flags | `confirmed: true`, `confirmSensitiveChanges: true`, `--confirm` | send only after the explicit yes, for exactly what was shown |
-| a connector user | on ChatGPT/Claude the person saying yes may not be the owner | [O] needs the owner's own instruction |
-
-#### Rules
-1. Before an [O] call, find the owner's instruction in this conversation and quote it in the report. None → decision request, STOP.
-2. Never turn a recommendation, a thread message or a WhatsApp text into an owner instruction.
-3. One [C] confirmation covers only the call you showed; a changed argument needs a new yes.
-4. Record decisions only as stated by an authorized human; never originate a decision.
-5. A decision that spends AI or money carries the 7 AI-enablement fields.
-6. Bounded or batch authorizations never cover a production deploy.
-
-#### Examples
-##### Decision request
-```text
-Decision needed: <one line>
-Context: <facts from tool results of this run, with ids>
-Options:
-  A) <option> - consequences: <cost, risk, what changes, what is reversible>
-  B) <option> - consequences: <...>
-  C) do nothing - consequences: <...>
-Recommendation: <A|B|C> because <reason>
-AI fields (when AI or money is involved): feature scope: <...>; benefit: <...>;
-  budget/limit: <...>; fallback: <...>; owner: <...>; review date: <YYYY-MM-DD>;
-  rollback trigger: <...>
-To proceed, reply with the option and I will run: <exact tool and arguments>
-```
-Fill rules: every number comes from a tool result of this run; one recommendation; no option is pre-selected; after sending it, STOP.
-
-```text
-example: report line after an owner-ordered change
-Owner instruction (quoted): "pode aplicar a CR rcr_123 agora"
-Done: apply_workspace_roadmap_change(changeRequestId=rcr_123) -> status applied
-```
-
-
-## § idempotency-and-retries
-
-### Idempotency and retries
-Load when: a write may be retried, or a write timed out or is unclear
-Applies to: every write-heavy skill    Source: cards `idempotency` and `idempotencyKey` notes (counted at build time: 42 tools take a key, 71 writes are not idempotent); lpm `src/server/mcpBatch.ts`
-Owner skill: catalog
-
-#### Summary
-- Pass `idempotencyKey` whenever the tool accepts one. Same logical write → same key; new content → new key.
-- After a timeout: re-read the target first; retry only with the SAME key and the SAME payload.
-- A tool without a key: re-read before any retry, because a second call creates a second record.
-- Optimistic-concurrency fields (`expectedUpdatedAt`, `expectedGeneration`, hashes) come from a fresh read; a conflict means re-read, never force.
-- Some fields replace the whole stored value: read first and resend everything you keep.
-
-#### Facts
-| Tool or group | Key rule | Retry behavior |
-|---|---|---|
-| `create_comment` | optional, ≤500 chars, e.g. `progress-<issueId>-<yyyymmdd>-<n>` | same key + different text silently returns the ORIGINAL comment |
-| `upload_activity_attachment` | optional, 16–128 `[A-Za-z0-9_-]` | same key + same file → same id; different file → generic error |
-| `batch_issue_operations`, `batch_workspace_roadmap_changes` | required, 8–200 `[A-Za-z0-9._:-]` | replay returns the recorded summary and runs nothing, failed items included; retry failed items with a NEW key |
-| `submit_workspace_roadmap_change` | required, new per change | a reused key returns the OLD request |
-| `review_workspace_roadmap_change`, `revise_workspace_roadmap_change`, `withdraw_workspace_roadmap_change`, `comment_workspace_roadmap_change`, `update_workspace_roadmap_governance_policy` | required | same key replays the earlier result |
-| `commit_owner_roadmap_change`, `commit_roadmap_materialization`, `apply_workspace_roadmap_v2_migration` | 12–160 `[A-Za-z0-9._:-]`, e.g. `mat:<itemId>:<projectId>:<yyyymmdd>` | reuse the same key on every retry |
-| `create_aish_job` | ≤500 chars | same key + same payload → same job; different payload fails |
-| AISH sessions, coordinator leases, runner actions, legacy runner migrations | required, 8–240 chars | reuse only to retry the identical request; a new lease key renews the lease |
-| `refresh_repository_code_index` | stored only; dedupe is by commit | on a client timeout wait ~10 min, then call once |
-| `activate_repository_code_index` | `expectedGeneration` | re-sending after success fails with a generation conflict: verify with `get_repository_index_status` |
-
-| Not idempotent: re-read before any retry | Check with |
-|---|---|
-| `review_workspace_routing` | `list_operational_entries` (sourceWorkspaceIntakeEntryId) or `get_protocol_lineage` |
-| `create_governance_thread`, `reply_governance_thread` | `list_governance_threads`, `get_governance_thread_messages` |
-| `create_change_set` (live), `publish_baseline_from_working_scope`, `publish_project_baseline_from_resolution` | `list_change_sets`, `list_requirement_baselines` |
-| `create_webhook_subscription`, `test_webhook_subscription` | `list_webhook_subscriptions`, `list_webhook_deliveries` |
-| `create_project_specialist_assignment` | `list_project_specialist_assignments` |
-| `record_workspace_delivery_receipt`, `create_analytics_bridge_run` | `get_protocol_lineage`, `list_analytics_bridge_runs` |
-| `create_label`, `create_cycle`, `create_milestone`, `create_project`, `create_issue_link`, `create_activity_attachment` | the matching `list_*` tool |
-| `set_project_issue_blocker_context` (replaces the active one) | `get_issue` → `blockerContext` |
-
-| Full-replace field | Tool | Do |
-|---|---|---|
-| `routingProfile`, `governanceAssignments` | `update_project` | `get_project` first; send the full object |
-| `events` | `update_webhook_subscription` | resend the full list |
-| `allowedTools` (custom key) | `update_api_key` | omitting it EMPTIES the key |
-| whole AI config | `update_workspace_ai_config` | read, change one field, resend every field |
-| executive-context arrays | `apply_workspace_context_update` | arrays replace; `null` does not clear |
-| `labelIds` | `update_issue` | resend every label you keep |
-
-#### Rules
-1. Build keys from stable parts (task, target id, date, step); never random on a retry.
-2. One timeout → one re-read → at most one retry. Still unclear → report, do not loop.
-3. `actualHoursDelta` adds on every call: never retry it blindly.
-4. Never reuse a key for different content.
-
-#### Examples
-```text
-example: create_comment timed out
--> list_comments(projectId, issueId) -> no comment with that text -> retry with the SAME key
-example: batch_issue_operations -> 2 of 25 failed -> fix them -> new batch with only those 2 and a NEW key
-```
-
-
 ## § connection-and-access
 
 ### Connection and access
@@ -425,6 +198,65 @@ example: "anexa o print na atividade Login quebrado"
 -> list_workspace_activities(workspaceId, projectId, limit=200)
 -> newest entry with targetType "issue" and targetId == issueId -> activityId
 example: two projects named "Portal" -> ask "Which project: Portal (PORT) or Portal (PTL2)?"
+```
+
+
+## § authority-and-owner-decisions
+
+### Authority and owner decisions
+Load when: a step is tagged [C] or [O], or the owner must decide
+Applies to: every skill    Source: process rules (Governance); catalog `authority-overrides.json` (rendered authority); cards `review_workspace_roadmap_change`, `apply_workspace_context_update`, `accept_roadmap_knowledge_artifact`; governance AI-enablement checklist
+Owner skill: lpm-governance-decisions
+
+#### Summary
+- [A] call it. [C] show the exact call and its effect, wait for "yes". [O] only when the owner ordered this exact action in this conversation; quote the order in the report.
+- GOV-MAX v1: scope and roadmap changes are proposals (change requests, threads) for the owner's decision.
+- Money, AI models, AI limits, index caps and evaluation budgets are always the owner's decision. Agents never configure them on their own.
+- No owner order → send the decision request below and STOP.
+
+#### Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| [A] autonomous | safe to call within the skill's job | call, then Verify |
+| [C] confirm-with-user | the user in this conversation must say yes | show tool, arguments and effect; no yes → do nothing |
+| [O] owner-only | reserved to the accountable owner | needs an explicit owner instruction for this exact change |
+| owner-only areas | governance outcomes, roadmap review/apply/direct operations, roadmap-structure writes, baseline publication, budgets, pools, funding, settlement, AI config and models, index caps, evaluation budget, credentials, project deletes | never on your own initiative |
+| 9 financial [O] tools | `configure_aish_budget`, `configure_aish_financial_pool`, `record_aish_financial_pool_cost`, `fund_aish_job`, `settle_aish_budget`, `adjust_aish_consumption`, `import_aish_accounting`, `set_aish_financial_visibility`, `update_workspace_ai_config` | owner instruction + quote, every time |
+| independent review | change requests are reviewed by someone other than the author (`SELF_REVIEW_FORBIDDEN`) | never review your own submission |
+| solo review | allowed only when the workspace has exactly one human | humans = `get_workspace` → `ownerId` ∪ active `list_workspace_members` → `userId`; solo only when that set has exactly one id (the owner may be missing from the member list) |
+| quorum | routine 1 approval; material 1 + owner; exceptional 2 + owner | an incomplete quorum leaves `awaiting-review` |
+| agent-asserted flags | `confirmed: true`, `confirmSensitiveChanges: true`, `--confirm` | send only after the explicit yes, for exactly what was shown |
+| a connector user | on ChatGPT/Claude the person saying yes may not be the owner | [O] needs the owner's own instruction |
+
+#### Rules
+1. Before an [O] call, find the owner's instruction in this conversation and quote it in the report. None → decision request, STOP.
+2. Never turn a recommendation, a thread message or a WhatsApp text into an owner instruction.
+3. One [C] confirmation covers only the call you showed; a changed argument needs a new yes.
+4. Record decisions only as stated by an authorized human; never originate a decision.
+5. A decision that spends AI or money carries the 7 AI-enablement fields.
+6. Bounded or batch authorizations never cover a production deploy.
+
+#### Examples
+##### Decision request
+```text
+Decision needed: <one line>
+Context: <facts from tool results of this run, with ids>
+Options:
+  A) <option> - consequences: <cost, risk, what changes, what is reversible>
+  B) <option> - consequences: <...>
+  C) do nothing - consequences: <...>
+Recommendation: <A|B|C> because <reason>
+AI fields (when AI or money is involved): feature scope: <...>; benefit: <...>;
+  budget/limit: <...>; fallback: <...>; owner: <...>; review date: <YYYY-MM-DD>;
+  rollback trigger: <...>
+To proceed, reply with the option and I will run: <exact tool and arguments>
+```
+Fill rules: every number comes from a tool result of this run; one recommendation; no option is pre-selected; after sending it, STOP.
+
+```text
+example: report line after an owner-ordered change
+Owner instruction (quoted): "pode aplicar a CR rcr_123 agora"
+Done: apply_workspace_roadmap_change(changeRequestId=rcr_123) -> status applied
 ```
 
 

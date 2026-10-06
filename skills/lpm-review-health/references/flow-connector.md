@@ -1,0 +1,58 @@
+# Playbook: connector
+Use when: review of one project on a ChatGPT/Claude connector, or when playbook project hit -32003
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | "none" (step 4) |
+| projectName | the name or key the user gave | "none" |
+| workspaceId | the user or this session | "none" (step 3) |
+| workspaceName | the workspace name the user gave | "none" |
+| why | "connector", or the -32003 error text when playbook project switched here | "connector" |
+| fix | a change asked in the same message (cancel, close, assign), unless that question was already answered | "none" |
+| fixSkill | dates, owners, cycles: lpm-plan-work; blockers: lpm-unblock-work; requirements: lpm-requirements-scope; AISH jobs: lpm-aish-delivery; decisions: lpm-governance-decisions | "none" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "Review incomplete: <tool> failed: <error text>."
+1. IF <input:fix> is not "none" → ASK: "This review changes nothing; <input:fix> is done with skill <input:fixSkill>. Finish the report first? (yes/no)" — continue only if the user says yes; otherwise STOP. Say: "Use skill <input:fixSkill> for that. Nothing was changed."
+2. SAVE: projectId = <input:projectId>; workspaceId = <input:workspaceId>; fallback = "not read"; clause = "; LPM may have re-attached orphan requirements (server side effect)" when <input:why> is not "connector", else ""
+   IF <saved:projectId> is not "none" → go to step 5.
+   IF <saved:workspaceId> is not "none" → go to step 4.
+3. CALL {{tool:list_workspaces}} {} [A]
+   SAVE: workspaceId = id of the only item, else of the one item whose name equals <input:workspaceName>, ignoring case (empty if none)
+   IF <saved:workspaceId> is empty → STOP. Say: "Which workspace: <names of result>?"
+4. CALL {{tool:list_projects}} {"workspaceId":"<saved:workspaceId>"} [A]
+   SAVE: projectId = id of the one item whose name or key equals <input:projectName>, ignoring case (empty if 0 or 2+)
+   IF <saved:projectId> is empty → STOP. Say: "Which project: <names and ids of result>?"
+5. CALL {{tool:get_project_owner_surface}} {"projectId":"<saved:projectId>"} [A]
+   IF the call returns an error containing "owner surface" → go to step 6.
+   IF the call returns an error containing "RESPONSE_TOO_LARGE" → SAVE: status = "not read"; source = "integrity derivation not possible on a connector"; decisions = "not read"; go to step 7.
+   SAVE: status = result.ownerView.delivery.healthStatus; source = "get_project_owner_surface ownerView.delivery.healthStatus"; decisions = result.ownerView.decisions.pendingCount; roles = result.ownerView.governance.missingRoleCount; fallback = "<id> <severity> <title>" per item of result.ownerView.risks; projectName = result.project.name; workspaceId = result.project.workspaceId; go to step 7.
+6. CALL {{tool:get_project_read_model}} {"projectId":"<saved:projectId>"} [A]
+   Read only ownerView.delivery, ownerView.decisions and ownerView.risks; never quote issues, ledger, labor or finance data.
+   IF the call returns an error containing "RESPONSE_TOO_LARGE" → SAVE: status = "not read"; source = "integrity derivation not possible on a connector"; decisions = "not read"; go to step 7.
+   SAVE: status = result.ownerView.delivery.healthStatus, or "not read" when ownerView is absent; source = "get_project_read_model ownerView.delivery.healthStatus"; decisions = result.ownerView.decisions.pendingCount; roles = "not read"; fallback = "<id> <severity> <title>" per item of result.ownerView.risks; projectName = result.project.name; workspaceId = result.project.workspaceId
+7. CALL {{tool:list_project_resolution_risks}} {"projectId":"<saved:projectId>"} [A]
+   IF the call returns an error → SAVE: risks = <saved:fallback> (entityCount not read); go to step 8.
+   SAVE: risks = "<id> <severity> entityCount <entityCount>" per item of result.risks, or "none firing"
+8. SAVE: pending = a line per row below that fired, in order, + " — <who decides>" (the row's, else delivery lead or project owner), then "<input:fix> → <input:fixSkill>: it confirms each change" if fix is not "none", then "integrity breakdown and risk drill-down need an LPM API key — you" (+ the howToEnable text in <input:why>, if any); next = skill and action of the fix line, else of the first line
+   ```text
+   delivery:blocked → lpm-unblock-work: start from the upstream blocker
+   delivery:overdue, delivery:ownership-gaps, delivery:unestimated → lpm-plan-work
+   any scope:* risk → lpm-requirements-scope — the owner
+   governance:decision-needed, decisions > 0 → lpm-governance-decisions — the owner
+   roles > 0 → lpm-workspace-admin — the owner
+   other risk id → lpm-start (by the risk title) — the owner
+   ```
+   requiresHumanReview true → the owner decides; never approved; send no decision request.
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId> / <saved:projectName> (<saved:projectId>) / no cycle filter
+Done: read-only review; status <saved:status> (source: <saved:source>)<saved:clause> | nothing reviewed
+Evidence: <decisions <saved:decisions>; risks <saved:risks>; integrity breakdown not available on a connector | not read>
+Pending: <the lines of <saved:pending> joined by " | " | none>
+Next: <the ASK or STOP text that ended the run | <saved:next>>
+```
+status: healthy | watch | critical | not read, copied exactly from step 5 or 6 (integrity is already in it). Never derive integrity signals yourself; a finding you infer is "derived by agent" and never changes the status. No finance. Never offer to cancel, delete or clean up. Never claim a number or id that a step above did not read.

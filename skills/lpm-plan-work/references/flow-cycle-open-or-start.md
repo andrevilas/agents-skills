@@ -1,0 +1,55 @@
+# Playbook: cycle-open-or-start
+Use when: open or start a cycle (sprint)
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| action | "open" to create a cycle, "start" to activate one | STOP. Say: "Open a new cycle, or start an existing one?" |
+| cycle | for "start": the cycle name or id the user gave | "none" |
+| name | for "open": the name the user gave ("Sprint 4 2026") | "none" (then "<startDate> to <endDate>") |
+| startDate | for "open": the start date the user gave, as YYYY-MM-DD; never invent it | "none" |
+| endDate | for "open": the end date the user gave, as YYYY-MM-DD; never invent it | "none" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was changed."
+1. CALL {{tool:list_cycles}} {"projectId":"<input:projectId>"} [A]
+   SAVE: cycles = every item's id, name, status, startDate and endDate (unsorted: sort by startDate yourself); active = the items with status "active"
+   IF <input:action> == "start" → go to step 4.
+2. IF <input:startDate> or <input:endDate> is "none" → STOP. Say: "Which start and end dates (YYYY-MM-DD)?"
+   IF <input:endDate> is not after <input:startDate> → STOP. Say: "The end date must be after the start date."
+   SAVE: overlap = the items of <saved:cycles> with status "upcoming" or "active" whose dates overlap <input:startDate> to <input:endDate>; cycleName = <input:name>, else "<input:startDate> to <input:endDate>"
+   IF <saved:overlap> is not empty → ASK: "Cycle <each overlap as "<name> (<id>)"> already covers these dates. Create <saved:cycleName> anyway? (yes/no)" — continue only if the user says yes; otherwise STOP. Say: "Nothing was created."
+3. CALL {{tool:create_cycle}} {"projectId":"<input:projectId>","name":"<saved:cycleName>","startDate":"<input:startDate>","endDate":"<input:endDate>","status":"upcoming"} [A] (create once: it has no retry key)
+   IF the call returns an error → STOP. Say: "create_cycle failed: <error text>. Run me again: step 1 re-lists the cycles first."
+   SAVE: cycleId = the id after "ID: " in result
+   VERIFY: CALL {{tool:get_cycle}} {"projectId":"<input:projectId>","cycleId":"<saved:cycleId>"} [A]
+   IF the call returns an error or result.name, result.startDate, result.endDate or result.status ("upcoming") differ from what you sent → STOP. Say: "Cycle <saved:cycleId> does not read back as sent: <error text or its values>."
+   SAVE: state = "<saved:cycleName> (<saved:cycleId>) <result.startDate> to <result.endDate>, upcoming"; go to Answer.
+4. SAVE: cycleId, cycleName, cycleState = the id, name and status of the item of <saved:cycles> whose id or name equals <input:cycle>, ignoring case
+   IF no item or 2 or more items match → STOP. Say: "Which cycle? <each cycle as "<name> (<id>, <status>)">"
+   IF <saved:cycleState> == "active" → STOP. Say: "<saved:cycleName> is already active."
+   IF <saved:cycleState> == "completed" → STOP. Say: "<saved:cycleName> is completed. Open a new cycle instead."
+   IF <saved:active> is not empty → ASK: "<each active as "<name> (<id>)"> is still active. Start <saved:cycleName> too (two active cycles), or close the old one first with playbook cycle-close? (yes = start both)" — continue only if the user says yes; otherwise STOP.
+5. CALL {{tool:list_issues}} {"projectId":"<input:projectId>","cycleId":"<saved:cycleId>","limitCount":100} [A]
+   SAVE: inCycle = the id of every item; partial = "yes" if result.hasMore == true, else "no"
+6. CALL {{tool:get_project_dependency_summary}} {"projectId":"<input:projectId>"} [A]
+   IF the call returns an error → SAVE: outside = "dependency check failed: <error text>"; go to step 7.
+   SAVE: outside = for each item of result.criticalBlockers whose issueId is in <saved:inCycle>: each of its blockers whose issueId is not in <saved:inCycle>, as "<issueId> blocked by <blocker issueId> (<blocker status>)" (empty if none)
+   IF <saved:outside> is empty → go to step 8.
+7. ASK: "<saved:outside>. These blockers are outside <saved:cycleName>. Start it anyway? (yes/no)" — continue only if the user says yes; otherwise STOP. Say: "Nothing was changed."
+8. CALL {{tool:update_cycle}} {"projectId":"<input:projectId>","cycleId":"<saved:cycleId>","status":"active"} [A]
+   VERIFY: CALL {{tool:get_cycle}} {"projectId":"<input:projectId>","cycleId":"<saved:cycleId>"} [A]
+   IF the call returns an error or result.status != "active" → STOP. Say: "<saved:cycleName> is <result.status>, not active."
+   SAVE: state = "<saved:cycleName> (<saved:cycleId>) upcoming → active"
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: project <input:projectId>, cycle <saved:cycleName>
+Done: <cycle <saved:state> | nothing changed>
+Evidence: <get_cycle read the cycle back | none>; outside blockers: <<saved:outside> | none | not checked>
+Pending: <none | only the first 100 activities of the cycle were checked (when <saved:partial> is "yes")>
+Next: <the ASK or STOP text that ended the run | add activities with playbook edit-activities (field cycleId) | none>
+```
+Cycle states are upcoming | active | completed ("planned" does not exist), from your last get_cycle. Never claim a cycle state that a get_cycle above did not read.

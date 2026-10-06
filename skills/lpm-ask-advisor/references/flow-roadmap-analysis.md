@@ -1,0 +1,36 @@
+# Playbook: roadmap-analysis
+Use when: analyze a whole roadmap, or which roadmap items have no code yet
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user, or the session (lpm-start) | STOP. Say: "Which LPM workspace? (id or name)" |
+| roadmapName | the roadmap title the user named | "none" (all roadmaps) |
+| question | the user's question | "analyze the roadmap" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was analyzed or changed."
+1. IF <input:roadmapName> == "none" → go to step 4.
+2. CALL {{tool:list_workspace_roadmaps}} {"workspaceId":"<input:workspaceId>"} [A]
+   SAVE: matches = the roadmaps whose title contains <input:roadmapName> (ignore case)
+   IF <saved:matches> is empty → STOP. Say: "No roadmap is called "<input:roadmapName>". Which roadmap?"
+   IF <saved:matches> has 2 or more items → STOP. Say: "Which roadmap: <title A> (<id A>) or <title B> (<id B>)?"
+   SAVE: roadmapId = id of the only item in <saved:matches>
+3. CALL {{tool:analyze_workspace_roadmap}} {"workspaceId":"<input:workspaceId>","roadmapId":"<saved:roadmapId>"} [A]
+   SAVE: r = result; scope = <input:workspaceId>/<saved:roadmapId>; go to step 5.
+4. CALL {{tool:analyze_workspace_roadmap}} {"workspaceId":"<input:workspaceId>"} [A]
+   SAVE: r = result; scope = <input:workspaceId> (all roadmaps)
+5. SAVE: facts, inferences, risks, repositoryWarnings, recommendedActions = those fields of <saved:r>; noCode = "<title> (<itemId>)" of each entry of technicalCoverage.repositoryImplementationGaps of <saved:r> with scope "roadmap_item", or "none"; level = technicalCoverage.level of <saved:r> (none | direct_repository | workspace_umbrella | direct_and_workspace); stale = technicalCoverage.staleScanCount of <saved:r>
+   This analysis is rule-based: it spends no AI budget and calls no model (aiMode is always "deterministic-fallback"). Never call explain_roadmap_item_technical_impact or an answer_* tool once per item here.
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:scope> — "<input:question>"
+Done: Answer: <1-3 sentences from <saved:facts> and <saved:noCode>>; calls: <list_workspace_roadmaps, analyze_workspace_roadmap | analyze_workspace_roadmap>; Advisor calls: 0
+Evidence: Facts: <each item of <saved:facts> — analyze_workspace_roadmap | none>; items without code evidence: <saved:noCode>. Inferences: <each item of <saved:inferences> — certainty medium — from analyze_workspace_roadmap | none>
+Pending: Limitations: technical coverage <saved:level>; <each item of <saved:repositoryWarnings> | none>; <saved:stale> stale scans (older than 24 h); "no code evidence" is not "not implemented"; repository code is not proof of production. Risks: <each item of <saved:risks> | none>. codeEvidence.status=no Advisor call; aiMode=no Advisor call; correlationId=none
+Next: <the STOP text that ended the run | the first item of <saved:recommendedActions> | technical impact of one item: playbook item-impact | none>
+```
+codeEvidence.status values: found | no_relevant_matches | no_matches | no_active_index | unavailable | not_requested come only from an answer_* call; none runs here, so write "no Advisor call" for codeEvidence.status and aiMode.
+Keep facts and inferences apart. Never claim a fact that the analysis did not return.

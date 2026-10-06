@@ -1,0 +1,47 @@
+# Playbook: add-requirement
+Use when: add a requirement
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| title | the user (short statement) | STOP. Say: "What is the requirement's title?" |
+| description | the user's testable statement, in their words; never invent one | STOP. Say: "Describe the requirement in one testable sentence." |
+| type | functional, non-functional, interface, business or technical, from the user | STOP. Say: "Type: functional, non-functional, interface, business or technical?" |
+| group | the group name the user gave | "none" |
+| activities | the activity titles or ids to link | "none" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was created."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → STOP. Say: "Creating requirements needs an LPM API key (profile requirements, full or custom)."
+2. CALL {{tool:get_project_scope_resolution_context}} {"projectId":"<input:projectId>"} [A]
+   SAVE: baselineId = result.currentBaseline.id (empty if null); version = result.currentBaseline.version
+   IF <saved:baselineId> is empty → STOP. Say: "The project has no current baseline; the owner must publish the first one (playbook publish-baseline). Nothing was created."
+3. CALL {{tool:list_requirements}} {"projectId":"<input:projectId>","baselineId":"<saved:baselineId>"} [A]
+   IF an item has title == <input:title> (ignoring case) → ASK: "<that item's id> '<input:title>' already exists. Add another requirement with the same title? (yes/no)" — continue only if the user says yes; otherwise STOP. Say: "Use playbook edit-requirement to change <that item's id>."
+4. CALL {{tool:list_requirement_groups}} {"projectId":"<input:projectId>"} [A]
+   SAVE: groupId = id of the only item whose name == <input:group> (ignoring case), "" when <input:group> == "none"
+   IF <input:group> != "none" and <saved:groupId> is empty → STOP. Say: "No group named '<input:group>' (groups: <each name>). Create it first (playbook groups-and-orphans) or add the requirement without a group?"
+5. CALL {{tool:list_issues}} {"projectId":"<input:projectId>"} [A] (no limitCount: it returns every issue)
+   SAVE: issueIds = the id of the only issue whose id or title == each name in <input:activities> (none when "none"); issueId = the first id of <saved:issueIds>, else ""
+   IF a name matches no issue or 2+ issues → STOP. Say: "Which activity is '<that name>'? <each matching id and title>"
+6. ASK: "Create requirement '<input:title>' (<input:type>, pending) in baseline <saved:version> (<saved:baselineId>), group <saved:groupId>, linked to <saved:issueIds>? Intent: authoring. This changes the working scope; it is approved only when a baseline is published. (yes/no)" — continue only if the user says yes; otherwise STOP.
+7. CALL {{tool:create_requirement}} {"projectId":"<input:projectId>","baselineId":"<saved:baselineId>","title":"<input:title>","description":"<input:description>","type":"<input:type>","status":"pending","groupId":"<saved:groupId>","issueId":"<saved:issueId>","linkedIssueIds":["<saved:issueIds>"]} [C] (the array holds every id of <saved:issueIds>, [] if none; no idempotencyKey)
+   IF the call returns an error → STOP. Say: "Not confirmed: <error text>. It is not idempotent: do not retry; rerun this playbook (step 3 shows whether it was created)."
+   SAVE: requirementId = the id after "ID: " in "Requirement created with ID: <id>"
+   VERIFY: CALL {{tool:list_requirements}} {"projectId":"<input:projectId>","baselineId":"<saved:baselineId>"} [A]
+   IF the call returns an error or item <saved:requirementId> is missing or its title, type, status, groupId or linkedIssueIds differ from what was sent → STOP. Say: "Requirement <saved:requirementId> does not show the sent values."
+8. CALL {{tool:get_project_scope_resolution_context}} {"projectId":"<input:projectId>"} [A]
+   SAVE: added = result.workingScope.addedCount; changed = result.workingScope.changedCount; materiality = result.publicationGate.materiality
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:projectId>; baseline <saved:version> (<saved:baselineId>)
+Done: <requirement <saved:requirementId> '<input:title>' (<input:type>, pending, group <saved:groupId>, linked <saved:issueIds>) | nothing created>
+Evidence: list_requirements → <saved:requirementId> with the sent values; scope: added <saved:added>, changed <saved:changed>, materiality <saved:materiality> | reads only
+Pending: publishing a baseline needs the owner's order | none
+Next: <the ASK or STOP text that ended the run> | the owner decides whether to publish a new baseline | none
+```
+requirement status: pending | in-progress | met | not-met | obsolete (a new requirement is always pending). Never claim the scope is approved; never claim a check that a step above did not run and pass.

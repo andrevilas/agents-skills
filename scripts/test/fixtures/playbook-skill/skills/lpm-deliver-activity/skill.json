@@ -1,0 +1,124 @@
+{
+  "id": "lpm-deliver-activity",
+  "title": "Deliver one activity: commit, progress, closure",
+  "version": "2.0.0",
+  "pack": "core",
+  "kind": "tools",
+  "invocation": "implicit",
+  "description": "Use when implementing, fixing or closing one LPM activity (atividade): commit with the LPM-Activity trailer, comment progress and close it. Not for connecting an agent (use lpm-start).",
+  "doneWhen": "The code is committed with the trailer, progress is commented and the activity is done.",
+  "authorityCeiling": "Reads, comments and status moves are [A]; API keys are [C]; budgets are [O].",
+  "jobs": [
+    "implementa a atividade 42",
+    "close the activity",
+    "commit with the LPM-Activity trailer",
+    "conclua a atividade e registre o progresso",
+    "finish the activity and set its due date"
+  ],
+  "routing": [
+    {
+      "order": 2,
+      "all": [
+        [
+          "commit",
+          "commits",
+          "trailer",
+          "lpm-activity"
+        ]
+      ],
+      "unless": [
+        "roadmap"
+      ],
+      "firstCall": "get_issue"
+    },
+    {
+      "order": 3,
+      "all": [
+        [
+          "close",
+          "fechar",
+          "finish",
+          "conclu*",
+          "implement*"
+        ],
+        [
+          "activity",
+          "atividade",
+          "issue",
+          "tarefa"
+        ]
+      ],
+      "unless": [
+        "roadmap",
+        "cycle",
+        "ciclo"
+      ],
+      "firstCall": "get_issue"
+    }
+  ],
+  "notFor": [
+    {
+      "when": "connecting an agent",
+      "skill": "lpm-start"
+    },
+    {
+      "when": "shipping the LPM product itself",
+      "skill": "lpm-release-product"
+    }
+  ],
+  "owns": [
+    "get_issue",
+    "update_issue",
+    "list_comments",
+    "create_comment",
+    "set_project_issue_due_date",
+    "update_project_issue_due_date",
+    "configure_aish_budget",
+    "create_api_key"
+  ],
+  "uses": [
+    "get_mcp_connection_info"
+  ],
+  "cli": [
+    "issues get",
+    "issues update"
+  ],
+  "sharedRefs": [
+    {
+      "name": "repo-hygiene",
+      "loadWhen": "before editing code in a git repository",
+      "inlineSummary": false
+    }
+  ],
+  "references": [
+    {
+      "file": "references/flow-close.md",
+      "loadWhen": "playbook close: close the activity, or answer \"can I close it?\""
+    },
+    {
+      "file": "references/flow-commit.md",
+      "loadWhen": "playbook commit: commit with the LPM-Activity trailer, then comment progress"
+    },
+    {
+      "file": "references/flow-due-date.md",
+      "loadWhen": "playbook due-date: set the due date of one activity"
+    },
+    {
+      "file": "references/flow-api-key.md",
+      "loadWhen": "playbook api-key: create an API key for a workspace"
+    },
+    {
+      "file": "references/flow-budget.md",
+      "loadWhen": "playbook budget: change the AISH budget on the owner's order"
+    }
+  ],
+  "behaviorContracts": [
+    "delivery-trailer",
+    "owner-budget-gate",
+    "activity-evidence"
+  ],
+  "codex": {
+    "shortDescription": "Ship one LPM activity with the commit trailer",
+    "defaultPrompt": "Use $lpm-deliver-activity to deliver LPM activity <issueId>."
+  }
+}

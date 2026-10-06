@@ -223,6 +223,14 @@
     {
       "file": "references/flow-aish-write.md",
       "loadWhen": "decision row 5 of SKILL.md"
+    },
+    {
+      "file": "references/flow-ai-status.md",
+      "loadWhen": "playbook ai-status: read the workspace AI policy, models, limits or spend, explain an Advisor fallbackReason, or read today's code-search quota"
+    },
+    {
+      "file": "references/flow-change-ai-config.md",
+      "loadWhen": "playbook change-ai-config: change the workspace AI model, a usage limit, a feature flag, enabled or the providers, on the owner's order (no order: send the decision request)"
     }
   ],
   "behaviorContracts": [

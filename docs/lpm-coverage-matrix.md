@@ -7,13 +7,13 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 
 | Field | Value |
 |---|---|
-| lpmCommit | `4731f07708719cf90d1fff0f16eaeb11524c38d1` |
+| lpmCommit | `5615224e1bb6a7f929818907ad879b642628a4ff` |
 | toolCount | `383` |
 | cliCount | `152` |
 | namesHash | `sha256:d5793cef8f7d359bfcaf40621b3c7b59f54f7e9d6c3412860146e6424c2e63c1` |
 | schemaHash | `sha256:c92e9c32f39d014d0191b062055140351bdfe6bf3d7a2e3602e8dbf524255de3` |
 | cliHash | `sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec` |
-| sourcesHash | `sha256:2491638961d1f9e9ea0e031909a3c2fbeb1bb35a4338f900433fa05b534b90d9` |
+| sourcesHash | `sha256:39f7104597875f0980b99875c2333419ce7cbf592e96f0b21caf508bc5bfd5fe` |
 
 ## Totals
 
@@ -23,31 +23,31 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 
 ## Skills
 
-| Skill | Pack | Kind | Owned | A/C/O | OAuth | Access | Used |
-|---|---|---|---|---|---|---|---|
-| `lpm-access` | core | tools | 21 | 7/0/14 | 0 | KEY | 6 |
-| `lpm-ai-cost` | core | tools | 19 | 9/1/9 | 0 | KEY | 6 |
-| `lpm-aish-delivery` | core | tools | 20 | 13/6/1 | 0 | KEY | 8 |
-| `lpm-aish-jobs` | core | tools | 28 | 15/9/4 | 0 | KEY | 6 |
-| `lpm-aish-runners` | core | tools | 12 | 5/7/0 | 0 | KEY | 5 |
-| `lpm-ask-advisor` | core | tools | 11 | 11/0/0 | 10 | OAuth mostly | 6 |
-| `lpm-code-index` | core | tools | 18 | 8/10/0 | 2 | mostly KEY | 3 |
-| `lpm-deliver-activity` | core | tools | 13 | 10/3/0 | 6 | mixed | 5 |
-| `lpm-executive-context` | core | tools | 10 | 9/0/1 | 4 | mixed | 5 |
-| `lpm-governance-decisions` | core | tools | 18 | 15/1/2 | 4 | mixed | 9 |
-| `lpm-intake-triage` | core | tools | 16 | 9/7/0 | 0 | KEY | 9 |
-| `lpm-integrations` | core | tools | 12 | 5/4/3 | 2 | mixed | 4 |
-| `lpm-knowledge` | core | tools | 18 | 11/7/0 | 3 | mixed | 7 |
-| `lpm-pilot-feedback` | internal | process | 0 | 0/0/0 | 0 | process skill | 13 |
-| `lpm-plan-work` | core | tools | 31 | 17/14/0 | 7 | mixed | 9 |
-| `lpm-release-product` | internal | process | 0 | 0/0/0 | 0 | process skill | 8 |
-| `lpm-requirements-scope` | core | tools | 25 | 12/7/6 | 3 | mostly KEY | 7 |
-| `lpm-review-health` | core | tools | 10 | 10/0/0 | 4 | mixed | 15 |
-| `lpm-roadmap` | core | tools | 31 | 19/3/9 | 21 | OAuth mostly | 3 |
-| `lpm-roadmap-owner-ops` | core | tools | 27 | 6/0/21 | 1 | mostly KEY | 9 |
-| `lpm-start` | core | tools | 8 | 8/0/0 | 6 | OAuth mostly | 4 |
-| `lpm-unblock-work` | core | tools | 16 | 12/4/0 | 2 | mostly KEY | 8 |
-| `lpm-workspace-admin` | core | tools | 19 | 6/12/1 | 1 | mostly KEY | 23 |
+| Skill | Pack | Kind | Owned | A/C/O | OAuth | Access | Used | Playbooks |
+|---|---|---|---|---|---|---|---|---|
+| `lpm-access` | core | tools | 21 | 7/0/14 | 0 | KEY | 6 | — |
+| `lpm-ai-cost` | core | tools | 19 | 9/1/9 | 0 | KEY | 6 | — |
+| `lpm-aish-delivery` | core | tools | 20 | 13/6/1 | 0 | KEY | 9 | — |
+| `lpm-aish-jobs` | core | tools | 28 | 15/9/4 | 0 | KEY | 3 | 10 |
+| `lpm-aish-runners` | core | tools | 12 | 5/7/0 | 0 | KEY | 5 | — |
+| `lpm-ask-advisor` | core | tools | 11 | 11/0/0 | 10 | OAuth mostly | 6 | 6 |
+| `lpm-code-index` | core | tools | 18 | 8/10/0 | 2 | mostly KEY | 4 | 9 |
+| `lpm-deliver-activity` | core | tools | 13 | 10/3/0 | 6 | mixed | 4 | 6 |
+| `lpm-executive-context` | core | tools | 10 | 9/0/1 | 4 | mixed | 6 | 6 |
+| `lpm-governance-decisions` | core | tools | 18 | 15/1/2 | 4 | mixed | 13 | 9 |
+| `lpm-intake-triage` | core | tools | 16 | 9/7/0 | 0 | KEY | 9 | 9 |
+| `lpm-integrations` | core | tools | 12 | 5/4/3 | 2 | mixed | 4 | — |
+| `lpm-knowledge` | core | tools | 18 | 11/7/0 | 3 | mixed | 7 | — |
+| `lpm-pilot-feedback` | internal | process | 0 | 0/0/0 | 0 | process skill | 13 | — |
+| `lpm-plan-work` | core | tools | 31 | 17/14/0 | 7 | mixed | 10 | 10 |
+| `lpm-release-product` | internal | process | 0 | 0/0/0 | 0 | process skill | 8 | — |
+| `lpm-requirements-scope` | core | tools | 25 | 12/7/6 | 3 | mostly KEY | 9 | 10 |
+| `lpm-review-health` | core | tools | 10 | 10/0/0 | 4 | mixed | 15 | 4 |
+| `lpm-roadmap` | core | tools | 31 | 19/3/9 | 21 | OAuth mostly | 4 | 10 |
+| `lpm-roadmap-owner-ops` | core | tools | 27 | 6/0/21 | 1 | mostly KEY | 10 | 10 |
+| `lpm-start` | core | tools | 8 | 8/0/0 | 6 | OAuth mostly | 4 | 6 |
+| `lpm-unblock-work` | core | tools | 16 | 12/4/0 | 2 | mostly KEY | 9 | 10 |
+| `lpm-workspace-admin` | core | tools | 19 | 6/12/1 | 1 | mostly KEY | 23 | — |
 
 ## Tools by category
 
@@ -65,7 +65,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `approve_aish_execution_plan` | `lpm-aish-jobs` | O | KEY | — |
 | `approve_aish_job_execution` | `lpm-aish-jobs` | O | KEY | — |
 | `approve_aish_release` | `lpm-aish-delivery` | O | KEY | — |
-| `audit_aish_issue_delivery` | `lpm-aish-delivery` | A | KEY | `lpm-deliver-activity` |
+| `audit_aish_issue_delivery` | `lpm-aish-delivery` | A | KEY | — |
 | `claim_aish_intake_transcription` | `lpm-aish-runners` | C | KEY | — |
 | `claim_aish_release` | `lpm-aish-delivery` | C | KEY | — |
 | `collect_aish_execution_pack` | `lpm-aish-delivery` | A | KEY | — |
@@ -92,7 +92,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `dispatch_aish_execution_plan` | `lpm-aish-jobs` | C | KEY | — |
 | `download_aish_intake_attachment` | `lpm-aish-jobs` | A | KEY | — |
 | `export_aish_execution_pack` | `lpm-aish-delivery` | A | KEY | — |
-| `fund_aish_job` | `lpm-ai-cost` | O | KEY | `lpm-aish-jobs` |
+| `fund_aish_job` | `lpm-ai-cost` | O | KEY | — |
 | `get_aish_accounting` | `lpm-ai-cost` | A | KEY | — |
 | `get_aish_automation_delivery` | `lpm-aish-delivery` | A | KEY | — |
 | `get_aish_budget` | `lpm-ai-cost` | A | KEY | `lpm-aish-jobs` |
@@ -200,7 +200,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `delete_milestone` | `lpm-plan-work` | C | KEY | — |
 | `find_operational_entry_semantic_matches` | `lpm-intake-triage` | A | KEY | — |
 | `get_cycle` | `lpm-plan-work` | A | portfolio:read | `lpm-workspace-admin` |
-| `get_issue` | `lpm-deliver-activity` | A | portfolio:read | `lpm-aish-jobs`, `lpm-pilot-feedback`, `lpm-plan-work`, `lpm-release-product`, `lpm-unblock-work` |
+| `get_issue` | `lpm-deliver-activity` | A | portfolio:read | `lpm-aish-delivery`, `lpm-aish-jobs`, `lpm-governance-decisions`, `lpm-pilot-feedback`, `lpm-plan-work`, `lpm-release-product`, `lpm-unblock-work` |
 | `get_milestone` | `lpm-plan-work` | A | portfolio:read | — |
 | `get_operational_analytics` | `lpm-intake-triage` | A | KEY | `lpm-review-health` |
 | `get_operational_entry` | `lpm-intake-triage` | A | KEY | — |
@@ -212,7 +212,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `list_comments` | `lpm-deliver-activity` | A | portfolio:read | `lpm-governance-decisions`, `lpm-pilot-feedback`, `lpm-plan-work`, `lpm-release-product`, `lpm-unblock-work` |
 | `list_cycles` | `lpm-plan-work` | A | portfolio:read | `lpm-review-health` |
 | `list_issue_links` | `lpm-unblock-work` | A | KEY | `lpm-deliver-activity`, `lpm-review-health` |
-| `list_issues` | `lpm-deliver-activity` | A | portfolio:read | `lpm-ai-cost`, `lpm-aish-jobs`, `lpm-intake-triage`, `lpm-pilot-feedback`, `lpm-plan-work`, `lpm-release-product`, `lpm-requirements-scope`, `lpm-review-health`, `lpm-unblock-work`, `lpm-workspace-admin` |
+| `list_issues` | `lpm-deliver-activity` | A | portfolio:read | `lpm-ai-cost`, `lpm-governance-decisions`, `lpm-intake-triage`, `lpm-pilot-feedback`, `lpm-plan-work`, `lpm-release-product`, `lpm-requirements-scope`, `lpm-review-health`, `lpm-unblock-work`, `lpm-workspace-admin` |
 | `list_labels` | `lpm-plan-work` | A | KEY | `lpm-workspace-admin` |
 | `list_milestones` | `lpm-plan-work` | A | portfolio:read | `lpm-pilot-feedback`, `lpm-workspace-admin` |
 | `list_operational_entries` | `lpm-intake-triage` | A | KEY | — |
@@ -296,12 +296,12 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `explain_workspace_roadmap_traceability_gap` | `lpm-roadmap` | A | KEY | — |
 | `generate_workspace_readiness_report` | `lpm-executive-context` | A | workspace:read | `lpm-review-health` |
 | `get_analytics_bridge_observability` | `lpm-integrations` | A | portfolio:read | — |
-| `get_mcp_connection_info` | `lpm-start` | A | workspace:read | `lpm-access`, `lpm-deliver-activity`, `lpm-pilot-feedback` |
+| `get_mcp_connection_info` | `lpm-start` | A | workspace:read | `lpm-access`, `lpm-code-index`, `lpm-deliver-activity`, `lpm-executive-context`, `lpm-governance-decisions`, `lpm-pilot-feedback`, `lpm-plan-work`, `lpm-requirements-scope`, `lpm-roadmap`, `lpm-roadmap-owner-ops`, `lpm-unblock-work` |
 | `get_owner_agent_usage` | `lpm-ai-cost` | A | KEY | `lpm-ask-advisor` |
 | `get_project` | `lpm-start` | A | portfolio:read | `lpm-executive-context`, `lpm-governance-decisions`, `lpm-intake-triage`, `lpm-workspace-admin` |
 | `get_project_analytics` | `lpm-review-health` | A | KEY | `lpm-aish-delivery`, `lpm-integrations` |
 | `get_project_decision_inbox` | `lpm-governance-decisions` | A | portfolio:read | — |
-| `get_project_execution_context` | `lpm-plan-work` | A | portfolio:read | `lpm-aish-jobs`, `lpm-requirements-scope`, `lpm-workspace-admin` |
+| `get_project_execution_context` | `lpm-plan-work` | A | portfolio:read | `lpm-requirements-scope`, `lpm-workspace-admin` |
 | `get_project_owner_surface` | `lpm-review-health` | A | portfolio:read | — |
 | `get_project_read_model` | `lpm-review-health` | A | portfolio:read | — |
 | `get_project_repository_context` | `lpm-ask-advisor` | A | portfolio:read | — |
@@ -318,7 +318,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `get_workspace_executive_context` | `lpm-executive-context` | A | workspace:read | — |
 | `get_workspace_owner_context_bundle` | `lpm-review-health` | A | KEY | — |
 | `get_workspace_owner_surface` | `lpm-review-health` | A | KEY | — |
-| `get_workspace_read_model` | `lpm-review-health` | A | workspace:read | `lpm-executive-context` |
+| `get_workspace_read_model` | `lpm-review-health` | A | workspace:read | — |
 | `get_workspace_repository_context` | `lpm-ask-advisor` | A | KEY | `lpm-code-index` |
 | `get_workspace_repository_credential` | `lpm-access` | A | KEY | `lpm-code-index` |
 | `get_workspace_roadmap_change_request` | `lpm-roadmap` | A | workspace:read | `lpm-governance-decisions` |
@@ -349,7 +349,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `list_workspace_context_gaps` | `lpm-executive-context` | A | KEY | — |
 | `list_workspace_issue_links` | `lpm-unblock-work` | A | KEY | `lpm-deliver-activity` |
 | `list_workspace_members` | `lpm-workspace-admin` | A | workspace:read | `lpm-access`, `lpm-executive-context`, `lpm-integrations`, `lpm-pilot-feedback`, `lpm-roadmap`, `lpm-start` |
-| `list_workspace_projects` | `lpm-start` | A | portfolio:read | `lpm-ai-cost`, `lpm-intake-triage`, `lpm-integrations`, `lpm-knowledge`, `lpm-review-health`, `lpm-roadmap`, `lpm-roadmap-owner-ops`, `lpm-unblock-work` |
+| `list_workspace_projects` | `lpm-start` | A | portfolio:read | `lpm-ai-cost`, `lpm-executive-context`, `lpm-intake-triage`, `lpm-integrations`, `lpm-knowledge`, `lpm-review-health`, `lpm-roadmap`, `lpm-roadmap-owner-ops`, `lpm-unblock-work` |
 | `list_workspace_repository_links` | `lpm-code-index` | A | workspace:read | `lpm-ask-advisor`, `lpm-pilot-feedback` |
 | `list_workspace_roadmap_allocations` | `lpm-roadmap` | A | KEY | `lpm-roadmap-owner-ops` |
 | `list_workspace_roadmap_change_requests` | `lpm-roadmap` | A | workspace:read | — |
@@ -425,12 +425,12 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `get_project_roadmap_drilldown` | `lpm-roadmap` | A | KEY | — |
 | `get_project_scope_resolution_context` | `lpm-requirements-scope` | A | KEY | `lpm-review-health` |
 | `list_change_sets` | `lpm-requirements-scope` | A | portfolio:read | — |
-| `list_governance_threads` | `lpm-governance-decisions` | A | portfolio:read | — |
+| `list_governance_threads` | `lpm-governance-decisions` | A | portfolio:read | `lpm-requirements-scope` |
 | `list_help_articles` | `lpm-knowledge` | A | portfolio:read | — |
 | `list_project_knowledge_items` | `lpm-knowledge` | A | portfolio:read | `lpm-requirements-scope` |
 | `list_requirement_baselines` | `lpm-requirements-scope` | A | portfolio:read | `lpm-knowledge`, `lpm-roadmap-owner-ops`, `lpm-workspace-admin` |
 | `list_requirement_groups` | `lpm-requirements-scope` | A | KEY | — |
-| `list_requirements` | `lpm-requirements-scope` | A | portfolio:read | `lpm-knowledge`, `lpm-roadmap-owner-ops`, `lpm-workspace-admin` |
+| `list_requirements` | `lpm-requirements-scope` | A | portfolio:read | `lpm-governance-decisions`, `lpm-knowledge`, `lpm-roadmap-owner-ops`, `lpm-workspace-admin` |
 | `list_requirements_awaiting_baseline` | `lpm-requirements-scope` | A | KEY | — |
 | `list_working_scope_delta_entities` | `lpm-requirements-scope` | A | KEY | — |
 | `prepare_change_set_draft_from_governance_thread` | `lpm-governance-decisions` | A | KEY | `lpm-requirements-scope` |
@@ -480,8 +480,8 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | Governance threads cannot target activities | `lpm-governance-decisions` rule; `lpm-unblock-work` rule |
 | Options + recommendation; financial decisions always the owner's; never configure budgets/pools/fund/settle | decision-request template; `lpm-ai-cost` [O] list; `lpm-aish-jobs` funding STOP; contract `owner-financial-gate` |
 | Model changes are the owner's | `lpm-ai-cost` rule; `lpm-knowledge` (`defaultModel`) |
-| Advisor pipeline, fields, `codeEvidence.status`, guards, certainty, code ≠ production, docs/tests ≠ implementation | `advisor-semantics.md`; `lpm-ask-advisor` rules; `answer-template.md` |
-| `read_repository_file_excerpt` takes a workspace or project link id | `lpm-ask-advisor` tools card + Inputs |
+| Advisor pipeline, fields, `codeEvidence.status`, guards, certainty, code ≠ production, docs/tests ≠ implementation | `advisor-semantics.md`; `lpm-ask-advisor` playbooks (Answer blocks) |
+| `read_repository_file_excerpt` takes a workspace or project link id | `lpm-ask-advisor` tools card; playbooks take repositoryLinkId from a search hit |
 | Scans > 24 h stale; refresh → activate(versionId, expectedGeneration); 5,000-chunk cap | `lpm-code-index` rules; `lpm-ask-advisor` freshness rule; V12 |
 | Web UI streams (SSE); MCP synchronous | `advisor-semantics.md` (wait, do not re-call inside ~60 s) |
 | AI budget → `fallbackReason=ai_usage_limit_reached` | `ai-cost-and-budgets.md`; `lpm-ask-advisor` and `lpm-ai-cost` rules |

@@ -1,0 +1,63 @@
+# Playbook: prepare-change
+Use when: save a change to the executive context: a draft, the mission, an executive role, a financial field, or removing a domain or capability
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user | STOP. Say: "Which LPM workspace? (id or name)" |
+| draftType | "routing-policy" or "operating-model" when that draft is to be saved | "none" |
+| ownerFields | the fields the owner wrote, as patch JSON, e.g. {"mandate":{"mission":"<text>"}}; sections: mandate{mission, operatingModel, strategicIntent, successCriteria[]}, governance{decisionPolicy, escalationPolicy}, portfolio{domains[], capabilities[], systems[], priorityRules[], routingPolicySummary}, delivery{curationSlaHours, releasePolicy, operationalCadence}, financial{currency, hourlyRateDefault, budgetPolicy} | "none" |
+| roleAdds | "<role> = <person>" lines; role is workspace-owner, portfolio-owner, operations-lead, finance-owner or routing-owner | "none" |
+| roleRemoves | "<role> = <person>" lines to remove | "none" |
+| removals | "domains: <text>" or "capabilities: <text>" lines the owner ordered removed | "none" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was changed."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → STOP. Say: "Changing the executive context needs an LPM API key; this connector cannot. Nothing was changed."
+2. CALL {{tool:generate_workspace_readiness_report}} {"workspaceId":"<input:workspaceId>"} [A]
+   IF result.report is null → STOP. Say: "LPM cannot build the executive context of <input:workspaceId>. Nothing was changed."
+   SAVE: name = result.workspace.name; beforeStatus = result.report.status; beforeScore = result.report.score; beforeIds = every id in result.report.blockers and result.report.warnings
+3. CALL {{tool:get_workspace_executive_context}} {"workspaceId":"<input:workspaceId>"} [A]
+   SAVE: ownerId = result.workspace.ownerId; canManage = result.workspace.access.canManage; context = result.executiveContext; assignments = result.executiveContext.governance.assignments
+4. IF <input:draftType> != "routing-policy" → go to step 6.
+5. CALL {{tool:draft_workspace_routing_policy}} {"workspaceId":"<input:workspaceId>"} [A]
+   IF result.draft is null → STOP. Say: "LPM cannot build the draft. Nothing was changed."
+   SAVE: draftPatch = result.draft.proposedPatch.patch (never the whole proposedPatch); draftReason = result.draft.proposedPatch.reason; closes = "missing-priority-policy:priority-rules, missing-routing-policy:routing-policy-summary"; go to step 8.
+6. IF <input:draftType> == "none" → SAVE: draftPatch = {}; draftReason = "none"; closes = "none"; go to step 8.
+7. CALL {{tool:draft_workspace_operating_model}} {"workspaceId":"<input:workspaceId>"} [A]
+   IF result.draft is null → STOP. Say: "LPM cannot build the draft. Nothing was changed."
+   SAVE: draftPatch = result.draft.proposedPatch.patch; draftReason = result.draft.proposedPatch.reason; closes = "none"
+8. CALL {{tool:list_workspace_members}} {"workspaceId":"<input:workspaceId>"} [A]
+   Always make this call.
+   SAVE: adds = {"role":"<role>","userId":"<userId>"} for each <input:roleAdds> line whose person matches exactly one member (userEmail equals the email given or contains the name given); question = "Who should hold <role>? Members: <userEmail (userId) of each candidate>." for a line with 0 or 2+ matches, else "none"
+   SAVE: removes = {"role","userId"} for each <input:roleRemoves> line, taken from the <saved:assignments> item of that role
+   IF that item's userId is not the person's userId → STOP. Say: "<person> does not hold <role>. Nothing was changed."
+   SAVE: closes = <saved:closes> (drop "none") plus "missing-governance-role:<role>" for each item of <saved:adds>
+9. SAVE: patch = <saved:draftPatch> + <input:ownerFields> + governance.assignmentsToAdd = <saved:adds> + governance.assignmentsToRemove = <saved:removes> + for each <input:removals> line, portfolio.domains or portfolio.capabilities = the full list in <saved:context> minus that text
+     A list (successCriteria, domains, capabilities, systems, priorityRules) replaces the stored one: send the full list with the change. null never clears: send "". currency is ISO 4217; curationSlaHours and hourlyRateDefault are numbers >= 0. Add no field the owner did not see. A field in <input:ownerFields> replaces the same field of <saved:draftPatch> (the owner's edit). A domain or capability that a project routing profile lists cannot be removed here.
+   IF <saved:patch> is {} → STOP. Say: "Nothing to apply. <saved:question>"
+   SAVE: reason = the owner's words for this change, else <saved:draftReason>
+10. IF <saved:canManage> != true → STOP. Say: "Only the owner or an admin can run this, on the owner's order. Hand them: patch <saved:patch>."
+11. SAVE: decision = these 5 lines, filled, joined with " / " into one line:
+   ```text
+   Decision needed: save this change to the executive context of <saved:name> (<input:workspaceId>)
+   Context: readiness <saved:beforeStatus>, score <saved:beforeScore>; it closes <saved:closes> and no unowned-domain or unowned-capability gap; policies are descriptive and do not change project routing profiles; patch <saved:patch>
+   Options: A) apply it - the whole context is rewritten and audited; a new apply can undo it. B) edit it first - nothing changes now. C) do nothing - the gaps stay open
+   Open question: <saved:question>. Recommendation: <A, B or C> because <reason>
+   To proceed, reply with the option and I will run: apply_workspace_context_update {"workspaceId":"<input:workspaceId>","reason":"<saved:reason>","patch":<saved:patch>,"confirmSensitiveChanges":true,"requestedBy":"<saved:ownerId>"}
+   ```
+12. IF <saved:question> == "none" and the workspace owner (<saved:ownerId>) ordered this exact change in this conversation → switch to playbook apply.
+   IF not → STOP. Say: "<saved:decision>"
+   An order comes from the owner, names this change and, for a draft, follows a reply that showed this patch. A relayed message (WhatsApp, "he said OK"), an admin's yes or your recommendation is not an order; roles and financial fields need the owner's own words.
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: workspace <saved:name> (<input:workspaceId>)
+Done: nothing changed; <draft shown | change prepared>
+Evidence: readiness <saved:beforeStatus>, score <saved:beforeScore>; <patch <saved:patch> | draft patch <saved:draftPatch> | no patch yet>
+Pending: <the owner's order for this patch; <saved:question> | the STOP question>
+Next: <the STOP text that ended the run | switched to playbook apply>
+```
+status: complete | partial | blocked, from step 2. This playbook writes nothing. Never claim a change was saved; never claim a check that a step above did not run and pass.

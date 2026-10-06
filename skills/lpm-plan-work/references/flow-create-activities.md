@@ -1,0 +1,50 @@
+# Playbook: create-activities
+Use when: create activities
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| items | the activities the user listed: their words and priority | STOP. Say: "Which activities should I create?" |
+| day | today's date as yyyymmdd | — |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was created."
+1. SAVE: plan = one row per entry of <input:items>, in the user's order, each with a title, a description and a priority:
+     title: starts with a verb, in the user's language, then the user's words. A bug ("erro", "errado", "bug", "falha") → "Corrigir …"; a feature → "Implementar …"; a screen → "Exibir …". Already a verb → keep it. Example: "cálculo de juros do parcelamento" → "Implementar cálculo de juros do parcelamento".
+     description: one sentence on what will be done, a blank line, "Critérios de aceite:" (in the user's language), then one "- <criterion>" line per criterion from the user's words, else the result the title promises.
+     priority: "urgent", "high", "medium", "low" from the user's words (urgente, alta, média, baixa); no word → "none".
+   Never add status, assigneeId, estimate, dueDate, cycleId, milestoneId or labelIds: owners and dates need approval (playbook owners-dates), moves use playbook edit-activities, after creation.
+   SAVE: later = the rows after the 25th (empty if 25 or fewer); plan = the first 25 rows
+2. CALL {{tool:list_issues}} {"projectId":"<input:projectId>","limitCount":100} [A]
+   SAVE: titles = the title of every item, lowercased and trimmed; cursor = result.nextCursor when result.hasMore == true, else empty
+   IF <saved:cursor> is empty → go to step 4.
+3. CALL {{tool:list_issues}} {"projectId":"<input:projectId>","limitCount":100,"cursor":"<saved:cursor>"} [A]
+   SAVE: titles = <saved:titles> plus the title of every item, lowercased and trimmed
+   IF result.hasMore == true → ASK: "<input:projectId> has more than 200 activities; I checked 200 titles for duplicates. Create anyway? (yes/no)" — continue only if the user says yes; otherwise STOP.
+4. SAVE: dupes = the rows of <saved:plan> whose title, or whose words as the user wrote them, lowercased and trimmed, equal an entry of <saved:titles> (exact match only; a similar title is not a duplicate)
+   IF <saved:dupes> is not empty → ASK: "These titles already exist in <input:projectId>: <saved:dupes>. Create them again anyway? (yes/no)" — continue only if the user says yes; otherwise STOP. Say: "Nothing was created. Send the list without the duplicates."
+   SAVE: n = 1 + the number of batch keys you already sent for <input:projectId> in this conversation; key = "plan-<input:projectId>-<input:day>-<saved:n>"
+   SAVE: title, description, priority = per row of <saved:plan>: its title, description and priority (one operations item per row)
+5. CALL {{tool:batch_issue_operations}} {"idempotencyKey":"<saved:key>","stopOnError":true,"operations":[{"tool":"create_issue","arguments":{"projectId":"<input:projectId>","title":"<saved:title>","description":"<saved:description>","priority":"<saved:priority>"}}]} [A] (one operations item per row of <saved:plan>, in order)
+   IF the call returns an error → STOP. Say: "batch_issue_operations failed: <error text>. Run me again: step 2 re-reads the titles, so nothing is created twice."
+   SAVE: created = for each item with status "succeeded": the id after "ID: " in its result, with its row's title and priority; failed = for each item with status "failed" or "skipped": its row's title and its error message
+   IF <saved:created> is empty → go to Answer.
+   SAVE: firstId = the first id of <saved:created>
+   VERIFY: CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<saved:firstId>"} [A]
+   IF the call returns an error or result.title is not the title of that row → STOP. Say: "<saved:firstId> does not read back as created: <error text or its title>."
+6. FOR EACH item IN <saved:created> (none → go to step 7):
+   CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<each:id>"} [A]
+   IF the call returns an error or result.title != <each:title> → STOP. Say: "<each:id> does not read back as created: <error text or its title>."
+7. SAVE: status = the status of the last get_issue result; pending = one "<title> — <error>" line per entry of <saved:failed>, plus "<title> — not sent (more than 25)" per row of <saved:later>
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: project <input:projectId>
+Done: <each <saved:created> entry as "<id> '<title>' (<priority>)" | nothing created>; status <saved:status>
+Evidence: batch <saved:key>: planned <rows of <saved:plan>>, created <entries of <saved:created>>, failed <entries of <saved:failed>>; every created id read back with get_issue | none
+Pending: <none | <saved:pending>>
+Next: <the ASK or STOP text that ended the run | resend only the failed rows (I build a new key) | owners, estimates and due dates with playbook owners-dates (needs your approval)>
+```
+status: backlog | todo | in-progress | done | canceled, from your last get_issue (new activities start todo). Pending is never "none" while <saved:failed> or <saved:later> has an entry. Never claim an activity exists unless a get_issue above read it.

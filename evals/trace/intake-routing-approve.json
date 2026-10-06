@@ -2,7 +2,7 @@
   "id": "intake-routing-approve",
   "title": "Intake routing approve: preview, owner role, not yet routed, review once, carry the reason, lineage read-back",
   "skill": "lpm-intake-triage",
-  "source": "lpm-intake-triage §4 rows 2-3 → P1 Preview routing, P2 Review routing",
+  "source": "lpm-intake-triage §4 row 6 → playbook route-intake (steps 2-11)",
   "request": "I am the owner of workspace ws_trace (my LPM email is owner@trace.example). Intake entry int_501 (protocol TRACE-20261006-0001, \"Invoices PDF missing the tax id\") is new in the web intake screen. Route it: approve the primary project prj_billing. Reason: \"billing invoices are owned by the billing team\". It is a bug (entry type: bug). I confirm this routing review and the entry update: yes.",
   "ownerInstruction": null,
   "fixtures": {

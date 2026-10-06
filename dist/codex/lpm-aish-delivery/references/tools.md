@@ -755,3 +755,25 @@ Gotchas:
 - Archived projects return an access error.
 - Result is cached about 10 s per server instance.
 Pairs with: `list_projects`, `list_blocked_project_issues`, `get_project_dependency_summary`
+
+### `get_issue` [A] · read · portfolio:read · owner `lpm-deliver-activity` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
+Purpose: Returns one issue with all its fields, including materialized actual hours.
+Use when: Read the current state of an issue before changing it; Confirm an update or a creation took effect; User gives an activity ID and asks about it    Avoid when: You need many issues: use list_issues; You need the comments of the issue: use list_comments; You need its evidence files: use list_activity_attachments
+| Param | Req | Source (call → field) | Notes |
+|---|---|---|---|
+| projectId | yes | list_projects -> id | Always send it. Without it the server scans every project to find the issue (slow) and fails if the ID is ambiguous. |
+| issueId | yes | list_issues -> id or create_issue result | Also accepted as 'id'. |
+Preconditions: Caller should have read access to the project; Under OAuth the project must belong to a workspace in the grant
+Returns: JSON issue (the stored document): id, workspaceId, title, description, status, priority, assigneeId, cycleId, milestoneId, estimate, labelIds, dueDate, startedAt, completedAt, requirementId, baselineId, workOrigin, roadmapLineageRefs[], actualHours, creatorId, createdAt, updatedAt; blockerContext {status active|resolved, content, capturedAt, capturedBy, source, commentId, resolvedAt, resolvedBy, resolution, resolutionCommentId} once a blocker was recorded (plus factoryGovernance/factoryAuditId on AISH issues).
+Errors → fix:
+| When | Fix |
+|---|---|
+| -32602 Issue not found | Wrong issueId or it was deleted; re-list with list_issues for this projectId. |
+| -32602 Issue ID is required | Send issueId. |
+| Project ID is required because the issue ID is ambiguous | Send projectId. |
+Gotchas:
+- Cheap and safe; use it to verify every write.
+- The id is the value for the commit trailer 'LPM-Activity: <id>'.
+- blockerContext is absent until set_project_issue_blocker_context runs; status 'resolved' only after resolve_project_issue_blocker_context, so an issue with status 'active' blockerContext is blocked even when no issue link blocks it.
+Pairs with: `list_issues`, `update_issue`, `list_comments`, `list_activity_attachments`
+CLI: `lpm issues get --project <projectId> --issue <issueId> [--json]`

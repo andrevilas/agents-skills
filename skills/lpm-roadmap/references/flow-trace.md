@@ -1,0 +1,45 @@
+# Playbook: trace
+Use when: trace an item, or a project's roadmap work
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user | STOP. Say: "Which LPM workspace? (id or name)" |
+| item | the roadmap item id or title to trace | "none" |
+| projectId | the project id whose roadmap work or unlinked work the user asked about | "none" |
+| records | "yes" if the user asked where the item is executed, by which projects or activities; else "no" | "no" |
+| all | "yes" if the user asked for done and canceled activities too; else "no" | "no" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. The trace is incomplete."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → STOP. Say: "Traceability needs an LPM API key: the ChatGPT/Claude connector does not expose these tools. The roadmap overview works on the connector."
+   IF <input:item> == "none" and <input:projectId> == "none" → STOP. Say: "Which roadmap item, or which project?"
+   IF <input:item> == "none" → go to step 5.
+2. CALL {{tool:list_workspace_roadmap_items}} {"workspaceId":"<input:workspaceId>","includeArchived":true,"compact":true} [A]
+   SAVE: itemId, title, lifecycle = those fields of the only item whose id == <input:item> or whose title equals <input:item> ignoring case and accents
+   IF no item or 2+ items match → STOP. Say: "Which item exactly? <each id with its title>"
+3. CALL {{tool:explain_workspace_roadmap_traceability_gap}} {"workspaceId":"<input:workspaceId>","itemId":"<saved:itemId>"} [A]
+   Make this call once, for this one item: never loop it over many items.
+   SAVE: complete = result.complete; gaps = for each result.gaps[] value: "<gap> → <owner>", where allocated → "allocate change request (playbook propose-change)", materialized → "lpm-roadmap-owner-ops (materialization on the owner's order), then lpm-requirements-scope", executionLinked → "lpm-plan-work (activities with roadmap lineage)"
+   IF <input:records> == "no" → go to Answer.
+4. CALL {{tool:get_workspace_roadmap_traceability}} {"workspaceId":"<input:workspaceId>","itemId":"<saved:itemId>"} [A]
+   SAVE: allocations = "<projectId> <role>" of each allocations[] item with status "active" or empty (skip rejected, archived, superseded); materializations = "<projectId> <method> <requirementId>" of each materializations[] item, marking method "conflict" or "deferred" as "pending decision" (never delivered); activities = "<title> (<status>, project <projectId>)" of each linkedIssues[] item
+   IF <input:projectId> == "none" → go to Answer.
+5. CALL {{tool:get_project_roadmap_drilldown}} {"projectId":"<input:projectId>"} [A]
+   IF the call returns an error → STOP. Say: "Project drilldown failed: <error text>. "Project is not attached to a workspace": the project has no workspace roadmap."
+   SAVE: projectItems = "<title> (<lifecycle>)" of each items[] item; projectAllocations = each allocations[] item with status "active" or empty (superseded ones lost primary ownership); dependsOn = upstreamLinks[]; dependedBy = downstreamLinks[]
+6. CALL {{tool:list_unlinked_project_work}} {"workspaceId":"<input:workspaceId>","projectId":"<input:projectId>"} [A]
+   SAVE: unlinked = "<id> <title> (<status>)" of each item whose status is neither "done" nor "canceled" (every item when <input:all> == "yes"); unlinkedCount = the number of those items
+   Relinking an activity to an item is a governed roadmap change: propose it to the owner; never relink it yourself.
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:workspaceId>/<saved:itemId> <saved:title> | <input:workspaceId>/project <input:projectId>
+Done: reads only; complete <saved:complete>; allocations <saved:allocations>; materializations <saved:materializations>; activities <saved:activities>; project items <saved:projectItems>; <saved:unlinkedCount> unlinked
+Evidence: explain_workspace_roadmap_traceability_gap, get_workspace_roadmap_traceability, get_project_roadmap_drilldown, list_unlinked_project_work (only the ones called) | none
+Pending: none | <saved:gaps> | unlinked: <saved:unlinked>
+Next: <the ASK or STOP text that ended the run> | the owner skill of the first gap | none
+```
+gap: allocated | materialized | executionLinked, from step 3. Leave out the parts whose step did not run. This playbook closes no gap and writes nothing. Never claim lineage or a count that a step above did not read.

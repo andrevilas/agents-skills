@@ -1,5 +1,5 @@
 # Roadmap import format (TSV)
-Load when: importing
+Load when: background on the TSV format; playbooks import and import-links already hold the steps
 Applies to: lpm-roadmap-owner-ops    Source: cards {{tool:preview_workspace_roadmap_import}}, {{tool:commit_workspace_roadmap_import}}, {{tool:resolve_workspace_roadmap_dependencies}}, {{tool:suggest_workspace_roadmap_allocations}} (`parseRoadmapTsv`, `buildRoadmapItemFromImportRow`, `resolveRoadmapDependencies`, `suggestRoadmapProjectAllocations`)
 
 ## Summary
@@ -32,7 +32,7 @@ Without `roadmapId` every commit creates a NEW roadmap: a blind retry duplicates
 | commit with `roadmapId` | rows whose key already exists there are skipped | compare `createdItemIds.length` with `importedRows` |
 | `importedRows` | rows parsed, NOT rows created | count created items with `createdItemIds` |
 | empty or invalid content on commit | still creates an empty roadmap | always preview first |
-| enforce mode | commit does not check it; no change-request type imports | the skill sends a decision request ({{ref:enforce-mode}}); never "needs a change request" |
+| enforce mode | commit does not check it; no change-request type imports | playbook import asks a confirmation that names enforce; never "needs a change request" |
 
 ### Dependencies and allocations after the import
 | Field / value | Meaning | Consequence for the agent |

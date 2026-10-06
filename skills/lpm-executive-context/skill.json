@@ -6,8 +6,8 @@
   "kind": "tools",
   "invocation": "implicit",
   "description": "Use when reviewing or changing the LPM workspace executive context (contexto executivo): readiness (prontidão), gaps, operating model, executive roles, routing/escalation policy, unowned domains or capabilities (sem dono), alignment. Not for project settings (use lpm-workspace-admin).",
-  "doneWhen": "The apply returned an `auditEventId`, the read-back shows the patch with `lastReviewedAt` = `appliedAt` and its closed gap ids are gone, or the review-only report was delivered.",
-  "authorityCeiling": "Reads and drafts [A]; the apply [O], only for the exact patch the workspace owner approved; routing-profile and description fixes [C].",
+  "doneWhen": "The apply returned an `auditEventId` and the read-back shows the patched fields, a new `lastReviewedAt` and its closed gap ids gone; or a routing-profile or description fix passed its re-read; or the review-only report was delivered.",
+  "authorityCeiling": "Reads and drafts [A]; every save of the executive context [O], only for the exact patch the workspace owner ordered; routing-profile and description fixes [C].",
   "jobs": [
     "o workspace está pronto para operação assistida? gere o relatório de prontidão",
     "quais papéis executivos estão sem responsável no workspace?",
@@ -22,7 +22,7 @@
     {
       "order": 33,
       "all": [
-        ["readiness", "prontidao", "executive context", "contexto executivo", "mission", "missao", "operating model", "modelo operacional", "executive roles", "routing policy", "politica de roteamento", "escalation policy", "unowned", "sem dono", "alignment", "alinhamento"]
+        ["readiness", "prontidao", "executive context", "contexto executivo", "mission", "missao", "operating model", "modelo operacional", "executive roles", "papeis executivos", "executive-context", "routing policy", "politica de roteamento", "escalation policy", "unowned", "sem dono", "alignment", "alinhamento"]
       ],
       "unless": [],
       "firstCall": "generate_workspace_readiness_report"
@@ -53,25 +53,19 @@
     "update_project",
     "update_workspace",
     "get_project",
-    "get_workspace_read_model"
+    "list_workspace_projects",
+    "get_mcp_connection_info"
   ],
   "cli": [],
-  "sharedRefs": [
-    {
-      "name": "authority-and-owner-decisions",
-      "loadWhen": "an [O] apply is next, or the owner's order is missing and you write the decision request",
-      "inlineSummary": false
-    },
-    {
-      "name": "idempotency-and-retries",
-      "loadWhen": "an apply or a routing-profile update timed out or returned an unclear result",
-      "inlineSummary": false
-    }
-  ],
+  "sharedRefs": [],
   "references": [
-    { "file": "references/patch-semantics.md", "loadWhen": "you draft, edit, apply or read back an executive-context patch" },
-    { "file": "references/gap-ids.md", "loadWhen": "you read a readiness report, a validation or a gap list" },
-    { "file": "references/flow-claim-unowned.md", "loadWhen": "decision row 5" }
+    { "file": "references/flow-readiness.md", "loadWhen": "playbook readiness: readiness review, \"what is missing\", gap ids or missing executive roles, with no change" },
+    { "file": "references/flow-draft.md", "loadWhen": "playbook draft: show a routing-policy or operating-model draft, nothing saved" },
+    { "file": "references/flow-prepare-change.md", "loadWhen": "playbook prepare-change: save a change to the executive context: a draft, the mission, an executive role, a financial field, or removing a domain or capability" },
+    { "file": "references/flow-apply.md", "loadWhen": "playbook apply: the workspace owner ordered a prepared executive-context patch saved" },
+    { "file": "references/flow-claim-unowned.md", "loadWhen": "playbook claim-unowned: a project claims an unowned domain or capability, or a project routing profile is misaligned" },
+    { "file": "references/flow-set-description.md", "loadWhen": "playbook set-description: missing-mandate:mission is open and the owner wants the workspace description set, not the mission" },
+    { "file": "references/patch-semantics.md", "loadWhen": "background: patch field semantics (playbooks hold the rules)" }
   ],
   "behaviorContracts": ["missing-tool-fallback"],
   "codex": {

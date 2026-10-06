@@ -7,7 +7,7 @@
   "invocation": "implicit",
   "description": "Use when implementing, fixing or closing one LPM activity (atividade/issue): commit with the LPM-Activity trailer, comment progress, attach evidence (prints, logs, tests). Old name: software-project-orchestrator. Not for planning many activities (use lpm-plan-work) or AISH jobs (use lpm-aish-jobs).",
   "doneWhen": "The activity's code is committed with the trailer, progress is commented, evidence is attached and listed, and the activity is done, or stays in-progress with one named pending item and its owner.",
-  "authorityCeiling": "Reads, comments, evidence and status moves are [A]; delete/edit of comments and evidence removal are [C]; done only through the closure check.",
+  "authorityCeiling": "Reads, comments, evidence and status moves are [A]; editing or removing a comment and removing evidence are [C]; done only through playbook close.",
   "jobs": [
     "implementa a atividade X",
     "fix bug ISSUE-ID and commit with the LPM-Activity trailer",
@@ -75,22 +75,19 @@
     "list_issue_links",
     "list_workspace_issue_links",
     "get_skills_context",
-    "audit_aish_issue_delivery",
     "get_mcp_connection_info"
   ],
   "cli": ["issues list", "issues get", "issues update", "issues status"],
   "sharedRefs": [
-    { "name": "delivery-tracking", "loadWhen": "before a commit message", "inlineSummary": true },
-    { "name": "evidence-and-closure", "loadWhen": "before evidence or closure", "inlineSummary": true },
-    { "name": "repo-hygiene", "loadWhen": "before editing code in a git repo", "inlineSummary": false },
-    { "name": "idempotency-and-retries", "loadWhen": "before a retry", "inlineSummary": false },
-    { "name": "enums", "loadWhen": "a status or link type is unclear", "inlineSummary": false },
-    { "name": "comment-templates", "loadWhen": "before writing a comment", "inlineSummary": false }
+    { "name": "repo-hygiene", "loadWhen": "background on code work in a git repository; the playbooks already hold its steps", "inlineSummary": false }
   ],
   "references": [
-    { "file": "references/flow-evidence.md", "loadWhen": "decision row 5: attach proof (print, log, report)" },
-    { "file": "references/flow-close.md", "loadWhen": "decision row 6: finish or close the activity" },
-    { "file": "references/closure-checklist.md", "loadWhen": "before status done" }
+    { "file": "references/flow-start.md", "loadWhen": "playbook start: start or continue work on one activity" },
+    { "file": "references/flow-commit-and-progress.md", "loadWhen": "playbook commit-and-progress: commit with the LPM-Activity trailer, or comment progress" },
+    { "file": "references/flow-evidence.md", "loadWhen": "playbook evidence: attach a screenshot, log or test report" },
+    { "file": "references/flow-close.md", "loadWhen": "playbook close: close the activity, or answer \"can I close it?\"" },
+    { "file": "references/flow-fix-comment-or-attachment.md", "loadWhen": "playbook fix-comment-or-attachment: edit or remove a comment, or remove an attachment" },
+    { "file": "references/flow-connector-only.md", "loadWhen": "playbook connector-only: attach or close on a ChatGPT/Claude connector" }
   ],
   "behaviorContracts": ["activity-evidence", "delivery-trailer", "missing-tool-fallback", "deliver-repo-hygiene"],
   "codex": {

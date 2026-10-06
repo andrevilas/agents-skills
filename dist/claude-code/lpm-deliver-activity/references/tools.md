@@ -394,31 +394,6 @@ Gotchas:
 - With id it can return an archived context: check status.
 Pairs with: `list_skills_contexts`, `update_skills_context`
 
-### `audit_aish_issue_delivery` [A] · write · KEY · owner `lpm-aish-delivery` · profiles: full, custom · sensitive: yes · idempotency: naturally idempotent
-Purpose: Computes and stores the factory Definition of Done audit of a factory-governed issue from its current workflow, job evidence, registered artifacts and open findings, returning passed or blocked with the failure list.
-Use when: Before marking a factory-governed activity done: update_issue with status 'done' requires a current passed audit; After registering artifacts or resolving findings, to see what is still missing    Avoid when: The issue was not executed through an AISH plan (no factory governance): close it with normal acceptance criteria and list_activity_attachments evidence; Pre-release check: create_aish_release runs its own preflight
-| Param | Req | Source (call → field) | Notes |
-|---|---|---|---|
-| projectId | yes | list_projects -> id |  |
-| issueId | yes | list_issues -> id | Factory-governed issue |
-Preconditions: Caller manages the project; Issue exists, not deleted, with factory governance 'factory-dod/1' bound to 1-20 sessions, and present in each session's current plan; At most 200 evidence records, 32 artifacts and 64 MiB of artifacts for the current plan
-Returns: {id (auditId), status:'passed'|'blocked', failures[] (readable reasons), fingerprint, artifactIds, version:'factory-dod/1', auditedBy, auditedAt, reused}. Passed needs: sessions completed on the approved plan with no checkpoint; every node completed; sanitized job evidence; one engineering-policy and one engineering-audit per builder job; evidence per change type (visual: screenshot + video; backend: test; documentation: document; operations: runbook + test or log); no open findings; when API changed, exactly one source + openapi + use-cases with no drift.
-Errors → fix:
-| When | Fix |
-|---|---|
-| Delivery issue not found. / Deleted delivery issues cannot be audited or completed. | Check the issueId with list_issues. |
-| Factory delivery governance is missing or exceeds the supported scope. | The issue is not governed by a plan; use normal closure. |
-| Delivery session scope is invalid. / Delivery issue is absent from its current plan. | The plan changed; inspect get_aish_execution_session. |
-| Delivery evidence exceeds the bounded audit limit. / Delivery artifacts exceed the bounded audit size. | Too much evidence for one audit; report to the user. |
-| Delivery changed during audit; audit the current state. | Call again. |
-Gotchas:
-- status 'blocked' is a normal result, not an error: read failures[] and fix each item.
-- Any later artifact registration or finding change resets the issue's audit pointer, so re-audit right before closing.
-- Needs manage access even though it only computes.
-- Same state returns the same audit id (reused=true).
-Pairs with: `register_aish_delivery_artifact`, `record_aish_delivery_finding`, `update_issue`
-CLI: `lpm aish command audit_aish_issue_delivery --file payload.json [--transport rest|mcp]`
-
 ### `get_mcp_connection_info` [A] · read · workspace:read · owner `lpm-start` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
 Purpose: Describes the caller's own MCP connection: credential type, granted scopes or tool count, workspace reach, and how to unlock missing tools.
 Use when: FIRST call when an expected tool is missing or a call returns -32003 (access denied).; The user asks what this connector can do or which permissions it has.; Before telling the user a feature is unavailable.    Avoid when: Workspace details: use get_workspace.; Managing your API keys: use list_api_keys.

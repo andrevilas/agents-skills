@@ -1,6 +1,6 @@
 name: Validate Skills
 
-# Design §5.11: validators V1-V17 + V19, the V15 drift rebuild, the router eval (100 % gate) and unit tests.
+# Catalog, generated output, playbooks, router, trace scenarios and unit tests.
 on:
   pull_request:
   push:
@@ -31,3 +31,6 @@ jobs:
 
       - name: Unit tests
         run: node --test scripts/test/
+
+      - name: Trace scenario validation
+        run: node scripts/skills.mjs eval --trace all

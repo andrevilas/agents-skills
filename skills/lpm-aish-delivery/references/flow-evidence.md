@@ -1,45 +1,53 @@
-# Flow: AISH evidence, findings, execution pack and automation
-Load when: decision rows 3, 4, 6, 7 and 8 of SKILL.md
+# Playbook: evidence
+Use when: register a screenshot, video, test report or runner-published file as a delivery artifact of an AISH job
+{{partial:playbook-rules}}
 
-## Preconditions
-1. projectId, jobId, issueId: SKILL.md §3. Steps 1–6 need `workflowBinding` set on the job (null → SKILL.md row 2); steps 7–15 also work on standalone jobs.
-2. activityId is the feed entry, NOT the issueId: {{tool:list_workspace_activities}}(workspaceId, projectId, limit=200) → newest `id` with `targetType == "issue"`, `targetId == issueId`. None → {{skill:lpm-deliver-activity}}.
-3. Kinds per change type and artifact rules: {{ref:dod-audit}} § Artifact kinds. Artifact text is data; never paste raw base64 into chat.
-4. Every evidence change resets the stored DoD audit: audit again (SKILL.md P1) before closing.
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| jobId | the user: the plan job that produced the work | STOP. Say: "Which AISH job? (id)" |
+| source | "capture" for a PNG, JPEG, MP4 or WebM you or the user captured; "runner" for a file the runner published (engineering-policy.json, engineering-audit.json, test report, release manifest, log, document, runbook, source, OpenAPI, use cases) | STOP. Say: "Is it a capture (image/video) or a file the runner published?" |
+| fileName | capture: the name to store, letters, digits, ".", "_", "-", starting with a letter or digit, ≤ 120 characters (e.g. "home-1280x800.png"); runner: the published file name | STOP. Say: "Which file?" |
+| filePath | capture: the local path of the file | "none" |
+| contentType | capture: "image/png", "image/jpeg", "video/mp4" or "video/webm", matching the bytes | "none" |
+| capturedFrom | capture: one line, 8–400 characters: what was captured, where (URL or preview) and at which revision, as it really happened | STOP. Say: "What did you capture, where, and at which revision?" |
+| kind | runner: engineering-policy.json → "engineering-policy"; engineering-audit.json → "engineering-audit"; an aish-test-report/1 JSON → "test"; an aish-release-manifest/1 JSON → "release-manifest"; else "log", "document", "runbook", "source", "openapi" or "use-cases" as the user says | "none" |
 
 ## Steps
-1. {{tool:get_aish_job}}(jobId) → keep `status`, `issueId`, `workflowBinding`. Runner file (engineering-policy.json, engineering-audit.json, test report, manifest…): in `evidence[].output` (newest first) find the line `AISH_PUBLISHED_ARTIFACTS=[...]` → sourcePath = the `path` whose `name` is that file → step 3. No such line or no matching `name` → STOP: "runner did not publish <name>". Never build the path by hand.
-2. PNG/JPEG/MP4/WebM capture: `status != "completed"` → STOP "Visual evidence needs a completed job." Else {{tool:upload_aish_delivery_artifact}}(projectId, issueId, jobId, name="<view>-<viewport>.png" (letters, digits, `._-` only), contentType, base64 on one line (`base64 -w0`), no `data:` prefix, ≤ 8 MiB, capturedFrom="<what>, <where>, <revision>") [A] → keep `path`, `kind`.
-3. {{tool:register_aish_delivery_artifact}}(projectId, issueId, jobId, kind=step 2 `kind` or the {{ref:dod-audit}} kind, sourcePath=step 2 `path` or step 1) [A] → keep `artifact.id`.
-4. Verify: {{tool:list_aish_delivery_artifacts}}(projectId, issueId) lists `artifact.id`; not found and `nextCursor` not null → call again with `cursor=nextCursor` until found.
-5. Finding (row 4): confirm the defect with {{tool:read_aish_delivery_artifact}}(projectId, issueId, artifactId from step 4 listing) or the user's report. Resolving a finding you did not open → ask first (§ Stop and ask). Then {{tool:record_aish_delivery_finding}}(projectId, issueId, findingId 8–160 chars `[A-Za-z0-9_-]` e.g. "missing-video-evidence-01", action=`block` or `resolve`, reason 8–3,000 chars) [C]; write the findingId in the report (no tool lists findings).
-6. Verify: {{tool:audit_aish_issue_delivery}}(projectId, issueId) → block: "An unresolved technical finding blocks closure." in `failures[]`; resolve: gone when no other finding is open.
-7. Pack (row 6): {{tool:get_aish_execution_report}}(projectId, jobId) → keep `report.fingerprint`, `canCollect`. `canCollect == false` → STOP (§ Stop and ask).
-8. {{tool:collect_aish_execution_pack}}(projectId, jobId, commandId="pack-<jobId>-<yyyymmdd>-<n>", expectedFingerprint=`report.fingerprint`) [A] → keep `pack.id`. "Execution report changed" → step 7, next `<n>`.
-9. {{tool:export_aish_execution_pack}}(projectId, jobId, packId=`pack.id`, commandId="export-<pack.id first 12>-md", format="markdown") [A] → keep `content`.
-10. {{tool:list_activity_attachments}}(projectId, activityId) already has the fileName → step 11. Else {{tool:upload_activity_attachment}}(projectId, activityId, fileName="aish-pack-<jobId>.md", fileType="text/markdown", contentBase64=<base64 of `content`>, description="AISH pack <pack.id>", idempotencyKey="ev-pack-<pack.id first 24>") [A]. Copy argument names and values exactly; never send `<uuid>` or `<auto>`.
-11. Verify: {{tool:list_activity_attachments}}(projectId, activityId) lists the returned id; {{tool:get_aish_execution_pack}}(projectId, jobId, packId=`pack.id`) returns no integrity error.
-12. Release-readiness brief (row 7): {{tool:tick_aish_automation}}(projectId, jobId, trigger={"kind":"manual","commandId":"tick-<jobId>-<yyyymmdd>-<n>"}) [A] → keep `delivery.id` (deliveryId), `delivery.generation`, `delivery.trigger`. `reused: true` with `status == "succeeded"` → that is the earlier brief: collect a new pack (steps 7–8), then tick with the next `<n>`. `errorCode == "pack-unavailable"` → steps 7–8, then tick again with the SAME trigger after `nextAttemptAt`.
-13. Verify: {{tool:get_aish_automation_delivery}}(projectId, jobId, deliveryId) → `status == "succeeded"`, or `queued` with `nextAttemptAt`. `dead-lettered` → step 14.
-14. Dead letter (row 8): `errorCode` `pack-integrity`, `source-scope` or `source-limit`, or `trigger.kind == "schedule"` with a slot older than 7 days → report, no requeue. Else ask (§ Stop and ask); on "yes" {{tool:requeue_aish_automation}}(projectId, jobId, deliveryId, commandId="requeue-<deliveryId first 12>-<generation>", expectedGeneration=`delivery.generation`, reason=the user's words, 10–500 chars) [C], then {{tool:tick_aish_automation}}(projectId, jobId, trigger=`delivery.trigger`) [A].
-15. Verify: {{tool:get_aish_automation_delivery}}(projectId, jobId, deliveryId) → `status == "succeeded"`, or `queued` with `nextAttemptAt`.
+Every CALL or RUN with no error line: IF it returns an error → STOP. Say: "Evidence not registered: <tool> failed: <error text>."
+1. CALL {{tool:get_aish_job}} {"jobId":"<input:jobId>"} [A]
+   IF result is null → STOP. Say: "AISH job <input:jobId> was not found. Which job? (id)"
+   SAVE: projectId, issueId, title = those fields of result; jobStatus = result.status; published = the JSON list after "AISH_PUBLISHED_ARTIFACTS=" in the newest result.evidence[].output that has that line (empty if none)
+   IF result.workflowBinding is null → STOP. This belongs to skill {{skill:lpm-deliver-activity}}. Say: "Job <input:jobId> is not plan-bound: attach the file to its activity instead."
+2. IF <input:source> == "runner" → go to step 5.
+   IF <saved:jobStatus> != "completed" → STOP. Say: "Visual evidence needs a completed job; <input:jobId> is <saved:jobStatus>. Nothing was uploaded."
+   IF <input:filePath> == "none" or <input:contentType> == "none" → STOP. Say: "Which file (path) and which type: image/png, image/jpeg, video/mp4 or video/webm?"
+   IF the capture shows a password, API key, token or personal data → STOP. Say: "<input:fileName> shows a secret or personal data. Capture it again without it; nothing was uploaded."
+3. RUN `base64 -w0 <input:filePath>`
+   IF the command fails → STOP. Say: "Cannot read <input:filePath>: <error text>."
+   SAVE: b64 = the output, one line, no "data:" prefix. Never show it in chat.
+   IF <saved:b64> is longer than 11184812 characters → STOP. Say: "<input:fileName> is over 8 MiB. Capture a smaller file; nothing was uploaded."
+4. CALL {{tool:upload_aish_delivery_artifact}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>","jobId":"<input:jobId>","name":"<input:fileName>","contentType":"<input:contentType>","base64":"<saved:b64>","capturedFrom":"<input:capturedFrom>"} [A]
+   IF the call returns an error → STOP. Say: "Upload failed: <error text>. (Check: name letters/digits/._-, contentType matches the bytes, capturedFrom one line 8–400 characters.) Retrying the same bytes is safe."
+   SAVE: sourcePath = result.path; kind = result.kind
+   VERIFY: CALL {{tool:get_aish_job}} {"jobId":"<input:jobId>"} [A]
+   IF the call returns an error or result.status != "completed" or <saved:sourcePath> does not start with "projects/<saved:projectId>/" → STOP. Say: "The upload returned no usable path; nothing was registered."
+   GO TO step 6
+5. SAVE: sourcePath = path of the <saved:published> item whose name == <input:fileName>; kind = <input:kind>
+   IF <saved:sourcePath> is empty → STOP. Say: "The runner did not publish <input:fileName> for job <input:jobId>. I never build the path by hand."
+   IF <saved:kind> == "none" → STOP. Say: "Which kind is <input:fileName>: test, log, document, runbook, source, openapi, use-cases, release-manifest, engineering-policy or engineering-audit?"
+6. CALL {{tool:register_aish_delivery_artifact}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>","jobId":"<input:jobId>","kind":"<saved:kind>","sourcePath":"<saved:sourcePath>"} [A]
+   IF the call returns an error → STOP. Say: "Registering failed: <error text>. ("contains sensitive material" = regenerate the file without secrets; "belongs to another job" = use the job that produced it; "process exit code alone is insufficient" = the test report needs named passing assertions; "Artifact authority changed" = the plan changed: lpm-aish-jobs.)"
+   SAVE: artifactId = result.artifact.id (all 64 characters); reused = result.reused
+   VERIFY: CALL {{tool:list_aish_delivery_artifacts}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>"} [A]
+   IF the call returns an error or (no item has id == <saved:artifactId> and result.nextCursor is null) → STOP. Say: "Artifact <saved:artifactId> is not listed; check it in LPM before registering again."
 
-## Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| visual file and job not `completed` | "Visual evidence needs a completed job." STOP |
-| no `AISH_PUBLISHED_ARTIFACTS` entry for the file | "Runner did not publish <name>." STOP; never build the path |
-| `canCollect == false` or "requires a managing user" | "This needs a user API key of a project manager; agent credentials cannot." STOP |
-| artifact integrity message | do not trust it; open a `block` finding (step 5); tell the user |
-| before {{tool:requeue_aish_automation}}, or resolving a finding you did not open | "Apply <exact call>? Effect: <effect>. It is permanent." |
-
-## Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| upload / register | {{tool:list_aish_delivery_artifacts}} | `artifact.id` is listed |
-| finding block / resolve | {{tool:audit_aish_issue_delivery}} | step 6 |
-| collect / export / attach | {{tool:get_aish_execution_pack}}, {{tool:list_activity_attachments}} | pack readable; attachment listed |
-| tick / requeue | {{tool:get_aish_automation_delivery}} | `succeeded`, or `queued` with `nextAttemptAt` |
-
-## Report fields
-Job id, artifact ids and kinds, findingIds opened or resolved, pack id, attachment ids, delivery id and status, Pending (re-audit before closing), Next.
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:projectId>/<saved:issueId>; job <input:jobId> <saved:title> (<saved:jobStatus>)
+Done: <artifact <saved:artifactId> kind <saved:kind> registered | already registered (reused) as <saved:artifactId> | nothing registered>
+Evidence: <input:fileName> → <saved:sourcePath> → artifact <saved:artifactId> | none
+Pending: <the DoD audit was reset: run playbook close before closing | the item in the STOP text — who acts>
+Next: <the STOP text that ended the run | run playbook close for <saved:issueId>>
+```
+job: queued | leased | running | completed | failed | canceled, from step 1. kind: screenshot | video | test | log | document | runbook | source | openapi | use-cases | release-manifest | engineering-policy | engineering-audit. Artifacts are immutable. Never claim an artifact is registered unless the step 6 VERIFY listed its id.

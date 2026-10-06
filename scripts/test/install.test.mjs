@@ -360,7 +360,7 @@ test("generic install: flat files, shared INDEX.md, include line, idempotent, pr
     ...CORE.flatMap((id) => [`${id}.md`, `${id}.refs.md`, `${id}.tools.md`]),
   ].sort());
   assert.equal(read(dest, "INDEX.md"), read(t.root, "dist/generic/INDEX.md"));
-  assert.match(t.out(), /LPM: read `~\/gen\/INDEX\.md` first, then exactly one `<id>\.md`\./);
+  assert.match(t.out(), /LPM: read `~\/gen\/INDEX\.md` first, then exactly one `<id>\.md`, and the one playbook it names in `<id>\.flows\.md`\./);
   const m = manifestOf(dest);
   assert.deepEqual(Object.keys(m.shared.files), ["AGENTS-snippet.md", "INDEX.md"]);
   assert.deepEqual(Object.keys(m.skills["lpm-start"].files), ["lpm-start.md", "lpm-start.refs.md", "lpm-start.tools.md"]);

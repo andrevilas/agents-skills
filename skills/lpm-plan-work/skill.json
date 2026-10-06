@@ -6,8 +6,8 @@
   "kind": "tools",
   "invocation": "implicit",
   "description": "Use when creating or organizing LPM backlog work: create activities (single or batch), edit fields, plan cycles/sprints and milestones (marcos), labels, owners, estimates, due dates, unassigned/unestimated/overdue queues, escalations. Not for doing or closing one activity (use lpm-deliver-activity).",
-  "doneWhen": "The requested backlog structure exists and a re-list matches the plan (counts, owners, dates), with failed batch items named.",
-  "authorityCeiling": "Reads, creates, comments, named cancels [A]; owner, estimate, due-date or milestone-date changes (any tool), labels, notifications, deletes [C]; no owner-only tools.",
+  "doneWhen": "The requested backlog structure exists, a re-read matches the plan (owners, dates, counts), and failed items are named.",
+  "authorityCeiling": "Reads, creates, edits, comments, named cancels [A]; owner, estimate and date plans need a \"yes\"; labels, notifications, deletes [C]; no owner-only tools.",
   "jobs": [
     "cria estas atividades no backlog do projeto <nome>",
     "planeje o próximo sprint e feche o ciclo atual",
@@ -51,7 +51,8 @@
           "atrasad*",
           "notify",
           "notificar",
-          "backlog"
+          "backlog",
+          "daily sync"
         ]
       ],
       "unless": [],
@@ -134,67 +135,55 @@
     "recommend_next_activity",
     "get_project_dependency_summary",
     "list_blocked_project_issues",
-    "prepare_issue_draft_from_governance_thread"
+    "prepare_issue_draft_from_governance_thread",
+    "get_mcp_connection_info"
   ],
   "cli": [
     "issues create",
     "issues assign",
     "issues priority"
   ],
-  "sharedRefs": [
-    {
-      "name": "enums",
-      "loadWhen": "an enum value is unclear",
-      "inlineSummary": false
-    },
-    {
-      "name": "idempotency-and-retries",
-      "loadWhen": "retrying a write",
-      "inlineSummary": false
-    },
-    {
-      "name": "naming-conventions",
-      "loadWhen": "naming anything",
-      "inlineSummary": false
-    },
-    {
-      "name": "comment-templates",
-      "loadWhen": "writing a comment",
-      "inlineSummary": false
-    }
-  ],
+  "sharedRefs": [],
   "references": [
     {
-      "file": "references/planning-rules.md",
-      "loadWhen": "row 1, or a cycle plan or start"
+      "file": "references/flow-daily-sync.md",
+      "loadWhen": "playbook daily-sync: daily sync of a project"
     },
     {
-      "file": "references/batch-and-bulk.md",
-      "loadWhen": "2+ items change"
-    },
-    {
-      "file": "references/flow-cycles.md",
-      "loadWhen": "row 2"
+      "file": "references/flow-create-activities.md",
+      "loadWhen": "playbook create-activities: create activities"
     },
     {
       "file": "references/flow-owners-dates.md",
-      "loadWhen": "row 3"
+      "loadWhen": "playbook owners-dates: set owners, estimates or due dates; work a queue"
     },
     {
-      "file": "references/flow-label-merge.md",
-      "loadWhen": "row 4 label merge"
+      "file": "references/flow-edit-activities.md",
+      "loadWhen": "playbook edit-activities: edit fields, cycle, milestone or labels of activities"
+    },
+    {
+      "file": "references/flow-cancel-or-delete.md",
+      "loadWhen": "playbook cancel-or-delete: cancel or delete an activity"
+    },
+    {
+      "file": "references/flow-cycle-open-or-start.md",
+      "loadWhen": "playbook cycle-open-or-start: open or start a cycle (sprint)"
+    },
+    {
+      "file": "references/flow-cycle-close.md",
+      "loadWhen": "playbook cycle-close: close or delete a cycle"
+    },
+    {
+      "file": "references/flow-milestone.md",
+      "loadWhen": "playbook milestone: open, close, re-date or delete a milestone"
+    },
+    {
+      "file": "references/flow-labels.md",
+      "loadWhen": "playbook labels: create or merge labels"
     },
     {
       "file": "references/flow-escalate.md",
-      "loadWhen": "row 5 or 6"
-    },
-    {
-      "file": "references/flow-remove.md",
-      "loadWhen": "row 7 or 8"
-    },
-    {
-      "file": "references/flow-decision.md",
-      "loadWhen": "row 9"
+      "loadWhen": "playbook escalate: escalate an activity; notify a person"
     }
   ],
   "behaviorContracts": [

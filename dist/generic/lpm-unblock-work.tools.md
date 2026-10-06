@@ -577,3 +577,16 @@ Gotchas:
 - OAuth: status 'archived' always returns [] and a single-workspace grant returns only that workspace.
 - Use compact:true to save context only when you do not need canManage.
 Pairs with: `get_mcp_connection_info`, `get_workspace`, `list_workspace_projects`
+
+### `get_mcp_connection_info` [A] · read · workspace:read · owner `lpm-start` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
+Purpose: Describes the caller's own MCP connection: credential type, granted scopes or tool count, workspace reach, and how to unlock missing tools.
+Use when: FIRST call when an expected tool is missing or a call returns -32003 (access denied).; The user asks what this connector can do or which permissions it has.; Before telling the user a feature is unavailable.    Avoid when: Workspace details: use get_workspace.; Managing your API keys: use list_api_keys.
+Preconditions: Any authenticated connection (OAuth or API key).
+Returns: OAuth: {credential:'oauth', scopes[], workspaceAccess (single|all), workspaceId (only when single), connectorRegisteredAt, accessTokenExpiresAt, availableToolCount, unavailableToolGroups[{scope, title, optional, tools[], howToEnable}]}. API key: {credential:'api_key', allowedToolCount, workspaceId:null, howToChange}.
+Gotchas:
+- howToEnable is Portuguese text for the end user: relay it as is.
+- On ChatGPT, disconnect/connect does NOT re-run OAuth or refresh the tool list: the connector must be removed and reinstalled and the optional box ticked (e.g. 'Gestão de atividades dos projetos' = portfolio:manage).
+- For API keys the allowed tools are set on the key by its owner (update_api_key). Returns no tokens.
+- Owner-agent credentials (lpm_mcp_...) cannot call it: it is not in the roadmap-owner profile tool lists.
+- 'lpm mcp status' only counts tools.
+Pairs with: `list_workspaces`

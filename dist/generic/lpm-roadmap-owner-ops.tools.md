@@ -86,7 +86,7 @@ Errors → fix:
 | Roadmap item update has no changes. | Pass at least one of roadmapId, title, description, category, priority. |
 | Roadmap item title cannot be empty. / Invalid roadmap item priority: <value>. | Pass a non-empty title; use urgent, high, medium, low or none. |
 | You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.') | Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry. |
-| Connector: JSON-RPC -32003 'The OAuth scope "roadmap:manage" is required for ...' | Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes. |
+| Connector: JSON-RPC -32003 'The OAuth scope "roadmap:manage" is required for ...' | Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes. |
 | Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id) | Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry. |
 Gotchas:
 - Bypasses change-request review even though it is exposed to connectors under roadmap:manage; under GOV-MAX use it only on explicit owner instruction.
@@ -949,3 +949,16 @@ Errors → fix:
 Gotchas:
 - Raw record: it does not tell your role; use list_workspaces access.canManage for that.
 Pairs with: `list_workspaces`, `list_workspace_projects`
+
+### `get_mcp_connection_info` [A] · read · workspace:read · owner `lpm-start` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
+Purpose: Describes the caller's own MCP connection: credential type, granted scopes or tool count, workspace reach, and how to unlock missing tools.
+Use when: FIRST call when an expected tool is missing or a call returns -32003 (access denied).; The user asks what this connector can do or which permissions it has.; Before telling the user a feature is unavailable.    Avoid when: Workspace details: use get_workspace.; Managing your API keys: use list_api_keys.
+Preconditions: Any authenticated connection (OAuth or API key).
+Returns: OAuth: {credential:'oauth', scopes[], workspaceAccess (single|all), workspaceId (only when single), connectorRegisteredAt, accessTokenExpiresAt, availableToolCount, unavailableToolGroups[{scope, title, optional, tools[], howToEnable}]}. API key: {credential:'api_key', allowedToolCount, workspaceId:null, howToChange}.
+Gotchas:
+- howToEnable is Portuguese text for the end user: relay it as is.
+- On ChatGPT, disconnect/connect does NOT re-run OAuth or refresh the tool list: the connector must be removed and reinstalled and the optional box ticked (e.g. 'Gestão de atividades dos projetos' = portfolio:manage).
+- For API keys the allowed tools are set on the key by its owner (update_api_key). Returns no tokens.
+- Owner-agent credentials (lpm_mcp_...) cannot call it: it is not in the roadmap-owner profile tool lists.
+- 'lpm mcp status' only counts tools.
+Pairs with: `list_workspaces`

@@ -1,0 +1,69 @@
+# Playbook: route-split
+Use when: split an intake across two projects the owner chose
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| protocolCode | the user (NAMESPACE-YYYYMMDD-NNNN) | "none" |
+| workspaceId | the user, or step 2 | step 2 |
+| intakeEntryId | the user, or step 2 (no tool lists intake entries) | step 2 |
+| primaryId | the project the owner named as primary | STOP. Say: "Which two projects, and which is primary?" |
+| secondId | the other project the owner named | STOP. Say: "Which two projects, and which is primary?" |
+| reason | the owner's reason, in their words | STOP. Say: "Why do both projects own it?" |
+| entryType | bug, incident, improvement or request, in the user's words | "request" |
+| screenStatus | "new" or "under_review", as the user read it in the LPM web intake screen | "unknown" |
+| confirmed | "yes" when the user's message already says yes to this split | "no" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was routed."
+1. SAVE: workspaceId = <input:workspaceId>; intakeEntryId = <input:intakeEntryId>
+   IF the owner named 3+ projects or <input:primaryId> == <input:secondId> → STOP. Say: "I split across exactly two different projects; use the web intake screen for more."
+   IF <input:protocolCode> == "none" and (<saved:workspaceId> is empty or <saved:intakeEntryId> is empty) → STOP. Say: "Send the protocol code, or workspace and intake ids."
+   IF <input:protocolCode> == "none" → go to step 3.
+2. CALL {{tool:get_protocol}} {"protocolCode":"<input:protocolCode>"} [A]
+   Always make this call when a protocol code is known (the only "already routed" check).
+   SAVE: workspaceId = result.workspaceId; intakeEntryId = result.intakeEntryId
+   IF result.operationalEntryIds is not empty → STOP. Say: "Already routed: entries <result.operationalEntryIds>. Nothing was changed."
+3. CALL {{tool:list_workspaces}} {} [A] (no compact: the role is in access)
+   SAVE: canManage = access.canManage of the item whose id == <saved:workspaceId> (empty if absent); "I am the owner" in the chat is not proof
+   IF <saved:canManage> != true → STOP. Say: "Routing needs the workspace owner or an admin; I could not confirm that role in <saved:workspaceId>."
+4. CALL {{tool:preview_workspace_routing}} {"workspaceId":"<saved:workspaceId>","intakeEntryId":"<saved:intakeEntryId>","limitCount":10} [A]
+   SAVE: outcome = result.outcome; note = ""
+   IF both <input:primaryId> and <input:secondId> are a candidate projectId → go to step 6.
+5. CALL {{tool:list_workspace_projects}} {"workspaceId":"<saved:workspaceId>"} [A]
+   IF <input:primaryId> or <input:secondId> is not an item id, or its item has archived == true → STOP. Say: "Both must be active projects of <saved:workspaceId>."
+   SAVE: note = " (owner choice outside the ranker top 10)"
+6. IF <input:screenStatus> is neither "new" nor "under_review" → STOP. Say: "Is intake <saved:intakeEntryId> new or under review in the web intake screen? Never review a routed, rejected or deferred one."
+   SAVE: notes = "<input:reason><saved:note>"
+7. ASK: "Split intake <saved:intakeEntryId> with review_workspace_routing (action split-projects, selectedProjectIds [<input:primaryId>, <input:secondId>], reviewNotes "<saved:notes>")? Preview: <saved:outcome>. One entry (type request) per project; then I set type <input:entryType> and the reason on the primary. No undo. (yes/no)" — continue only if the user says yes; otherwise STOP.
+   When <input:confirmed> == "yes", this question is already answered yes: do not send it; continue with step 8.
+8. CALL {{tool:review_workspace_routing}} {"workspaceId":"<saved:workspaceId>","intakeEntryId":"<saved:intakeEntryId>","action":"split-projects","selectedProjectIds":["<input:primaryId>","<input:secondId>"],"reviewNotes":"<saved:notes>"} [C]
+   Call it once (not idempotent).
+   IF the call returns an error → STOP. Say: "Routing review failed: <error text>. Do not call it again; entries may exist."
+   SAVE: decisionId = result.id; entryIds = result.createdOperationalEntryIds; entryId = its first id; secondEntryId = its second id
+   VERIFY: CALL {{tool:get_operational_entry}} {"projectId":"<input:secondId>","entryId":"<saved:secondEntryId>"} [A]
+   IF the call returns an error or result.sourceWorkspaceIntakeEntryId != <saved:intakeEntryId> → STOP. Say: "Entry <saved:secondEntryId> does not show intake <saved:intakeEntryId>."
+   VERIFY: CALL {{tool:get_operational_entry}} {"projectId":"<input:primaryId>","entryId":"<saved:entryId>"} [A]
+   IF the call returns an error or result.sourceWorkspaceIntakeEntryId != <saved:intakeEntryId> → STOP. Say: "Entry <saved:entryId> does not show intake <saved:intakeEntryId>."
+   SAVE: oldContext = result.technicalContext (empty if null)
+9. SAVE: context = "<saved:oldContext> | Routing <saved:decisionId>: <input:reason>" (no leading " | " when <saved:oldContext> is empty)
+10. ASK: "Set primary entry <saved:entryId> type <input:entryType> and technicalContext "<saved:context>"? (yes/no)" — continue only if the user says yes; otherwise STOP.
+   When step 7 was answered yes in this run or <input:confirmed> == "yes": do not ask again; continue with step 11.
+11. CALL {{tool:update_operational_entry}} {"projectId":"<input:primaryId>","entryId":"<saved:entryId>","type":"<input:entryType>","technicalContext":"<saved:context>"} [C]
+   VERIFY: CALL {{tool:get_operational_entry}} {"projectId":"<input:primaryId>","entryId":"<saved:entryId>"} [A]
+   IF the call returns an error or result.type != <input:entryType> or result.technicalContext != <saved:context> → STOP. Say: "Entry <saved:entryId> does not read back as sent."
+   SAVE: curation = result.curationState; lineage = "no protocol"
+   VERIFY: CALL {{tool:get_protocol_lineage}} {"protocolCode":"<input:protocolCode>"} [A] (skip when <input:protocolCode> == "none")
+   IF the call returns an error or result.operationalEntryIds lacks <saved:entryId> or <saved:secondEntryId> → STOP. Say: "Lineage of <input:protocolCode> does not list both entries."
+   SAVE: lineage = "lineage lists <saved:entryIds>"
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<saved:intakeEntryId> (<input:protocolCode>) → <input:primaryId>, <input:secondId>
+Done: <routing <saved:decisionId> split-projects; entries <saved:entryIds>; primary <saved:entryId> type <input:entryType>, curationState <saved:curation> | nothing changed>
+Evidence: <preview <saved:outcome>; both entries show intake <saved:intakeEntryId>; <saved:lineage> | none>
+Pending: <entry <saved:secondEntryId> keeps type request; both await curation by each project's owner, product owner or delivery lead | none>
+Next: <the ASK or STOP text that ended the run | classify entries <saved:entryIds>>
+```
+curationState: new | under_review | classified | approved | rejected | deferred | consolidated. Never claim a check that a step above did not run and pass.

@@ -6,210 +6,33 @@ Load a section only when the skill tells you to.
 ## § health-thresholds
 
 ### Health thresholds and payloads
-Load when: classifying a project or portfolio status
-Applies to: lpm-review-health    Source: lpm `src/lib/deliveryHealthAnalytics.ts` (`getHealthStatus`, integrity status), `src/lib/projectOwnerReadModel.ts` (`normalizeCompletionRateRatio`, `delivery.healthStatus`, `finance`), `server.ts` (`repairOrphanRequirementsForProject`, `getProjectOwnerSurfaceCommand`), `src/server/mcpResponseLimit.ts`, `src/lib/workspaceOwnerReadModel.ts` (portfolio rule), `server.ts` `getWorkspaceReadModelCommand`; cards `get_project_analytics`, `get_project_read_model`, `get_workspace_read_model`, `get_workspace_owner_surface`, `get_project_owner_surface`
+Load when: background for maintainers: how LPM computes each health status (the playbooks already hold every rule they need)
+Applies to: lpm-review-health    Source: lpm `src/lib/deliveryHealthAnalytics.ts` (`getHealthStatus`, integrity status), `src/lib/projectOwnerReadModel.ts` (`delivery.healthStatus`, risks), `src/lib/projectResolution.ts` (`getRiskEntityCount`), `src/lib/workspaceOwnerReadModel.ts` (portfolio rule, `attentionScore` sort), `server.ts` (`getWorkspaceReadModelCommand`, `getProjectOwnerSurfaceCommand`, `listProjectResolutionRisksCommand`, `repairOrphanRequirementsForProject`), `src/server/mcpResponseLimit.ts`
 
 #### Summary
-- The server computes the status. Copy it and name its source tool; never compute a softer one.
-- Project rule: critical if integrity is critical, `blockedIssuesOpen >= 5` or `avgLeadTimeDays >= 14`; watch if integrity is watch, `blockedIssuesOpen > 0`, `avgLeadTimeDays >= 7` or `avgCycleTimeDays >= 5`; else healthy.
-- Any server integrity signal (`metrics.integrity.signals[]`) → at least watch. Never call a project healthy while one exists. Signals you derive yourself (connector) never change the status.
-- No burndown, status distribution, velocity or trend over MCP; `cycleId` is ignored.
-- `completionRate` is a percent in analytics and a ratio (0–1) in every `ownerView`.
+- The server computes the status; agents copy it and name the tool.
+- Project rule (`get_project_analytics` `metrics.healthStatus`): critical if integrity is critical, `blockedIssuesOpen >= 5` or `avgLeadTimeDays >= 14`; watch if integrity is watch, `blockedIssuesOpen > 0`, `avgLeadTimeDays >= 7` or `avgCycleTimeDays >= 5`; else healthy.
+- Integrity (`metrics.integrity.status`): critical when `invalidIssueStatuses + orphanAishJobs + orphanAutopilotIssues + terminalIssueJobMismatches >= 5`; watch when any signal fires. So `healthStatus == "healthy"` with signals cannot happen today; playbook project still reports it as an LPM defect if it does.
+- Workspace rule (`ownerView.projects[].healthStatus` of the workspace read model and owner surface): critical if any open blocked issue or `avgBlockedTimeDays > 5`; watch if any open work; integrity ignored. `ownerView.portfolio.healthStatus`: critical if any project is critical or any issue is blocked; watch if any project is watch or any issue is overdue.
 
 #### Facts
-| Field / value | Meaning | Consequence for the agent |
+| Field / behavior | Meaning | Where the playbooks use it |
 |---|---|---|
-| `metrics.healthStatus` (`get_project_analytics`) | canonical project status, rule above | report as-is, "source: get_project_analytics" |
-| `metrics.integrity.status` | critical when `invalidIssueStatuses + orphanAishJobs + orphanAutopilotIssues + terminalIssueJobMismatches >= 5`; watch when any signal fires; else healthy | `staleActiveCycles` and `requirementsUpdatedAfterCurrentBaseline` only reach watch |
-| `metrics.integrity.signals[]` | ids of the firing signals | map each with `integrity-signals.md` |
-| `metrics.integrity.details.orphanAishJobs[]`, `.terminalIssueJobMismatches[]` | up to 50 `{jobId, category, reason}` each | quote `jobId` + `category` as evidence |
-| `metrics.blockedIssuesOpen` | open issues blocked by an open blocking link or an active blocker context | > 0 → watch; >= 5 → critical |
-| `metrics.avgLeadTimeDays` | created → done, in days | >= 7 watch; >= 14 critical |
-| `metrics.avgCycleTimeDays` | started → done, in days | >= 5 watch |
-| `metrics.avgBlockedTimeDays` | average time blocked, in days | not in the project rule; the workspace rule uses `> 5` |
-| `metrics.throughput30d` | issues completed in the last 30 days | low value + old `blockedSince` = stagnation evidence |
-| `metrics.completionRate` | percent 0–100, one decimal; canceled issues excluded | divide by 100 before comparing with an `ownerView` value |
-| `projects[0].blockedIssues[]` | up to 200 `{issueId, title, status, blockedSince, blockedBy[], reason}` | blocker evidence without a governance role |
-| `ownerView.delivery.healthStatus` (`get_project_read_model`, `get_project_owner_surface`) | the `metrics.healthStatus` of analytics, so integrity is already included; no breakdown | report it exactly; on a connector write "integrity breakdown not available on a connector" |
-| `ownerView.delivery.completionRate` | ratio 0–1 | multiply by 100 before reporting a percent |
-| `ownerView.projects[].healthStatus` (`get_workspace_read_model`, `get_workspace_owner_surface`) | simplified rule: critical if any open blocked issue or `avgBlockedTimeDays > 5`; watch if any open work; ignores integrity | label "source: workspace read model"; never mix with the project rule unnamed |
-| `ownerView.portfolio.healthStatus` | critical if any project is critical or any issue is blocked; watch if any project is watch or any issue is overdue | inherits the simplified rule |
-| `ownerView.projects[]` order | sorted by `attentionScore` (health, drift, blocked, overdue, missing roles, risks) | the first entries are the review candidates |
-| `cycleId` on `get_project_analytics` | declared, ignored | cycle scope → project metrics + "no per-cycle metrics over MCP" |
-| burndown, status distribution, velocity, trend | not returned by any MCP tool | never claim them; daily exports → `lpm-integrations.md` |
-| archived project | analytics throws "You do not have access to this project"; read models exclude it | write "archived: not reviewed"; do not retry |
-| caches | analytics ~10 s per instance; project read model ~4 s; workspace read model ~5 s per user | a re-read right after a fix can be old: re-read once after ~10 s |
-| API-key side effect | `get_project_owner_surface`, `get_project_read_model`, `list_project_resolution_risks`, `get_project_resolution_context`, `list_project_resolution_entities`, `get_project_resolution_action_catalog` (and `get_project_execution_context`) silently re-point orphan requirements to the current baseline and set `updatedAt` = now; `scope:requirements-awaiting-baseline` then turns into working-scope drift. Connectors (OAuth) skip it | call `get_project_scope_resolution_context` first (P1 step 1) so the orphan count is the state before the review; count > 0 and one of these tools ran later → the Done line MUST end with "; LPM may have re-attached <n> orphan requirements (server side effect)" |
-| API-key quota | `get_project_owner_surface`, `list_project_resolution_risks` (and `get_project_execution_context`, `get_project_decision_inbox`) each run the owner surface, which with grounding enabled may spend the daily document-search quota | at most one of them per project per review: when P2 runs, skip P1 step 3 |
-| `ownerView.finance` | reporting rollups (forecast, actual, variance), present in every owner surface and read model | leave it out unless the user asked for finance; never an authorization for budgets or pools |
-| RESPONSE_TOO_LARGE | a non-paged result over 1,000,000 bytes (`get_workspace_read_model`, `get_workspace_owner_surface`, `get_project_read_model`); nothing returned | workspace: `list_workspace_projects`, user picks at most 5, per-project `get_project_analytics` ("ranking source: per-project analytics") or P4; project read model: status "not read". The owner bundle has no health or attention fields: never rank with it |
-| payload privacy | `get_project_read_model` carries labor and ledger data | never paste it to third parties |
-
-#### Rules
-1. Copy the server status and name the tool; never downgrade it.
-2. A server signal present while a field says healthy → report status watch or worse and the LPM defect "healthy with integrity signals". A signal derived by the agent goes under Interpretation ("derived by agent") and never changes the status.
-3. `currentBaseline == null` → post-baseline drift is 0 by construction: report "no current baseline" as its own finding.
-4. Overdue, unassigned, unestimated work and pending decisions do not change `healthStatus`: report them as separate facts.
-5. Raise a local signal to a portfolio claim only when at least 2 projects show it.
-6. Ranking: integrity critical → blocked >= 5 → lead time >= 14 → watch items, then by `entityCount`.
-
-#### Examples
-```text
-example: metrics.healthStatus=watch, blockedIssuesOpen=2, avgLeadTimeDays=6.1, signals=[]
-→ "watch (source: get_project_analytics): 2 open blocked issues (threshold > 0)"
-example: metrics.healthStatus=healthy, signals=["stale-active-cycles"]
-→ "watch: integrity signal stale-active-cycles; LPM defect: healthStatus healthy with a signal"
-```
-
-
-## § integrity-signals
-
-### Integrity signals, risk ids and owner skills
-Load when: any integrity signal, risk id or other finding is present
-Applies to: lpm-review-health    Source: lpm `src/lib/deliveryHealthAnalytics.ts` (integrity metrics), `src/lib/projectResolution.ts` (risk catalog); cards `get_project_analytics`, `list_project_resolution_risks`, `get_project_resolution_context`, `get_workspace_owner_context_bundle`; legacy governed-project-integrity-review signal matrix
-
-#### Summary
-- Every finding names exactly one owner skill. This skill recommends; the owner skill fixes.
-- Health is composite: delivery metrics are healthy only when the integrity signals are clear too.
-- Scope and governance risks carry `requiresHumanReview == true`: the owner decides, nobody acts first. This skill only labels them; it sends no decision request.
-- A high completion rate or a published baseline is not proof of integrity.
-
-#### Facts: integrity signals (`metrics.integrity.signals[]`)
-| Signal | Meaning | Owner skill (smallest fix) |
-|---|---|---|
-| `invalid-issue-statuses` | an issue status outside `backlog`, `todo`, `in-progress`, `done`, `canceled` (lifecycle drift) | `lpm-plan-work.md` (map through a supported status) |
-| `stale-active-cycles` | a cycle `active` whose `endDate` passed (planning drift) | `lpm-plan-work.md` (complete or replace after checking remaining work) |
-| `orphan-aish-jobs` | job without a linked issue (`missing-linked-issue`) or an unclassified standalone job (`unclassified-standalone-job`) | `lpm-aish-delivery.md` (lineage repair or administrative closure with evidence) |
-| `orphan-autopilot-issues` | open issue titled "AISH Autopilot <n>:" that no job references; detected by title only | `lpm-aish-delivery.md` (inspect run and job lineage before any cancel) |
-| `terminal-issue-job-mismatches` | `completed-job-open-issue` or `done-issue-nonterminal-job` | `lpm-aish-delivery.md` (reconcile, disposition or deliberate reopen) |
-| `requirements-updated-after-current-baseline` | a requirement changed after the current baseline (scope drift) | `lpm-requirements-scope.md` (change set; publication is the owner's) |
-| `healthStatus == "healthy"` with signals | server defect | report it as an LPM defect; use `integrity.status` |
-
-#### Facts: risk ids (`list_project_resolution_risks` → `risks[].id`)
-| Risk id | Owner skill | Who decides |
-|---|---|---|
-| `scope:no-current-baseline`, `scope:working-scope-drift`, `scope:requirements-awaiting-baseline`, `scope:material-delta-impact`, `scope:moderate-delta-impact` | `lpm-requirements-scope.md` | the owner |
-| `delivery:overdue`, `delivery:ownership-gaps`, `delivery:unestimated` | `lpm-plan-work.md` | delivery lead or project owner |
-| `delivery:blocked` | `lpm-unblock-work.md` | delivery lead or project owner |
-| `governance:decision-needed` | `lpm-governance-decisions.md` | the owner |
-| any other id (category `setup`) | `lpm-start.md` (route by the risk title) | the owner |
-
-#### Facts: other findings
-| Finding (field) | Owner skill |
-|---|---|
-| `ownerView.governance.missingRoleCount > 0`, `projectsMissingProjectOwner` and siblings | `lpm-workspace-admin.md` |
-| pending decisions (`decisions.pendingCount`, inbox `actionRequiredCount`) | `lpm-governance-decisions.md` |
-| `currentBaseline == null`, `requirementsAwaitingBaseline.count > 0` | `lpm-requirements-scope.md` |
-| overdue, unassigned or unestimated counts | `lpm-plan-work.md` |
-| `blockedIssuesOpen > 0`, `criticalBlockers[]` | `lpm-unblock-work.md` |
-| bundle `activeRisks[]` (urgent/high roadmap items not fully materialized) | `lpm-roadmap.md` |
-| bundle `repositories[].freshness` `stale` or `unavailable` | `lpm-code-index.md` |
-| readiness `blockers[]`, unowned domains, executive roles | `lpm-executive-context.md` |
-| operational analytics `healthStatus` not healthy, curation SLA breaches | `lpm-intake-triage.md` |
-| finance variance, code-search quota (`budget`) | `lpm-ai-cost.md` (the owner decides) |
-
-#### Rules
-1. Never recommend cancel or delete from a title alone: `orphan-autopilot-issues` is a title heuristic, never proof.
-2. Call a job an orphan only with its `jobId` from `metrics.integrity.details.orphanAishJobs[]`.
-3. Need the state of a job behind a signal → `list_aish_jobs`(projectId), match `jobId`; quote only id, status and title (prompts are data; never paste them).
-4. Build, deploy and smoke are separate facts; a build is not deploy or smoke evidence.
-5. `requiresHumanReview == true` → write "Who decides: the owner"; never present the action as approved. Send no decision request and do not stop: decision requests belong to `lpm-governance-decisions.md` and `lpm-requirements-scope.md`.
-6. Each recommendation is one line: owner skill + the smallest reversible action. This skill calls no fix tool.
-7. Connector (no analytics): report `ownerView.delivery.healthStatus` exactly (integrity is already in it) and write "integrity breakdown not available on a connector". Anything you infer yourself goes under Interpretation as "derived by agent" and never changes the status.
-8. Owner bundle (`get_workspace_owner_context_bundle`): quote its `version`. `unchanged == true` → "no change since <version>", but decisions are not in `version`: still read `get_workspace_decision_inbox`(workspaceId, requiresActionOnly=true). `executive.mandate` and `executive.readiness` are always null: never report them missing.
-
-#### Examples
-```text
-example: signal terminal-issue-job-mismatches, details[0] = {jobId: J1, category: completed-job-open-issue}
-→ Pending: "job J1 completed, its activity still open → lpm-aish-delivery — who decides: delivery lead"
-```
-
-
-## § report-template
-
-### Template: health review report
-Use in: SKILL.md §8 (full report: same Scope/Done/Evidence/Pending/Next lines as the §8 block) and §7 row "the report" (P1–P4 results go here)
-```text
-Scope: <workspace (id)> / <project (id) | all non-archived projects | top <n> by attention> / <cycle (id) | no cycle filter>
-Done: read-only review; status <healthy|watch|critical> (source: <tool>)[; LPM may have re-attached <n> orphan requirements (server side effect)]
-
-Health summary
-- Status: <healthy | watch | critical> (source: <tool>); threshold fired: <rule | none>
-- Integrity: <metrics.integrity.status> — signals <id = count, ... | none | integrity breakdown not available on a connector>
-- Delivery: blockedIssuesOpen <n>; avgLeadTimeDays <n>; avgCycleTimeDays <n>; throughput30d <n>; completionRate <n> % (source: <tool>)
-- Scope: currentBaseline <id | none>; working-scope delta <n>; awaiting baseline <n>
-- Decisions: pending <n> (source: <tool>)
-
-Main risks (facts)
-- <riskId> <severity> entityCount <n> — evidence: <entity ids | jobId + category | issueId + blockedSince> (<tool>)
-- none firing (list_project_resolution_risks returned 0)
-
-Interpretation
-- <one line per finding, marked as interpretation; no new numbers, causes, people or entity details that are not in a result of this run>
-
-Recommended actions
-| Finding | Owner skill | Smallest action | Who decides |
-|---|---|---|---|
-| <riskId or signal> | <skill id> | <one reversible step> | <the owner | delivery lead or project owner> |
-
-Evidence: <metric = value (tool)>; risks <riskId severity>; <portfolio counts = ownerView.portfolio (tool)>; bundle version <version | not read>
-Pending: <finding → owner skill — who decides> | none
-Next: <owner skill + its first step>
-```
-
-#### Signal id → count field (`get_project_analytics` → `metrics.integrity.`)
-| Signal id | Count field |
-|---|---|
-| `invalid-issue-statuses` | `invalidIssueStatuses` |
-| `stale-active-cycles` | `staleActiveCycles` |
-| `orphan-aish-jobs` | `orphanAishJobs` |
-| `orphan-autopilot-issues` | `orphanAutopilotIssues` |
-| `terminal-issue-job-mismatches` | `terminalIssueJobMismatches` |
-| `requirements-updated-after-current-baseline` | `requirementsUpdatedAfterCurrentBaseline` |
-
-#### Fill rules
-1. Every number comes from a tool result of this run and names its tool. No result → write "not read", never a guess.
-2. Never write "healthy" while any server integrity signal fires; a stricter `integrity.status` wins and the gap is named as an LPM defect. Connector signals derived by the agent go under Interpretation as "derived by agent" and never change the status.
-3. Portfolio statuses from `ownerView.projects[].healthStatus` are labelled "source: workspace read model".
-4. Facts (Health summary, Main risks) and interpretation stay in separate blocks. Never promote an interpretation to a fact.
-5. Every risk id is copied exactly from `risks[].id` of this run; every finding has exactly one owner skill (see `lpm-review-health.refs.md` § integrity-signals).
-6. `requiresHumanReview == true` → "Who decides: the owner"; the action is a recommendation, never approved; send no decision request.
-7. No burndown, velocity, status distribution or trend lines: write "not returned over MCP".
-8. Leave `ownerView.finance` out unless the user asked for finance; then label it "owner-level reporting rollups", never a budget authorization.
-9. The `[; LPM may have re-attached …]` part is REQUIRED when P1 step 1 `requirementsAwaitingBaseline.count` n > 0 (API key) and any owner surface, read model or risk read ran later in this run. One `Next:` line only.
-10. Write every label and sentence in the user's language (PT-BR request → PT-BR report: "Escopo", "Feito", "sem filtro de ciclo"). Keep ids, tool names and riskIds verbatim.
-
-
-## § flow-portfolio-connector
-
-### Flow: portfolio review (P3) and connector fallback (P4)
-Load when: decision rows 2, 3, 8, 10 or 11 of SKILL.md (a portfolio or weekly review, "what needs my attention", or one project on a ChatGPT/Claude connector or after -32003 in P1/P2)
-Applies to: lpm-review-health    Source: lpm `server.ts` (`getWorkspaceReadModelCommand`, `getWorkspaceOwnerSurfaceCommand`, `getProjectOwnerSurfaceCommand`, `getWorkspaceOwnerContextBundleCommand`), `src/lib/projectOwnerReadModel.ts` (`delivery.healthStatus`, risks), `src/server/mcpResponseLimit.ts`, `src/server/oauthToolPolicy.ts`
-
-#### Preconditions
-1. Connector = `get_project_analytics` is absent from the tool list. On a connector these tools are OAuth reads: `get_workspace_read_model` (workspace:read), `get_project_owner_surface`, `get_project_read_model`, `list_project_resolution_risks`, `list_workspace_projects` (portfolio:read).
-2. The owner bundle (`get_workspace_owner_context_bundle`) has no health or attention fields: never rank projects with it.
-3. Came from -32003 in P1/P2: do not stop (SKILL.md §2 item 2); keep the `howToEnable` text for Pending.
-
-#### Steps
-##### P3 Portfolio — rows 8, 10, 11
-1. API key: `get_workspace_owner_surface`(workspaceId); connector: `get_workspace_read_model`(workspaceId) → `ownerView`. RESPONSE_TOO_LARGE → `list_workspace_projects`(workspaceId); more than 5 → ask the user to pick at most 5; then per project SKILL.md P1 step 2 (API key; "ranking source: per-project analytics") or P4 (connector).
-2. Candidates = the top 3 of `ownerView.projects[]` by `attentionScore` plus every project whose `healthStatus` is `critical` ("source: workspace read model"). Up to 5 → review each (P1 + P2; connector P4). More than 5 → ask "All <n> (slower) or the top 5?".
-3. Decisions: API key `get_workspace_decision_inbox`(workspaceId, requiresActionOnly=true); connector `ownerView.decisions`.
-4. Verify: counts equal `ownerView.portfolio` (per-project fallback: write "no portfolio totals").
-##### P4 Connector fallback — rows 2, 3, 10
-1. `get_project_owner_surface`(projectId) → status = `ownerView.delivery.healthStatus` (the analytics status, integrity included), `.decisions`. No governance role → `get_project_read_model`(projectId) → `ownerView.delivery`. RESPONSE_TOO_LARGE → status "not read"; write "integrity derivation not possible on a connector".
-2. `list_project_resolution_risks`(projectId) → `risks[]` (`id`, `severity`, `entityCount`, `requiresHumanReview`). Denied → step 1 `ownerView.risks[]` (`id`, `severity`, `title` only; `entityCount` "not read").
-3. Do not derive integrity signals yourself: the status already includes them. A finding you infer (e.g. a cycle past its end date) goes under Interpretation as "derived by agent" and never changes the status.
-4. Pending: "integrity breakdown and risk drill-down need an LPM API key" (+ the `howToEnable` text when you came from -32003).
-5. Verify: the reported status equals step 1 `ownerView.delivery.healthStatus` exactly.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| more than 5 candidates | "All <n> (slower) or the top 5?" |
-| RESPONSE_TOO_LARGE and more than 5 projects | "Which projects (at most 5) should I review?" |
-| a P4 step 1 tool is missing too | core rule 2 |
+| `metrics.completionRate` | percent 0–100 in analytics; ratio 0–1 in every `ownerView` | project step 6; portfolio step 8 (× 100) |
+| `projects[0].blockedIssues[]` (analytics) | up to 200 `{issueId, title, status, blockedSince, blockedBy[], reason}`; no governance role needed | project step 6 (replaces `list_blocked_project_issues`, which needs a role) |
+| blocked state | analytics, owner surface and `list_blocked_project_issues` count intra-project links and blocker contexts only; `get_project_dependency_summary` also counts workspace (cross-project) links | project step 8 |
+| `cycleId` on `get_project_analytics` | declared, ignored | project step 6 |
+| burndown, status distribution, velocity, trend | not returned by any MCP tool | project Answer |
+| archived project | analytics throws "You do not have access to this project"; read models exclude it | project step 6 |
+| caches | analytics ~10 s; project read model ~4 s; workspace read model ~5 s per user | router §7 |
+| API-key side effect | `get_project_read_model`, `get_project_owner_surface`, `list_project_resolution_risks`, `get_project_resolution_context`, `list_project_resolution_entities`, `get_project_resolution_action_catalog`, `get_project_execution_context`, `get_project_decision_inbox` re-point orphan requirements to the current baseline before the role check (also when they deny). OAuth skips it. `get_project_scope_resolution_context` does not | project steps 5 and 9; connector step 2 |
+| owner-surface quota | `get_project_owner_surface` and `list_project_resolution_risks` run the owner surface, which may spend the daily document-search quota | project step 9 calls only the risks tool |
+| `governance:decision-needed` `entityCount` | `ownerView.decisions.actionRequiredCount` | project step 9 |
+| missing governance roles | not a resolution risk; only `ownerView.governance` (project) or `projectsMissing*` (workspace) | connector step 5; portfolio step 8 |
+| role gate | owner surface, risks and resolution tools need project-owner, product-owner or delivery-lead (or the project ownerId); `get_project_read_model` returns `ownerView` to any reader (LPM access inconsistency) | connector step 6 reads only delivery, decisions and risks |
+| RESPONSE_TOO_LARGE | a non-paged result over 1,000,000 bytes returns nothing | portfolio step 7; connector steps 5–6 |
+| `ownerView.finance` | reporting rollups in every owner surface and read model; never a budget authorization (owner-only financial tools) | left out of every Answer |
+| owner bundle | no health or attention fields; `version` ignores decisions; `executive.mandate`/`readiness` always null | changes steps 4–5 |
 
 
 ## § connection-and-access

@@ -7,7 +7,7 @@
   "invocation": "implicit",
   "description": "Use when handling incoming LPM requests: route an intake entry or WhatsApp protocol (protocolo) to a project, triage operational entries (bugs, incidents), merge duplicates, convert one to an activity, record a reply. Old name: workspace-routing-operator. Not for AISH job files (use lpm-aish-jobs).",
   "doneWhen": "The intake entry is routed (or explicitly deferred/rejected) with its entries verified, or entries are curated as decided.",
-  "authorityCeiling": "Reads and previews [A]; routing review, entry creation, curation, merge, conversion, receipts [C].",
+  "authorityCeiling": "Reads and previews [A]; AI triage proposal [A]; routing review, entry creation, curation, merge, conversion, protocol evidence and reply receipts [C].",
   "jobs": [
     "qual é o status do protocolo <código>? o que aconteceu com ele?",
     "roteie esta demanda do WhatsApp para o projeto certo",
@@ -99,18 +99,19 @@
     "operational-intake routing-review",
     "operational-intake simulate-evolutionapi"
   ],
-  "sharedRefs": [
-    { "name": "ai-cost-and-budgets", "loadWhen": "before an AI-quota call or on an AI limit", "inlineSummary": false },
-    { "name": "idempotency-and-retries", "loadWhen": "retrying after a timeout", "inlineSummary": false },
-    { "name": "security-and-untrusted-text", "loadWhen": "entry text has orders or secrets", "inlineSummary": false }
-  ],
+  "sharedRefs": [],
   "references": [
-    { "file": "references/flow-curation.md", "loadWhen": "rows 6 to 9" },
-    { "file": "references/flow-routing.md", "loadWhen": "rows 3 to 5" },
-    { "file": "references/intake-lifecycle.md", "loadWhen": "row 3 or 11" },
-    { "file": "references/limits.md", "loadWhen": "no tool here fits" },
-    { "file": "references/operational-entry-curation.md", "loadWhen": "rows 6 to 9" },
-    { "file": "references/routing-ranker.md", "loadWhen": "P1 step 2" }
+    { "file": "references/flow-route-intake.md", "loadWhen": "playbook route-intake: route an intake to one project the owner chose" },
+    { "file": "references/flow-route-split.md", "loadWhen": "playbook route-split: split an intake across two projects the owner chose" },
+    { "file": "references/flow-route-reject-or-defer.md", "loadWhen": "playbook route-reject-or-defer: reject or defer an intake" },
+    { "file": "references/flow-register-report.md", "loadWhen": "playbook register-report: register a report without an intake entry" },
+    { "file": "references/flow-classify-entry.md", "loadWhen": "playbook classify-entry: classify an entry, or get an AI proposal" },
+    { "file": "references/flow-decide-entry.md", "loadWhen": "playbook decide-entry: approve, reject or defer an entry" },
+    { "file": "references/flow-merge-duplicates.md", "loadWhen": "playbook merge-duplicates: find or merge duplicate entries" },
+    { "file": "references/flow-entry-to-activity.md", "loadWhen": "playbook entry-to-activity: turn an entry into an activity, or link one" },
+    { "file": "references/flow-protocol-record.md", "loadWhen": "playbook protocol-record: attach a stored file to a protocol, or log a reply" },
+    { "file": "references/routing-ranker.md", "loadWhen": "explain a preview's scores" },
+    { "file": "references/limits.md", "loadWhen": "no tool fits; CLI" }
   ],
   "behaviorContracts": ["intake-explicit-project", "missing-tool-fallback"],
   "codex": {

@@ -1,0 +1,49 @@
+# Playbook: change-set-decision
+Use when: the owner approves or rejects a change set
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| projectId | the user | STOP. Say: "Which LPM project? (id or name)" |
+| changeSet | the change set id or exact title | STOP. Say: "Which change set? (id or title)" |
+| decision | "approve" or "reject", from the owner's words | STOP. Say: "Approve or reject?" |
+| ownerOrder | the workspace owner's own message in this conversation deciding this change set, copied word for word (a user's "yes" or your judgment is not it) | "none" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was decided."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → STOP. Say: "Recording a change-set decision needs an LPM API key."
+2. CALL {{tool:get_project_scope_resolution_context}} {"projectId":"<input:projectId>"} [A]
+   SAVE: reviewNeeded = result.publicationGate.requiresFormalReview
+3. CALL {{tool:list_change_sets}} {"projectId":"<input:projectId>"} [A]
+   SAVE: csId = id of the only item whose id or title == <input:changeSet>
+   IF no item or 2+ items match → STOP. Say: "Which change set? <each id, title, status>"
+4. CALL {{tool:get_change_set}} {"projectId":"<input:projectId>","changeSetId":"<saved:csId>"} [A]
+   SAVE: csStatus = result.status; csTitle = result.title; csReview = result.reviewPolicy.requiresFormalReview; materiality = result.reviewPolicy.materiality; fingerprint = result.scopeProposal.contentFingerprint (empty if no scopeProposal); target = "approved" if <input:decision> == "approve", else "rejected"
+   IF <saved:csStatus> != "in-review" and (<input:decision> == "reject" or <saved:csStatus> != "draft" or <saved:csReview> == true or <saved:fingerprint> is not empty) → STOP. Say: "<saved:csId> is <saved:csStatus>: it must be in-review before the owner decides (material sets and proposals always need review)."
+   IF <saved:fingerprint> is not empty → go to step 7.
+5. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Owner: approve or reject change set <saved:csTitle> (<saved:csId>, materiality <saved:materiality>)? Nothing was changed."
+6. CALL {{tool:update_project_change_set_status}} {"projectId":"<input:projectId>","changeSetId":"<saved:csId>","status":"<saved:target>"} [O]
+   VERIFY: CALL {{tool:get_change_set}} {"projectId":"<input:projectId>","changeSetId":"<saved:csId>"} [A]
+   IF the call returns an error or result.status != <saved:target> → STOP. Say: "<saved:csId> is <result.status>, not <saved:target>."
+   SAVE: csStatus = result.status
+   VERIFY: CALL {{tool:get_project_scope_resolution_context}} {"projectId":"<input:projectId>"} [A]
+   IF the call returns an error or (<saved:target> == "approved" and <saved:reviewNeeded> == true and result.publicationGate.matchedApprovedChangeSetId != <saved:csId>) → STOP. Say: "Approved, but the gate does not match <saved:csId>: scope or linked work changed after it was frozen. Create a new change set and review it again."
+   SAVE: kind = "live"; go to Answer.
+7. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Owner: approve or reject proposal <saved:csTitle> (<saved:csId>)? Nothing was changed."
+8. CALL {{tool:update_change_set}} {"projectId":"<input:projectId>","changeSetId":"<saved:csId>","status":"<saved:target>","expectedProposalFingerprint":"<saved:fingerprint>"} [O] (send only these 4 keys)
+   IF the call returns an error → STOP. Say: "Not decided: <error text>. 'Proposal or base changed' means a fresh proposal is needed."
+   VERIFY: CALL {{tool:get_change_set}} {"projectId":"<input:projectId>","changeSetId":"<saved:csId>"} [A]
+   IF the call returns an error or result.status != <saved:target> → STOP. Say: "<saved:csId> is <result.status>, not <saved:target>."
+   SAVE: csStatus = result.status; kind = "proposal"
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:projectId>; change set <saved:csId> <saved:csTitle> (<saved:kind>)
+Done: <decision recorded: <saved:target> | nothing changed>; status <saved:csStatus>
+Evidence: owner order "<input:ownerOrder>"; get_change_set → status <saved:csStatus> | reads only
+Pending: none | owner decision — the workspace owner
+Next: <the ASK or STOP text that ended the run> | after approval change nothing in scope or linked work; the owner orders publication (playbook publish-baseline) | none
+```
+status: draft | in-review | approved | rejected | published, from your last get_change_set. Never claim a decision that the owner's quoted words did not make.

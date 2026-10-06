@@ -1,0 +1,68 @@
+# Playbook: route-intake
+Use when: route an intake to one project the owner chose
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| protocolCode | the user (NAMESPACE-YYYYMMDD-NNNN) | "none" |
+| workspaceId | the user, or step 2 | step 2 |
+| intakeEntryId | the user, or step 2 (no tool lists intake entries) | step 2 |
+| projectId | the one project id the owner named in this conversation | "none" |
+| reason | the owner's reason, in their words | STOP. Say: "Why does this project own it? The reason is saved with the entry." |
+| entryType | bug, incident, improvement or request, in the user's words | "request" |
+| screenStatus | "new" or "under_review", as the user read it in the LPM web intake screen | "unknown" |
+| confirmed | "yes" when the user's message already says yes to this routing (same project and reason) | "no" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was routed."
+1. SAVE: workspaceId = <input:workspaceId>; intakeEntryId = <input:intakeEntryId>
+   IF <input:protocolCode> == "none" and (<saved:workspaceId> is empty or <saved:intakeEntryId> is empty) → STOP. Say: "Send the protocol code, or the workspace and intake entry ids."
+   IF <input:protocolCode> == "none" → go to step 3.
+2. CALL {{tool:get_protocol}} {"protocolCode":"<input:protocolCode>"} [A]
+   Always make this call when a protocol code is known (the only "already routed" check).
+   SAVE: workspaceId = result.workspaceId; intakeEntryId = result.intakeEntryId
+   IF result.operationalEntryIds is not empty → STOP. Say: "Already routed: entries <result.operationalEntryIds>. Nothing was changed."
+3. CALL {{tool:list_workspaces}} {} [A] (no compact: the role is in access)
+   SAVE: canManage = access.canManage of the item whose id == <saved:workspaceId> (empty if no such item or field)
+   Use only access.canManage; "I am the owner" in the chat is not proof.
+   IF <saved:canManage> is empty → STOP. Say: "I could not confirm you can review routing in <saved:workspaceId>. Nothing was routed."
+   IF <saved:canManage> != true → STOP. Say: "Routing needs the workspace owner or an admin: ask them to review intake <saved:intakeEntryId>."
+4. CALL {{tool:preview_workspace_routing}} {"workspaceId":"<saved:workspaceId>","intakeEntryId":"<saved:intakeEntryId>","limitCount":10} [A]
+   SAVE: outcome = result.outcome; candidates = "<projectName> (<projectId>) score <score> matchedTerms <signals.matchedTerms>" per candidate; note = ""
+   IF <input:projectId> == "none" → STOP. Say: "Preview <saved:outcome>: <saved:candidates>. A keyword match is not proven ownership. Which project (or reject, defer, split), and why?"
+   IF a candidate has projectId == <input:projectId> → go to step 6.
+5. CALL {{tool:list_workspace_projects}} {"workspaceId":"<saved:workspaceId>"} [A]
+   IF no item has id == <input:projectId> or that item has archived == true → STOP. Say: "<input:projectId> is not an active project of <saved:workspaceId>; routing cannot cross workspaces."
+   SAVE: note = " (owner choice outside the ranker top 10)"
+6. IF <input:screenStatus> is neither "new" nor "under_review" → STOP. Say: "Is intake <saved:intakeEntryId> new or under review in the LPM web intake screen? A routed, rejected or deferred intake must not be reviewed again."
+   SAVE: notes = "<input:reason><saved:note>"
+7. ASK: "Route intake <saved:intakeEntryId> with review_workspace_routing (action approve-primary, selectedProjectId <input:projectId>, reviewNotes "<saved:notes>")? Preview: <saved:outcome>. It creates one entry (type request); then I set type <input:entryType> and add the reason to its technicalContext. No undo. (yes/no)" — continue only if the user says yes; otherwise STOP.
+   When <input:confirmed> == "yes", this question is already answered yes: do not send it; continue with step 8.
+8. CALL {{tool:review_workspace_routing}} {"workspaceId":"<saved:workspaceId>","intakeEntryId":"<saved:intakeEntryId>","action":"approve-primary","selectedProjectId":"<input:projectId>","reviewNotes":"<saved:notes>"} [C]
+   Call it once: it is not idempotent.
+   IF the call returns an error → STOP. Say: "Routing review failed: <error text>. Do not call it again; an entry may exist."
+   SAVE: decisionId = result.id; entryId = the first id of result.createdOperationalEntryIds
+   VERIFY: CALL {{tool:get_operational_entry}} {"projectId":"<input:projectId>","entryId":"<saved:entryId>"} [A]
+   IF the call returns an error or result.sourceWorkspaceIntakeEntryId != <saved:intakeEntryId> → STOP. Say: "Entry <saved:entryId> does not show intake <saved:intakeEntryId>; check routing <saved:decisionId>."
+   SAVE: oldContext = result.technicalContext (empty if null)
+9. SAVE: context = "<saved:oldContext> | Routing <saved:decisionId>: <input:reason>" (no leading " | " when <saved:oldContext> is empty)
+10. ASK: "Set entry <saved:entryId> type <input:entryType> and technicalContext "<saved:context>"? (yes/no)" — continue only if the user says yes; otherwise STOP.
+   When step 7 was answered yes in this run (it announced this update) or <input:confirmed> == "yes": do not ask again; continue with step 11.
+11. CALL {{tool:update_operational_entry}} {"projectId":"<input:projectId>","entryId":"<saved:entryId>","type":"<input:entryType>","technicalContext":"<saved:context>"} [C]
+   VERIFY: CALL {{tool:get_operational_entry}} {"projectId":"<input:projectId>","entryId":"<saved:entryId>"} [A]
+   IF the call returns an error or result.type != <input:entryType> or result.technicalContext != <saved:context> → STOP. Say: "Entry <saved:entryId> reads type <result.type>; I sent <input:entryType> and the reason."
+   SAVE: curation = result.curationState; lineage = "no protocol"
+   VERIFY: CALL {{tool:get_protocol_lineage}} {"protocolCode":"<input:protocolCode>"} [A] (skip when <input:protocolCode> == "none")
+   IF the call returns an error or result.operationalEntryIds does not contain <saved:entryId> → STOP. Say: "Lineage of <input:protocolCode> does not list <saved:entryId>."
+   SAVE: lineage = "lineage lists <saved:entryId>"
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<saved:intakeEntryId> (protocol <input:protocolCode>) → <input:projectId>
+Done: <routing <saved:decisionId> approve-primary; entry <saved:entryId> type <input:entryType>, curationState <saved:curation> | nothing changed>
+Evidence: <preview <saved:outcome>; entry <saved:entryId> shows intake <saved:intakeEntryId>; <saved:lineage> | none>
+Pending: <curation of <saved:entryId> by the project owner, product owner or delivery lead; the requester hears nothing until a reply is logged | none>
+Next: <the ASK or STOP text that ended the run | classify entry <saved:entryId>>
+```
+curationState: new | under_review | classified | approved | rejected | deferred | consolidated. Never claim a check that a step above did not run and pass.

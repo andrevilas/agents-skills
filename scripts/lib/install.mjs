@@ -298,6 +298,8 @@ function desiredFiles(root, agent, entry) {
     const main = path.join(root, "dist", "generic", `${entry.id}.md`);
     if (!isFile(main)) return null;
     out.set(`${entry.id}.md`, fs.readFileSync(main));
+    const flows = path.join(root, "dist", "generic", `${entry.id}.flows.md`);
+    if (isFile(flows)) out.set(`${entry.id}.flows.md`, fs.readFileSync(flows));
     const refs = path.join(root, "dist", "generic", `${entry.id}.refs.md`);
     if (isFile(refs)) out.set(`${entry.id}.refs.md`, fs.readFileSync(refs));
     const tools = path.join(root, "dist", "generic", `${entry.id}.tools.md`);
@@ -787,7 +789,7 @@ function runInstall(ctx, model, { agent, scope, dest, selection, prune, adoptLeg
     `${command} ${agent}/${scope} → ${show(dest, ctx)}: ${total} selected · ${result.written.length} ${dryRun ? "to write" : "written"} · ${result.unchanged.length} unchanged · ${result.removed.length} ${dryRun ? "to remove" : "removed"} · ${problems.length} problem(s)`,
   );
   if (agent === "generic" && !dryRun && !problems.length) {
-    log.info(`LPM: read \`${show(path.join(dest, "INDEX.md"), ctx)}\` first, then exactly one \`<id>.md\`.`);
+    log.info(`LPM: read \`${show(path.join(dest, "INDEX.md"), ctx)}\` first, then exactly one \`<id>.md\`, and the one playbook it names in \`<id>.flows.md\`.`);
   }
   result.problems = problems;
   result.exitCode = problems.length ? 1 : 0;

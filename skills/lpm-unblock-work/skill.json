@@ -6,8 +6,8 @@
   "kind": "tools",
   "invocation": "implicit",
   "description": "Use when LPM activities are blocked (bloqueada) or depend on other work: find blockers, record or resolve a blocker reason, add or remove dependency links (any project or workspace), read the dependency graph/critical path. Not for roadmap-item dependencies (use lpm-roadmap-owner-ops).",
-  "doneWhen": "Each blocked activity has its cause recorded as a link, a blocker context or a decision thread, and the blocked list reflects it.",
-  "authorityCeiling": "Links and blocker contexts are [A]; deletes and cross-workspace links are [C]; scope decisions are handed to governance.",
+  "doneWhen": "Each blocked activity has its cause recorded as a link, a blocker context or a decision request, and a re-read shows it.",
+  "authorityCeiling": "Links and contexts are [A]; link deletes and cross-workspace links are [C]; scope stays with the owner (GOV-MAX v1).",
   "jobs": [
     "por que a atividade <id> está bloqueada?",
     "o que está bloqueado no projeto <P>? qual é o caminho crítico?",
@@ -137,54 +137,59 @@
     "list_issues",
     "list_project_resolution_risks",
     "list_workspace_projects",
-    "list_workspaces"
+    "list_workspaces",
+    "get_mcp_connection_info"
   ],
   "cli": [
     "portfolio-links create",
     "portfolio-links list",
     "portfolio-links update"
   ],
-  "sharedRefs": [
-    {
-      "name": "comment-templates",
-      "loadWhen": "writing a blocker, release or decision comment",
-      "inlineSummary": false
-    },
-    {
-      "name": "enums",
-      "loadWhen": "a link type or status value is unclear",
-      "inlineSummary": false
-    },
-    {
-      "name": "idempotency-and-retries",
-      "loadWhen": "retrying a write after a timeout or unclear result",
-      "inlineSummary": false
-    }
-  ],
+  "sharedRefs": [],
   "references": [
     {
-      "file": "references/blocked-semantics.md",
-      "loadWhen": "when explaining why an activity is or is not blocked"
+      "file": "references/flow-diagnose.md",
+      "loadWhen": "playbook diagnose: what is blocked, or why X is blocked"
     },
     {
       "file": "references/flow-add-link.md",
-      "loadWhen": "decision row 5 (add a dependency link, P2)"
+      "loadWhen": "playbook add-link: X waits for U in the same project"
+    },
+    {
+      "file": "references/flow-add-cross-project-link.md",
+      "loadWhen": "playbook add-cross-project-link: X waits for U in another project"
+    },
+    {
+      "file": "references/flow-add-portfolio-link.md",
+      "loadWhen": "playbook add-portfolio-link: X waits for U in another workspace"
+    },
+    {
+      "file": "references/flow-blocker-context.md",
+      "loadWhen": "playbook blocker-context: X waits for an external cause"
     },
     {
       "file": "references/flow-owner-decision.md",
-      "loadWhen": "decision row 7 (owner decision)"
+      "loadWhen": "playbook owner-decision: X waits for an owner decision"
+    },
+    {
+      "file": "references/flow-resolve-context.md",
+      "loadWhen": "playbook resolve-context: the external cause is gone, or the owner decided"
     },
     {
       "file": "references/flow-remove-link.md",
-      "loadWhen": "decision row 10 (remove or close a link)"
+      "loadWhen": "playbook remove-link: a link is wrong or dangling"
     },
     {
-      "file": "references/flow-resolve-release.md",
-      "loadWhen": "decision rows 8-9 (resolve a context, P4; release after U ends, P5)"
+      "file": "references/flow-close-portfolio-link.md",
+      "loadWhen": "playbook close-portfolio-link: a link to another workspace is done or wrong"
     },
     {
-      "file": "references/link-or-context-or-thread.md",
-      "loadWhen": "when choosing how to record a dependency"
+      "file": "references/flow-connector-only.md",
+      "loadWhen": "playbook connector-only: record a blocker on a connector"
+    },
+    {
+      "file": "references/blocked-semantics.md",
+      "loadWhen": "background: why an activity is or is not blocked"
     }
   ],
   "behaviorContracts": [],

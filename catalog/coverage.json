@@ -3,10 +3,10 @@
   "generatedBy": "agents-skills scripts/skills.mjs build",
   "source": {
     "repo": "andrevilas/agents-skills",
-    "sourcesHash": "sha256:2491638961d1f9e9ea0e031909a3c2fbeb1bb35a4338f900433fa05b534b90d9"
+    "sourcesHash": "sha256:39f7104597875f0980b99875c2333419ce7cbf592e96f0b21caf508bc5bfd5fe"
   },
   "snapshot": {
-    "lpmCommit": "4731f07708719cf90d1fff0f16eaeb11524c38d1",
+    "lpmCommit": "5615224e1bb6a7f929818907ad879b642628a4ff",
     "toolCount": 383,
     "cliCount": 152,
     "namesHash": "sha256:d5793cef8f7d359bfcaf40621b3c7b59f54f7e9d6c3412860146e6424c2e63c1",
@@ -58,7 +58,8 @@
         "claude-code": "dist/claude-code/lpm-access/SKILL.md",
         "antigravity": "dist/antigravity/lpm-access/SKILL.md",
         "generic": "dist/generic/lpm-access.md"
-      }
+      },
+      "playbooks": []
     },
     {
       "id": "lpm-ai-cost",
@@ -99,7 +100,8 @@
         "claude-code": "dist/claude-code/lpm-ai-cost/SKILL.md",
         "antigravity": "dist/antigravity/lpm-ai-cost/SKILL.md",
         "generic": "dist/generic/lpm-ai-cost.md"
-      }
+      },
+      "playbooks": []
     },
     {
       "id": "lpm-aish-delivery",
@@ -131,6 +133,7 @@
       "uses": [
         "get_aish_execution_session",
         "get_aish_job",
+        "get_issue",
         "get_project_analytics",
         "list_activity_attachments",
         "list_aish_jobs",
@@ -143,7 +146,8 @@
         "claude-code": "dist/claude-code/lpm-aish-delivery/SKILL.md",
         "antigravity": "dist/antigravity/lpm-aish-delivery/SKILL.md",
         "generic": "dist/generic/lpm-aish-delivery.md"
-      }
+      },
+      "playbooks": []
     },
     {
       "id": "lpm-aish-jobs",
@@ -181,11 +185,8 @@
         "upload_aish_intake_attachment"
       ],
       "uses": [
-        "fund_aish_job",
         "get_aish_budget",
         "get_issue",
-        "get_project_execution_context",
-        "list_issues",
         "list_project_repository_links"
       ],
       "rendered": {
@@ -193,7 +194,19 @@
         "claude-code": "dist/claude-code/lpm-aish-jobs/SKILL.md",
         "antigravity": "dist/antigravity/lpm-aish-jobs/SKILL.md",
         "generic": "dist/generic/lpm-aish-jobs.md"
-      }
+      },
+      "playbooks": [
+        "create-job",
+        "approve-job",
+        "cockpit-plan",
+        "request-approval",
+        "approve-plan",
+        "dispatch",
+        "pause-resume-retry",
+        "checkpoint-or-cancel",
+        "intake",
+        "copilot"
+      ]
     },
     {
       "id": "lpm-aish-runners",
@@ -226,7 +239,8 @@
         "claude-code": "dist/claude-code/lpm-aish-runners/SKILL.md",
         "antigravity": "dist/antigravity/lpm-aish-runners/SKILL.md",
         "generic": "dist/generic/lpm-aish-runners.md"
-      }
+      },
+      "playbooks": []
     },
     {
       "id": "lpm-ask-advisor",
@@ -259,7 +273,15 @@
         "claude-code": "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "antigravity": "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "generic": "dist/generic/lpm-ask-advisor.md"
-      }
+      },
+      "playbooks": [
+        "code-question",
+        "workspace-code-question",
+        "exact-lines",
+        "roadmap-analysis",
+        "item-impact",
+        "advisor"
+      ]
     },
     {
       "id": "lpm-code-index",
@@ -287,6 +309,7 @@
         "update_workspace_repository_link"
       ],
       "uses": [
+        "get_mcp_connection_info",
         "get_workspace_repository_context",
         "get_workspace_repository_credential",
         "search_workspace_code"
@@ -296,7 +319,18 @@
         "claude-code": "dist/claude-code/lpm-code-index/SKILL.md",
         "antigravity": "dist/antigravity/lpm-code-index/SKILL.md",
         "generic": "dist/generic/lpm-code-index.md"
-      }
+      },
+      "playbooks": [
+        "check",
+        "link",
+        "scan",
+        "refresh",
+        "rollback",
+        "purge",
+        "compare",
+        "change-link",
+        "unlink"
+      ]
     },
     {
       "id": "lpm-deliver-activity",
@@ -319,7 +353,6 @@
         "upload_activity_attachment"
       ],
       "uses": [
-        "audit_aish_issue_delivery",
         "get_mcp_connection_info",
         "get_skills_context",
         "list_issue_links",
@@ -330,7 +363,15 @@
         "claude-code": "dist/claude-code/lpm-deliver-activity/SKILL.md",
         "antigravity": "dist/antigravity/lpm-deliver-activity/SKILL.md",
         "generic": "dist/generic/lpm-deliver-activity.md"
-      }
+      },
+      "playbooks": [
+        "start",
+        "commit-and-progress",
+        "evidence",
+        "close",
+        "fix-comment-or-attachment",
+        "connector-only"
+      ]
     },
     {
       "id": "lpm-executive-context",
@@ -350,9 +391,10 @@
         "validate_workspace_project_alignment"
       ],
       "uses": [
+        "get_mcp_connection_info",
         "get_project",
-        "get_workspace_read_model",
         "list_workspace_members",
+        "list_workspace_projects",
         "update_project",
         "update_workspace"
       ],
@@ -361,7 +403,15 @@
         "claude-code": "dist/claude-code/lpm-executive-context/SKILL.md",
         "antigravity": "dist/antigravity/lpm-executive-context/SKILL.md",
         "generic": "dist/generic/lpm-executive-context.md"
-      }
+      },
+      "playbooks": [
+        "readiness",
+        "draft",
+        "prepare-change",
+        "apply",
+        "claim-unowned",
+        "set-description"
+      ]
     },
     {
       "id": "lpm-governance-decisions",
@@ -393,18 +443,33 @@
         "create_comment",
         "create_issue",
         "create_requirement",
+        "get_issue",
+        "get_mcp_connection_info",
         "get_project",
         "get_workspace_roadmap_change_request",
         "list_comments",
+        "list_issues",
         "list_missing_governance_assignments",
-        "list_project_assignable_members"
+        "list_project_assignable_members",
+        "list_requirements"
       ],
       "rendered": {
         "codex": "dist/codex/lpm-governance-decisions/SKILL.md",
         "claude-code": "dist/claude-code/lpm-governance-decisions/SKILL.md",
         "antigravity": "dist/antigravity/lpm-governance-decisions/SKILL.md",
         "generic": "dist/generic/lpm-governance-decisions.md"
-      }
+      },
+      "playbooks": [
+        "triage",
+        "explain",
+        "open-thread",
+        "reply",
+        "update-thread",
+        "reopen",
+        "record-decision",
+        "create-artifact",
+        "activity-note"
+      ]
     },
     {
       "id": "lpm-intake-triage",
@@ -445,7 +510,18 @@
         "claude-code": "dist/claude-code/lpm-intake-triage/SKILL.md",
         "antigravity": "dist/antigravity/lpm-intake-triage/SKILL.md",
         "generic": "dist/generic/lpm-intake-triage.md"
-      }
+      },
+      "playbooks": [
+        "route-intake",
+        "route-split",
+        "route-reject-or-defer",
+        "register-report",
+        "classify-entry",
+        "decide-entry",
+        "merge-duplicates",
+        "entry-to-activity",
+        "protocol-record"
+      ]
     },
     {
       "id": "lpm-integrations",
@@ -477,7 +553,8 @@
         "claude-code": "dist/claude-code/lpm-integrations/SKILL.md",
         "antigravity": "dist/antigravity/lpm-integrations/SKILL.md",
         "generic": "dist/generic/lpm-integrations.md"
-      }
+      },
+      "playbooks": []
     },
     {
       "id": "lpm-knowledge",
@@ -518,7 +595,8 @@
         "claude-code": "dist/claude-code/lpm-knowledge/SKILL.md",
         "antigravity": "dist/antigravity/lpm-knowledge/SKILL.md",
         "generic": "dist/generic/lpm-knowledge.md"
-      }
+      },
+      "playbooks": []
     },
     {
       "id": "lpm-pilot-feedback",
@@ -546,7 +624,8 @@
         "claude-code": "dist/claude-code/lpm-pilot-feedback/SKILL.md",
         "antigravity": "dist/antigravity/lpm-pilot-feedback/SKILL.md",
         "generic": "dist/generic/lpm-pilot-feedback.md"
-      }
+      },
+      "playbooks": []
     },
     {
       "id": "lpm-plan-work",
@@ -589,6 +668,7 @@
       "uses": [
         "create_comment",
         "get_issue",
+        "get_mcp_connection_info",
         "get_project_dependency_summary",
         "list_blocked_project_issues",
         "list_comments",
@@ -602,7 +682,19 @@
         "claude-code": "dist/claude-code/lpm-plan-work/SKILL.md",
         "antigravity": "dist/antigravity/lpm-plan-work/SKILL.md",
         "generic": "dist/generic/lpm-plan-work.md"
-      }
+      },
+      "playbooks": [
+        "daily-sync",
+        "create-activities",
+        "owners-dates",
+        "edit-activities",
+        "cancel-or-delete",
+        "cycle-open-or-start",
+        "cycle-close",
+        "milestone",
+        "labels",
+        "escalate"
+      ]
     },
     {
       "id": "lpm-release-product",
@@ -625,7 +717,8 @@
         "claude-code": "dist/claude-code/lpm-release-product/SKILL.md",
         "antigravity": "dist/antigravity/lpm-release-product/SKILL.md",
         "generic": "dist/generic/lpm-release-product.md"
-      }
+      },
+      "playbooks": []
     },
     {
       "id": "lpm-requirements-scope",
@@ -662,7 +755,9 @@
       "uses": [
         "create_governance_thread",
         "get_help_article",
+        "get_mcp_connection_info",
         "get_project_execution_context",
+        "list_governance_threads",
         "list_issues",
         "list_project_knowledge_items",
         "list_workspace_roadmap_materializations",
@@ -673,7 +768,19 @@
         "claude-code": "dist/claude-code/lpm-requirements-scope/SKILL.md",
         "antigravity": "dist/antigravity/lpm-requirements-scope/SKILL.md",
         "generic": "dist/generic/lpm-requirements-scope.md"
-      }
+      },
+      "playbooks": [
+        "scope-status",
+        "add-requirement",
+        "edit-requirement",
+        "remove-requirement",
+        "groups-and-orphans",
+        "change-set",
+        "change-set-decision",
+        "proposal",
+        "publish-baseline",
+        "baseline-records"
+      ]
     },
     {
       "id": "lpm-review-health",
@@ -714,7 +821,13 @@
         "claude-code": "dist/claude-code/lpm-review-health/SKILL.md",
         "antigravity": "dist/antigravity/lpm-review-health/SKILL.md",
         "generic": "dist/generic/lpm-review-health.md"
-      }
+      },
+      "playbooks": [
+        "project",
+        "connector",
+        "portfolio",
+        "changes"
+      ]
     },
     {
       "id": "lpm-roadmap",
@@ -755,6 +868,7 @@
         "withdraw_workspace_roadmap_change"
       ],
       "uses": [
+        "get_mcp_connection_info",
         "get_workspace",
         "list_workspace_members",
         "list_workspace_projects"
@@ -764,7 +878,19 @@
         "claude-code": "dist/claude-code/lpm-roadmap/SKILL.md",
         "antigravity": "dist/antigravity/lpm-roadmap/SKILL.md",
         "generic": "dist/generic/lpm-roadmap.md"
-      }
+      },
+      "playbooks": [
+        "trace",
+        "propose-link",
+        "propose-change",
+        "comment",
+        "revise-or-withdraw",
+        "review",
+        "apply",
+        "capability",
+        "create-item",
+        "roadmap-header"
+      ]
     },
     {
       "id": "lpm-roadmap-owner-ops",
@@ -801,6 +927,7 @@
         "update_workspace_roadmap_item"
       ],
       "uses": [
+        "get_mcp_connection_info",
         "get_workspace",
         "get_workspace_roadmap_overview",
         "list_requirement_baselines",
@@ -816,7 +943,19 @@
         "claude-code": "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
         "antigravity": "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
         "generic": "dist/generic/lpm-roadmap-owner-ops.md"
-      }
+      },
+      "playbooks": [
+        "owner-commit",
+        "items",
+        "lifecycle",
+        "dependency",
+        "allocation",
+        "import",
+        "import-links",
+        "materialize",
+        "governance",
+        "migration"
+      ]
     },
     {
       "id": "lpm-start",
@@ -844,7 +983,15 @@
         "claude-code": "dist/claude-code/lpm-start/SKILL.md",
         "antigravity": "dist/antigravity/lpm-start/SKILL.md",
         "generic": "dist/generic/lpm-start.md"
-      }
+      },
+      "playbooks": [
+        "connection",
+        "agent-setup",
+        "resolve-ids",
+        "notifications",
+        "who-can-manage",
+        "route"
+      ]
     },
     {
       "id": "lpm-unblock-work",
@@ -873,6 +1020,7 @@
         "create_comment",
         "create_governance_thread",
         "get_issue",
+        "get_mcp_connection_info",
         "list_comments",
         "list_issues",
         "list_project_resolution_risks",
@@ -884,7 +1032,19 @@
         "claude-code": "dist/claude-code/lpm-unblock-work/SKILL.md",
         "antigravity": "dist/antigravity/lpm-unblock-work/SKILL.md",
         "generic": "dist/generic/lpm-unblock-work.md"
-      }
+      },
+      "playbooks": [
+        "diagnose",
+        "add-link",
+        "add-cross-project-link",
+        "add-portfolio-link",
+        "blocker-context",
+        "owner-decision",
+        "resolve-context",
+        "remove-link",
+        "close-portfolio-link",
+        "connector-only"
+      ]
     },
     {
       "id": "lpm-workspace-admin",
@@ -942,7 +1102,8 @@
         "claude-code": "dist/claude-code/lpm-workspace-admin/SKILL.md",
         "antigravity": "dist/antigravity/lpm-workspace-admin/SKILL.md",
         "generic": "dist/generic/lpm-workspace-admin.md"
-      }
+      },
+      "playbooks": []
     }
   ],
   "tools": {
@@ -981,12 +1142,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "activate_repository_code_index": {
       "owner": "lpm-code-index",
@@ -1002,12 +1158,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "add_team_member": {
       "owner": "lpm-workspace-admin",
@@ -1092,13 +1243,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/antigravity/lpm-knowledge/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md",
         "dist/generic/lpm-knowledge.md"
       ]
     },
@@ -1118,13 +1265,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/antigravity/lpm-knowledge/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md",
         "dist/generic/lpm-knowledge.md"
       ]
     },
@@ -1141,12 +1284,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md"
-      ]
+      "renderedIn": []
     },
     "answer_workspace_roadmap_item_question": {
       "owner": "lpm-ask-advisor",
@@ -1162,12 +1300,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md"
-      ]
+      "renderedIn": []
     },
     "answer_workspace_roadmap_question": {
       "owner": "lpm-ask-advisor",
@@ -1182,12 +1315,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md"
-      ]
+      "renderedIn": []
     },
     "append_aish_execution_session_command": {
       "owner": "lpm-aish-jobs",
@@ -1203,12 +1331,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "apply_aish_legacy_runner_migration": {
       "owner": "lpm-aish-runners",
@@ -1273,12 +1396,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
-        "dist/generic/lpm-executive-context.md"
-      ]
+      "renderedIn": []
     },
     "apply_workspace_roadmap_change": {
       "owner": "lpm-roadmap",
@@ -1295,12 +1413,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "apply_workspace_roadmap_governance_migration": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1316,12 +1429,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "apply_workspace_roadmap_v2_migration": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1337,12 +1445,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "approve_aish_execution_plan": {
       "owner": "lpm-aish-jobs",
@@ -1361,12 +1464,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "approve_aish_job_execution": {
       "owner": "lpm-aish-jobs",
@@ -1381,12 +1479,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "approve_aish_release": {
       "owner": "lpm-aish-delivery",
@@ -1442,12 +1535,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "archive_workspace_capability": {
       "owner": "lpm-roadmap",
@@ -1463,12 +1551,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "archive_workspace_repository_link": {
       "owner": "lpm-code-index",
@@ -1484,12 +1567,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "archive_workspace_roadmap": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1505,12 +1583,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "archive_workspace_roadmap_allocation": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1526,12 +1599,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "archive_workspace_roadmap_dependency": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1547,12 +1615,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "archive_workspace_roadmap_item": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1568,12 +1631,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "assign_project_issue_owner": {
       "owner": "lpm-plan-work",
@@ -1589,18 +1647,11 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "audit_aish_issue_delivery": {
       "owner": "lpm-aish-delivery",
-      "usedBy": [
-        "lpm-deliver-activity"
-      ],
+      "usedBy": [],
       "category": "administration",
       "accessLevel": "write",
       "sensitive": true,
@@ -1613,13 +1664,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-aish-delivery/SKILL.md",
-        "dist/antigravity/lpm-deliver-activity/SKILL.md",
         "dist/claude-code/lpm-aish-delivery/SKILL.md",
-        "dist/claude-code/lpm-deliver-activity/SKILL.md",
         "dist/codex/lpm-aish-delivery/SKILL.md",
-        "dist/codex/lpm-deliver-activity/SKILL.md",
-        "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-deliver-activity.md"
+        "dist/generic/lpm-aish-delivery.md"
       ]
     },
     "batch_issue_operations": {
@@ -1635,12 +1682,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "batch_workspace_roadmap_changes": {
       "owner": "lpm-roadmap",
@@ -1655,12 +1697,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "bulk_assign_project_issue_owners": {
       "owner": "lpm-plan-work",
@@ -1675,12 +1712,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "bulk_set_project_issue_due_dates": {
       "owner": "lpm-plan-work",
@@ -1695,12 +1727,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "bulk_set_project_issue_estimates": {
       "owner": "lpm-plan-work",
@@ -1715,12 +1742,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "bulk_update_project_issue_due_dates": {
       "owner": "lpm-plan-work",
@@ -1735,9 +1757,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "claim_aish_intake_transcription": {
       "owner": "lpm-aish-runners",
@@ -1759,7 +1779,6 @@
         "dist/antigravity/lpm-aish-runners/SKILL.md",
         "dist/claude-code/lpm-aish-runners/SKILL.md",
         "dist/codex/lpm-aish-runners/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md",
         "dist/generic/lpm-aish-runners.md"
       ]
     },
@@ -1821,12 +1840,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "commit_owner_roadmap_change": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1844,12 +1858,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "commit_roadmap_materialization": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1869,12 +1878,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "commit_workspace_roadmap_import": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1890,12 +1894,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "commit_workspace_roadmap_item_bulk": {
       "owner": "lpm-roadmap-owner-ops",
@@ -1912,12 +1911,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "compare_repository_commits": {
       "owner": "lpm-code-index",
@@ -1934,12 +1928,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "complete_aish_release": {
       "owner": "lpm-aish-delivery",
@@ -2039,12 +2028,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
-        "dist/generic/lpm-intake-triage.md"
-      ]
+      "renderedIn": []
     },
     "convert_operational_entry_to_issue": {
       "owner": "lpm-intake-triage",
@@ -2059,12 +2043,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
-        "dist/generic/lpm-intake-triage.md"
-      ]
+      "renderedIn": []
     },
     "create_activity_attachment": {
       "owner": "lpm-deliver-activity",
@@ -2105,13 +2084,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "create_aish_intake_context": {
       "owner": "lpm-aish-jobs",
@@ -2129,12 +2102,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "create_aish_job": {
       "owner": "lpm-aish-jobs",
@@ -2151,12 +2119,6 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "C",
       "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-ai-cost.md",
-        "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-aish-jobs.md",
         "dist/generic/lpm-aish-runners.md"
       ]
     },
@@ -2236,16 +2198,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "create_comment": {
       "owner": "lpm-deliver-activity",
@@ -2268,30 +2221,14 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-deliver-activity/SKILL.md",
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-release-product/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-deliver-activity/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-release-product/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-deliver-activity/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-release-product/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-deliver-activity.md",
-        "dist/generic/lpm-governance-decisions.md",
         "dist/generic/lpm-pilot-feedback.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-release-product.md",
-        "dist/generic/lpm-unblock-work.md"
+        "dist/generic/lpm-release-product.md"
       ]
     },
     "create_copilot_conversation": {
@@ -2308,12 +2245,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "create_cycle": {
       "owner": "lpm-plan-work",
@@ -2333,13 +2265,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-plan-work.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -2386,20 +2314,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "create_issue": {
       "owner": "lpm-plan-work",
@@ -2418,22 +2333,11 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md",
-        "dist/generic/lpm-deliver-activity.md",
-        "dist/generic/lpm-governance-decisions.md",
         "dist/generic/lpm-pilot-feedback.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-release-product.md",
-        "dist/generic/lpm-unblock-work.md"
+        "dist/generic/lpm-release-product.md"
       ]
     },
     "create_issue_link": {
@@ -2451,12 +2355,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "create_knowledge_item": {
       "owner": "lpm-knowledge",
@@ -2497,13 +2396,9 @@
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
       "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-plan-work.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -2524,13 +2419,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-plan-work.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -2549,12 +2440,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "create_operational_entry": {
       "owner": "lpm-intake-triage",
@@ -2571,12 +2457,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
-        "dist/generic/lpm-intake-triage.md"
-      ]
+      "renderedIn": []
     },
     "create_portfolio_work_item_link": {
       "owner": "lpm-unblock-work",
@@ -2594,16 +2475,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-intake-triage.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "create_project": {
       "owner": "lpm-workspace-admin",
@@ -2637,12 +2509,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "create_project_file": {
       "owner": "lpm-knowledge",
@@ -2683,13 +2550,9 @@
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
       "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-code-index.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -2735,12 +2598,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
-        "dist/generic/lpm-intake-triage.md"
-      ]
+      "renderedIn": []
     },
     "create_requirement": {
       "owner": "lpm-requirements-scope",
@@ -2763,17 +2621,9 @@
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
       "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-requirements-scope.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -2794,13 +2644,9 @@
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
       "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -2817,12 +2663,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "create_skills_context": {
       "owner": "lpm-knowledge",
@@ -2943,12 +2784,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "create_workspace_issue_link": {
       "owner": "lpm-unblock-work",
@@ -2967,12 +2803,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "create_workspace_mcp_agent_credential": {
       "owner": "lpm-access",
@@ -3012,12 +2843,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "create_workspace_roadmap": {
       "owner": "lpm-roadmap",
@@ -3032,12 +2858,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "create_workspace_roadmap_allocation": {
       "owner": "lpm-roadmap-owner-ops",
@@ -3054,12 +2875,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "create_workspace_roadmap_dependency": {
       "owner": "lpm-roadmap-owner-ops",
@@ -3076,12 +2892,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "create_workspace_roadmap_item": {
       "owner": "lpm-roadmap",
@@ -3121,12 +2932,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "delete_activity_attachment": {
       "owner": "lpm-deliver-activity",
@@ -3182,12 +2988,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-deliver-activity/SKILL.md",
-        "dist/claude-code/lpm-deliver-activity/SKILL.md",
-        "dist/codex/lpm-deliver-activity/SKILL.md",
-        "dist/generic/lpm-deliver-activity.md"
-      ]
+      "renderedIn": []
     },
     "delete_cycle": {
       "owner": "lpm-plan-work",
@@ -3202,12 +3003,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "delete_issue": {
       "owner": "lpm-plan-work",
@@ -3222,12 +3018,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "delete_issue_link": {
       "owner": "lpm-unblock-work",
@@ -3242,12 +3033,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "delete_knowledge_item": {
       "owner": "lpm-knowledge",
@@ -3281,12 +3067,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "delete_milestone": {
       "owner": "lpm-plan-work",
@@ -3301,12 +3082,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "delete_project": {
       "owner": "lpm-workspace-admin",
@@ -3360,12 +3136,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "delete_requirement_baseline": {
       "owner": "lpm-requirements-scope",
@@ -3380,12 +3151,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "delete_requirement_group": {
       "owner": "lpm-requirements-scope",
@@ -3400,12 +3166,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "delete_skills_context": {
       "owner": "lpm-knowledge",
@@ -3497,12 +3258,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "delete_workspace_repository_credential": {
       "owner": "lpm-access",
@@ -3541,12 +3297,6 @@
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
       "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-ai-cost.md",
-        "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-aish-jobs.md",
         "dist/generic/lpm-aish-runners.md"
       ]
     },
@@ -3563,12 +3313,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "draft_activity_from_governance_thread": {
       "owner": "lpm-governance-decisions",
@@ -3583,9 +3328,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "draft_change_set_from_governance_thread": {
       "owner": "lpm-governance-decisions",
@@ -3600,9 +3343,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "draft_requirement_from_governance_thread": {
       "owner": "lpm-governance-decisions",
@@ -3617,9 +3358,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "draft_roadmap_knowledge": {
       "owner": "lpm-knowledge",
@@ -3652,12 +3391,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
-        "dist/generic/lpm-executive-context.md"
-      ]
+      "renderedIn": []
     },
     "draft_workspace_routing_policy": {
       "owner": "lpm-executive-context",
@@ -3671,12 +3405,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
-        "dist/generic/lpm-executive-context.md"
-      ]
+      "renderedIn": []
     },
     "explain_roadmap_item_technical_impact": {
       "owner": "lpm-ask-advisor",
@@ -3691,12 +3420,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md"
-      ]
+      "renderedIn": []
     },
     "explain_workspace_roadmap_traceability_gap": {
       "owner": "lpm-roadmap",
@@ -3711,12 +3435,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "export_aish_execution_pack": {
       "owner": "lpm-aish-delivery",
@@ -3753,18 +3472,11 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
-        "dist/generic/lpm-intake-triage.md"
-      ]
+      "renderedIn": []
     },
     "fund_aish_job": {
       "owner": "lpm-ai-cost",
-      "usedBy": [
-        "lpm-aish-jobs"
-      ],
+      "usedBy": [],
       "category": "administration",
       "accessLevel": "write",
       "sensitive": true,
@@ -3778,13 +3490,9 @@
       "renderedAuthority": "O",
       "renderedIn": [
         "dist/antigravity/lpm-ai-cost/SKILL.md",
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
         "dist/claude-code/lpm-ai-cost/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
         "dist/codex/lpm-ai-cost/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-ai-cost.md",
-        "dist/generic/lpm-aish-jobs.md"
+        "dist/generic/lpm-ai-cost.md"
       ]
     },
     "generate_workspace_readiness_report": {
@@ -3869,13 +3577,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-ai-cost/SKILL.md",
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
         "dist/claude-code/lpm-ai-cost/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
         "dist/codex/lpm-ai-cost/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-ai-cost.md",
-        "dist/generic/lpm-aish-jobs.md"
+        "dist/generic/lpm-ai-cost.md"
       ]
     },
     "get_aish_execution_pack": {
@@ -3911,12 +3615,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "get_aish_execution_report": {
       "owner": "lpm-aish-delivery",
@@ -4151,12 +3850,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "get_cycle": {
       "owner": "lpm-plan-work",
@@ -4197,12 +3891,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "get_governance_thread_resolution_context": {
       "owner": "lpm-governance-decisions",
@@ -4242,23 +3931,17 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-knowledge/SKILL.md",
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/antigravity/lpm-start/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-start/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-start/SKILL.md",
-        "dist/generic/lpm-knowledge.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-start.md"
+        "dist/generic/lpm-knowledge.md"
       ]
     },
     "get_issue": {
       "owner": "lpm-deliver-activity",
       "usedBy": [
+        "lpm-aish-delivery",
         "lpm-aish-jobs",
+        "lpm-governance-decisions",
         "lpm-pilot-feedback",
         "lpm-plan-work",
         "lpm-release-product",
@@ -4275,24 +3958,31 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
+        "dist/antigravity/lpm-aish-delivery/SKILL.md",
         "dist/antigravity/lpm-aish-jobs/SKILL.md",
         "dist/antigravity/lpm-deliver-activity/SKILL.md",
+        "dist/antigravity/lpm-governance-decisions/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
         "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-release-product/SKILL.md",
         "dist/antigravity/lpm-unblock-work/SKILL.md",
+        "dist/claude-code/lpm-aish-delivery/SKILL.md",
         "dist/claude-code/lpm-aish-jobs/SKILL.md",
         "dist/claude-code/lpm-deliver-activity/SKILL.md",
+        "dist/claude-code/lpm-governance-decisions/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
         "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-release-product/SKILL.md",
         "dist/claude-code/lpm-unblock-work/SKILL.md",
+        "dist/codex/lpm-aish-delivery/SKILL.md",
         "dist/codex/lpm-aish-jobs/SKILL.md",
         "dist/codex/lpm-deliver-activity/SKILL.md",
+        "dist/codex/lpm-governance-decisions/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
         "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-release-product/SKILL.md",
         "dist/codex/lpm-unblock-work/SKILL.md",
+        "dist/generic/lpm-aish-delivery.md",
         "dist/generic/lpm-aish-jobs.md",
         "dist/generic/lpm-deliver-activity.md",
         "dist/generic/lpm-governance-decisions.md",
@@ -4306,8 +3996,16 @@
       "owner": "lpm-start",
       "usedBy": [
         "lpm-access",
+        "lpm-code-index",
         "lpm-deliver-activity",
-        "lpm-pilot-feedback"
+        "lpm-executive-context",
+        "lpm-governance-decisions",
+        "lpm-pilot-feedback",
+        "lpm-plan-work",
+        "lpm-requirements-scope",
+        "lpm-roadmap",
+        "lpm-roadmap-owner-ops",
+        "lpm-unblock-work"
       ],
       "category": "portfolio",
       "accessLevel": "read",
@@ -4492,13 +4190,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-ai-cost/SKILL.md",
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-ai-cost/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-ai-cost/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
-        "dist/generic/lpm-ai-cost.md",
-        "dist/generic/lpm-ask-advisor.md"
+        "dist/generic/lpm-ai-cost.md"
       ]
     },
     "get_project": {
@@ -4519,34 +4213,21 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/antigravity/lpm-executive-context/SKILL.md",
         "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/antigravity/lpm-start/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-executive-context/SKILL.md",
         "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-start/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-executive-context/SKILL.md",
         "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-start/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md",
-        "dist/generic/lpm-ask-advisor.md",
         "dist/generic/lpm-executive-context.md",
         "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-intake-triage.md",
         "dist/generic/lpm-pilot-feedback.md",
-        "dist/generic/lpm-start.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -4592,14 +4273,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "get_project_dependency_graph": {
       "owner": "lpm-unblock-work",
@@ -4655,24 +4329,15 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
         "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
         "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
         "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-review-health.md",
         "dist/generic/lpm-unblock-work.md"
       ]
     },
     "get_project_execution_context": {
       "owner": "lpm-plan-work",
       "usedBy": [
-        "lpm-aish-jobs",
         "lpm-requirements-scope",
         "lpm-workspace-admin"
       ],
@@ -4686,20 +4351,12 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-requirements-scope/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-requirements-scope/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-requirements-scope/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md",
-        "dist/generic/lpm-plan-work.md",
         "dist/generic/lpm-requirements-scope.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
@@ -4716,12 +4373,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-review-health.md"
-      ]
+      "renderedIn": []
     },
     "get_project_read_model": {
       "owner": "lpm-review-health",
@@ -4735,12 +4387,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-review-health.md"
-      ]
+      "renderedIn": []
     },
     "get_project_repository_context": {
       "owner": "lpm-ask-advisor",
@@ -4774,12 +4421,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-review-health.md"
-      ]
+      "renderedIn": []
     },
     "get_project_resolution_context": {
       "owner": "lpm-review-health",
@@ -4794,12 +4436,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-review-health.md"
-      ]
+      "renderedIn": []
     },
     "get_project_roadmap_drilldown": {
       "owner": "lpm-roadmap",
@@ -4813,12 +4450,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "get_project_scope_resolution_context": {
       "owner": "lpm-requirements-scope",
@@ -4836,13 +4468,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
         "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
         "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-review-health.md"
+        "dist/generic/lpm-requirements-scope.md"
       ]
     },
     "get_project_specialist_governance_summary": {
@@ -4918,13 +4546,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md",
         "dist/generic/lpm-code-index.md"
       ]
     },
@@ -4943,13 +4567,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-deliver-activity/SKILL.md",
         "dist/antigravity/lpm-knowledge/SKILL.md",
-        "dist/claude-code/lpm-deliver-activity/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
-        "dist/codex/lpm-deliver-activity/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/generic/lpm-deliver-activity.md",
         "dist/generic/lpm-knowledge.md"
       ]
     },
@@ -5009,20 +4629,12 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/antigravity/lpm-start/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
         "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-start/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
         "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-start/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
         "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-roadmap.md",
-        "dist/generic/lpm-start.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -5045,19 +4657,15 @@
       "renderedIn": [
         "dist/antigravity/lpm-access/SKILL.md",
         "dist/antigravity/lpm-ai-cost/SKILL.md",
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/antigravity/lpm-release-product/SKILL.md",
         "dist/claude-code/lpm-access/SKILL.md",
         "dist/claude-code/lpm-ai-cost/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-release-product/SKILL.md",
         "dist/codex/lpm-access/SKILL.md",
         "dist/codex/lpm-ai-cost/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-release-product/SKILL.md",
         "dist/generic/lpm-access.md",
         "dist/generic/lpm-ai-cost.md",
-        "dist/generic/lpm-ask-advisor.md",
         "dist/generic/lpm-release-product.md"
       ]
     },
@@ -5077,17 +4685,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
         "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
         "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-access.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-review-health.md",
-        "dist/generic/lpm-unblock-work.md"
+        "dist/generic/lpm-governance-decisions.md"
       ]
     },
     "get_workspace_executive_context": {
@@ -5121,12 +4721,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-review-health.md"
-      ]
+      "renderedIn": []
     },
     "get_workspace_owner_surface": {
       "owner": "lpm-review-health",
@@ -5140,18 +4735,11 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-review-health.md"
-      ]
+      "renderedIn": []
     },
     "get_workspace_read_model": {
       "owner": "lpm-review-health",
-      "usedBy": [
-        "lpm-executive-context"
-      ],
+      "usedBy": [],
       "category": "portfolio",
       "accessLevel": "read",
       "sensitive": false,
@@ -5161,16 +4749,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-executive-context.md",
-        "dist/generic/lpm-review-health.md"
-      ]
+      "renderedIn": []
     },
     "get_workspace_repository_context": {
       "owner": "lpm-ask-advisor",
@@ -5186,16 +4765,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "get_workspace_repository_credential": {
       "owner": "lpm-access",
@@ -5213,13 +4783,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-access/SKILL.md",
-        "dist/antigravity/lpm-code-index/SKILL.md",
         "dist/claude-code/lpm-access/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
         "dist/codex/lpm-access/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-access.md",
-        "dist/generic/lpm-code-index.md"
+        "dist/generic/lpm-access.md"
       ]
     },
     "get_workspace_roadmap_change_request": {
@@ -5237,16 +4803,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "get_workspace_roadmap_governance_observability": {
       "owner": "lpm-roadmap",
@@ -5260,12 +4817,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "get_workspace_roadmap_item_history": {
       "owner": "lpm-roadmap",
@@ -5280,12 +4832,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "get_workspace_roadmap_overview": {
       "owner": "lpm-roadmap",
@@ -5324,13 +4871,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "get_workspace_roadmap_traceability": {
       "owner": "lpm-roadmap",
@@ -5345,12 +4886,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "import_aish_accounting": {
       "owner": "lpm-ai-cost",
@@ -5493,7 +5029,6 @@
         "dist/antigravity/lpm-aish-jobs/SKILL.md",
         "dist/claude-code/lpm-aish-jobs/SKILL.md",
         "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-delivery.md",
         "dist/generic/lpm-aish-jobs.md"
       ]
     },
@@ -5545,22 +5080,18 @@
         "dist/antigravity/lpm-aish-delivery/SKILL.md",
         "dist/antigravity/lpm-aish-jobs/SKILL.md",
         "dist/antigravity/lpm-aish-runners/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
         "dist/claude-code/lpm-ai-cost/SKILL.md",
         "dist/claude-code/lpm-aish-delivery/SKILL.md",
         "dist/claude-code/lpm-aish-jobs/SKILL.md",
         "dist/claude-code/lpm-aish-runners/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
         "dist/codex/lpm-ai-cost/SKILL.md",
         "dist/codex/lpm-aish-delivery/SKILL.md",
         "dist/codex/lpm-aish-jobs/SKILL.md",
         "dist/codex/lpm-aish-runners/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
         "dist/generic/lpm-ai-cost.md",
         "dist/generic/lpm-aish-delivery.md",
         "dist/generic/lpm-aish-jobs.md",
-        "dist/generic/lpm-aish-runners.md",
-        "dist/generic/lpm-review-health.md"
+        "dist/generic/lpm-aish-runners.md"
       ]
     },
     "list_analytics_bridge_runs": {
@@ -5596,19 +5127,15 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-access/SKILL.md",
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
         "dist/antigravity/lpm-start/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
         "dist/claude-code/lpm-access/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
         "dist/claude-code/lpm-start/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
         "dist/codex/lpm-access/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
         "dist/codex/lpm-start/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
         "dist/generic/lpm-access.md",
-        "dist/generic/lpm-intake-triage.md",
         "dist/generic/lpm-start.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
@@ -5628,20 +5155,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-review-health.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "list_change_sets": {
       "owner": "lpm-requirements-scope",
@@ -5655,12 +5169,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "list_comments": {
       "owner": "lpm-deliver-activity",
@@ -5685,25 +5194,21 @@
         "dist/antigravity/lpm-deliver-activity/SKILL.md",
         "dist/antigravity/lpm-governance-decisions/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-release-product/SKILL.md",
         "dist/antigravity/lpm-unblock-work/SKILL.md",
         "dist/claude-code/lpm-deliver-activity/SKILL.md",
         "dist/claude-code/lpm-governance-decisions/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-release-product/SKILL.md",
         "dist/claude-code/lpm-unblock-work/SKILL.md",
         "dist/codex/lpm-deliver-activity/SKILL.md",
         "dist/codex/lpm-governance-decisions/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-release-product/SKILL.md",
         "dist/codex/lpm-unblock-work/SKILL.md",
         "dist/generic/lpm-deliver-activity.md",
         "dist/generic/lpm-governance-decisions.md",
         "dist/generic/lpm-pilot-feedback.md",
-        "dist/generic/lpm-plan-work.md",
         "dist/generic/lpm-release-product.md",
         "dist/generic/lpm-unblock-work.md"
       ]
@@ -5720,12 +5225,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "list_cycles": {
       "owner": "lpm-plan-work",
@@ -5741,17 +5241,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-review-health.md",
-        "dist/generic/lpm-workspace-admin.md"
-      ]
+      "renderedIn": []
     },
     "list_export_requests": {
       "owner": "lpm-integrations",
@@ -5778,7 +5268,9 @@
     },
     "list_governance_threads": {
       "owner": "lpm-governance-decisions",
-      "usedBy": [],
+      "usedBy": [
+        "lpm-requirements-scope"
+      ],
       "category": "requirements",
       "accessLevel": "read",
       "sensitive": false,
@@ -5792,9 +5284,7 @@
         "dist/antigravity/lpm-governance-decisions/SKILL.md",
         "dist/claude-code/lpm-governance-decisions/SKILL.md",
         "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-requirements-scope.md"
+        "dist/generic/lpm-governance-decisions.md"
       ]
     },
     "list_help_articles": {
@@ -5813,9 +5303,7 @@
         "dist/antigravity/lpm-knowledge/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/generic/lpm-knowledge.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-start.md"
+        "dist/generic/lpm-knowledge.md"
       ]
     },
     "list_issue_links": {
@@ -5833,26 +5321,13 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-deliver-activity/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-deliver-activity/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-deliver-activity/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-deliver-activity.md",
-        "dist/generic/lpm-review-health.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "list_issues": {
       "owner": "lpm-deliver-activity",
       "usedBy": [
         "lpm-ai-cost",
-        "lpm-aish-jobs",
+        "lpm-governance-decisions",
         "lpm-intake-triage",
         "lpm-pilot-feedback",
         "lpm-plan-work",
@@ -5874,56 +5349,24 @@
       "renderedIn": [
         "dist/antigravity/lpm-ai-cost/SKILL.md",
         "dist/antigravity/lpm-aish-delivery/SKILL.md",
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/antigravity/lpm-deliver-activity/SKILL.md",
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-release-product/SKILL.md",
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
         "dist/claude-code/lpm-ai-cost/SKILL.md",
         "dist/claude-code/lpm-aish-delivery/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-deliver-activity/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-release-product/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
         "dist/codex/lpm-ai-cost/SKILL.md",
         "dist/codex/lpm-aish-delivery/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-deliver-activity/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-release-product/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
         "dist/generic/lpm-ai-cost.md",
         "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-aish-jobs.md",
         "dist/generic/lpm-aish-runners.md",
-        "dist/generic/lpm-deliver-activity.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-intake-triage.md",
         "dist/generic/lpm-pilot-feedback.md",
-        "dist/generic/lpm-plan-work.md",
         "dist/generic/lpm-release-product.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-review-health.md",
-        "dist/generic/lpm-unblock-work.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -5967,16 +5410,12 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
         "dist/generic/lpm-pilot-feedback.md",
-        "dist/generic/lpm-plan-work.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -5995,13 +5434,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
         "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
         "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
         "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/generic/lpm-executive-context.md",
         "dist/generic/lpm-governance-decisions.md"
       ]
     },
@@ -6078,12 +5513,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "list_project_assignable_members": {
       "owner": "lpm-plan-work",
@@ -6101,23 +5531,10 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-intake-triage.md",
-        "dist/generic/lpm-pilot-feedback.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-workspace-admin.md"
+        "dist/generic/lpm-pilot-feedback.md"
       ]
     },
     "list_project_decision_queue": {
@@ -6132,9 +5549,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "list_project_files": {
       "owner": "lpm-knowledge",
@@ -6171,13 +5586,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-knowledge/SKILL.md",
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-knowledge.md",
-        "dist/generic/lpm-requirements-scope.md"
+        "dist/generic/lpm-knowledge.md"
       ]
     },
     "list_project_repository_links": {
@@ -6196,14 +5607,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/antigravity/lpm-code-index/SKILL.md",
         "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
         "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md",
-        "dist/generic/lpm-code-index.md",
-        "dist/generic/lpm-workspace-admin.md"
+        "dist/generic/lpm-aish-jobs.md"
       ]
     },
     "list_project_resolution_entities": {
@@ -6219,12 +5625,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-review-health.md"
-      ]
+      "renderedIn": []
     },
     "list_project_resolution_risks": {
       "owner": "lpm-review-health",
@@ -6240,16 +5641,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-review-health.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "list_project_specialist_assignments": {
       "owner": "lpm-access",
@@ -6286,60 +5678,23 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-access/SKILL.md",
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/antigravity/lpm-executive-context/SKILL.md",
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
         "dist/antigravity/lpm-release-product/SKILL.md",
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
         "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/antigravity/lpm-start/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
         "dist/claude-code/lpm-access/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
         "dist/claude-code/lpm-release-product/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
         "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-start/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
         "dist/codex/lpm-access/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
         "dist/codex/lpm-release-product/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
         "dist/codex/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-start/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
         "dist/generic/lpm-access.md",
-        "dist/generic/lpm-ai-cost.md",
-        "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-aish-jobs.md",
         "dist/generic/lpm-aish-runners.md",
-        "dist/generic/lpm-ask-advisor.md",
-        "dist/generic/lpm-code-index.md",
-        "dist/generic/lpm-deliver-activity.md",
-        "dist/generic/lpm-executive-context.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-intake-triage.md",
         "dist/generic/lpm-integrations.md",
-        "dist/generic/lpm-knowledge.md",
         "dist/generic/lpm-pilot-feedback.md",
-        "dist/generic/lpm-plan-work.md",
         "dist/generic/lpm-release-product.md",
-        "dist/generic/lpm-requirements-scope.md",
         "dist/generic/lpm-review-health.md",
-        "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-roadmap.md",
-        "dist/generic/lpm-start.md",
-        "dist/generic/lpm-unblock-work.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -6379,6 +5734,53 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
+        "dist/antigravity/lpm-knowledge/SKILL.md",
+        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
+        "dist/antigravity/lpm-workspace-admin/SKILL.md",
+        "dist/claude-code/lpm-knowledge/SKILL.md",
+        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
+        "dist/claude-code/lpm-workspace-admin/SKILL.md",
+        "dist/codex/lpm-knowledge/SKILL.md",
+        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
+        "dist/codex/lpm-workspace-admin/SKILL.md",
+        "dist/generic/lpm-knowledge.md",
+        "dist/generic/lpm-roadmap-owner-ops.md",
+        "dist/generic/lpm-workspace-admin.md"
+      ]
+    },
+    "list_requirement_groups": {
+      "owner": "lpm-requirements-scope",
+      "usedBy": [],
+      "category": "requirements",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": null,
+      "required": [
+        "projectId"
+      ],
+      "cardAuthority": "autonomous",
+      "renderedAuthority": "A",
+      "renderedIn": []
+    },
+    "list_requirements": {
+      "owner": "lpm-requirements-scope",
+      "usedBy": [
+        "lpm-governance-decisions",
+        "lpm-knowledge",
+        "lpm-roadmap-owner-ops",
+        "lpm-workspace-admin"
+      ],
+      "category": "requirements",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": "portfolio:read",
+      "required": [
+        "baselineId",
+        "projectId"
+      ],
+      "cardAuthority": "autonomous",
+      "renderedAuthority": "A",
+      "renderedIn": [
         "dist/antigravity/lpm-governance-decisions/SKILL.md",
         "dist/antigravity/lpm-knowledge/SKILL.md",
         "dist/antigravity/lpm-requirements-scope/SKILL.md",
@@ -6398,64 +5800,6 @@
         "dist/generic/lpm-knowledge.md",
         "dist/generic/lpm-requirements-scope.md",
         "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-unblock-work.md",
-        "dist/generic/lpm-workspace-admin.md"
-      ]
-    },
-    "list_requirement_groups": {
-      "owner": "lpm-requirements-scope",
-      "usedBy": [],
-      "category": "requirements",
-      "accessLevel": "read",
-      "sensitive": false,
-      "oauthScope": null,
-      "required": [
-        "projectId"
-      ],
-      "cardAuthority": "autonomous",
-      "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
-    },
-    "list_requirements": {
-      "owner": "lpm-requirements-scope",
-      "usedBy": [
-        "lpm-knowledge",
-        "lpm-roadmap-owner-ops",
-        "lpm-workspace-admin"
-      ],
-      "category": "requirements",
-      "accessLevel": "read",
-      "sensitive": false,
-      "oauthScope": "portfolio:read",
-      "required": [
-        "baselineId",
-        "projectId"
-      ],
-      "cardAuthority": "autonomous",
-      "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-knowledge/SKILL.md",
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-knowledge/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-knowledge.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-unblock-work.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -6471,12 +5815,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "list_roadmap_knowledge_artifacts": {
       "owner": "lpm-knowledge",
@@ -6567,13 +5906,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-review-health/SKILL.md",
-        "dist/generic/lpm-plan-work.md",
         "dist/generic/lpm-review-health.md"
       ]
     },
@@ -6589,12 +5924,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "list_unlinked_project_work": {
       "owner": "lpm-roadmap",
@@ -6608,12 +5938,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "list_unowned_domains_or_capabilities": {
       "owner": "lpm-executive-context",
@@ -6631,17 +5956,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-executive-context.md",
-        "dist/generic/lpm-intake-triage.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -6691,12 +6008,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "list_workspace_activities": {
       "owner": "lpm-deliver-activity",
@@ -6816,12 +6128,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "list_workspace_context_gaps": {
       "owner": "lpm-executive-context",
@@ -6835,12 +6142,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
-        "dist/generic/lpm-executive-context.md"
-      ]
+      "renderedIn": []
     },
     "list_workspace_issue_links": {
       "owner": "lpm-unblock-work",
@@ -6856,16 +6158,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-deliver-activity/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-deliver-activity/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-deliver-activity/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-deliver-activity.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "list_workspace_mcp_agent_credentials": {
       "owner": "lpm-access",
@@ -6907,34 +6200,20 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-access/SKILL.md",
-        "dist/antigravity/lpm-executive-context/SKILL.md",
         "dist/antigravity/lpm-integrations/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/antigravity/lpm-start/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
         "dist/claude-code/lpm-access/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
         "dist/claude-code/lpm-integrations/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-start/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
         "dist/codex/lpm-access/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
         "dist/codex/lpm-integrations/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-start/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
         "dist/generic/lpm-access.md",
-        "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-executive-context.md",
         "dist/generic/lpm-integrations.md",
         "dist/generic/lpm-pilot-feedback.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-roadmap.md",
-        "dist/generic/lpm-start.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -6942,6 +6221,7 @@
       "owner": "lpm-start",
       "usedBy": [
         "lpm-ai-cost",
+        "lpm-executive-context",
         "lpm-intake-triage",
         "lpm-integrations",
         "lpm-knowledge",
@@ -6964,46 +6244,22 @@
         "dist/antigravity/lpm-intake-triage/SKILL.md",
         "dist/antigravity/lpm-integrations/SKILL.md",
         "dist/antigravity/lpm-knowledge/SKILL.md",
-        "dist/antigravity/lpm-review-health/SKILL.md",
         "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/antigravity/lpm-start/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
         "dist/claude-code/lpm-ai-cost/SKILL.md",
         "dist/claude-code/lpm-intake-triage/SKILL.md",
         "dist/claude-code/lpm-integrations/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
-        "dist/claude-code/lpm-review-health/SKILL.md",
         "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-start/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
         "dist/codex/lpm-ai-cost/SKILL.md",
         "dist/codex/lpm-intake-triage/SKILL.md",
         "dist/codex/lpm-integrations/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/codex/lpm-review-health/SKILL.md",
         "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-start/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-access.md",
         "dist/generic/lpm-ai-cost.md",
-        "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-aish-jobs.md",
-        "dist/generic/lpm-code-index.md",
-        "dist/generic/lpm-governance-decisions.md",
         "dist/generic/lpm-intake-triage.md",
         "dist/generic/lpm-integrations.md",
         "dist/generic/lpm-knowledge.md",
-        "dist/generic/lpm-plan-work.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-review-health.md",
-        "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-roadmap.md",
-        "dist/generic/lpm-start.md",
-        "dist/generic/lpm-unblock-work.md",
-        "dist/generic/lpm-workspace-admin.md"
+        "dist/generic/lpm-roadmap-owner-ops.md"
       ]
     },
     "list_workspace_repository_links": {
@@ -7022,16 +6278,12 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/antigravity/lpm-code-index/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-code-index/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-code-index/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md",
         "dist/generic/lpm-code-index.md",
         "dist/generic/lpm-pilot-feedback.md"
       ]
@@ -7050,16 +6302,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "list_workspace_roadmap_change_requests": {
       "owner": "lpm-roadmap",
@@ -7077,10 +6320,7 @@
         "dist/antigravity/lpm-roadmap/SKILL.md",
         "dist/claude-code/lpm-roadmap/SKILL.md",
         "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-roadmap.md",
-        "dist/generic/lpm-unblock-work.md"
+        "dist/generic/lpm-roadmap.md"
       ]
     },
     "list_workspace_roadmap_item_links": {
@@ -7099,13 +6339,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/antigravity/lpm-roadmap/SKILL.md",
         "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
         "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-roadmap.md"
+        "dist/generic/lpm-roadmap-owner-ops.md"
       ]
     },
     "list_workspace_roadmap_items": {
@@ -7125,25 +6361,14 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/antigravity/lpm-knowledge/SKILL.md",
         "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
         "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
         "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md",
-        "dist/generic/lpm-governance-decisions.md",
         "dist/generic/lpm-knowledge.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-roadmap.md",
-        "dist/generic/lpm-unblock-work.md"
+        "dist/generic/lpm-roadmap-owner-ops.md"
       ]
     },
     "list_workspace_roadmap_materializations": {
@@ -7161,20 +6386,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "list_workspace_roadmaps": {
       "owner": "lpm-roadmap",
@@ -7192,19 +6404,10 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/antigravity/lpm-knowledge/SKILL.md",
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md",
-        "dist/generic/lpm-knowledge.md",
-        "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-roadmap.md"
+        "dist/generic/lpm-knowledge.md"
       ]
     },
     "list_workspaces": {
@@ -7228,57 +6431,29 @@
       "renderedIn": [
         "dist/antigravity/lpm-access/SKILL.md",
         "dist/antigravity/lpm-ai-cost/SKILL.md",
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/antigravity/lpm-executive-context/SKILL.md",
         "dist/antigravity/lpm-intake-triage/SKILL.md",
         "dist/antigravity/lpm-integrations/SKILL.md",
         "dist/antigravity/lpm-review-health/SKILL.md",
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/antigravity/lpm-start/SKILL.md",
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
         "dist/claude-code/lpm-access/SKILL.md",
         "dist/claude-code/lpm-ai-cost/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
         "dist/claude-code/lpm-intake-triage/SKILL.md",
         "dist/claude-code/lpm-integrations/SKILL.md",
         "dist/claude-code/lpm-review-health/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-start/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
         "dist/codex/lpm-access/SKILL.md",
         "dist/codex/lpm-ai-cost/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
         "dist/codex/lpm-intake-triage/SKILL.md",
         "dist/codex/lpm-integrations/SKILL.md",
         "dist/codex/lpm-review-health/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-start/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
         "dist/generic/lpm-access.md",
         "dist/generic/lpm-ai-cost.md",
-        "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-aish-jobs.md",
-        "dist/generic/lpm-ask-advisor.md",
-        "dist/generic/lpm-code-index.md",
-        "dist/generic/lpm-deliver-activity.md",
-        "dist/generic/lpm-executive-context.md",
-        "dist/generic/lpm-governance-decisions.md",
         "dist/generic/lpm-intake-triage.md",
         "dist/generic/lpm-integrations.md",
-        "dist/generic/lpm-knowledge.md",
         "dist/generic/lpm-pilot-feedback.md",
         "dist/generic/lpm-release-product.md",
-        "dist/generic/lpm-requirements-scope.md",
         "dist/generic/lpm-review-health.md",
-        "dist/generic/lpm-roadmap-owner-ops.md",
-        "dist/generic/lpm-roadmap.md",
-        "dist/generic/lpm-start.md",
-        "dist/generic/lpm-unblock-work.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -7317,12 +6492,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "prepare_change_set_draft_from_governance_thread": {
       "owner": "lpm-governance-decisions",
@@ -7339,16 +6509,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "prepare_governance_thread_from_blocker": {
       "owner": "lpm-unblock-work",
@@ -7363,14 +6524,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "prepare_issue_draft_from_governance_thread": {
       "owner": "lpm-governance-decisions",
@@ -7387,16 +6541,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "prepare_requirement_draft_from_governance_thread": {
       "owner": "lpm-governance-decisions",
@@ -7411,12 +6556,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "preview_aish_legacy_runner_migration": {
       "owner": "lpm-aish-runners",
@@ -7493,12 +6633,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "preview_roadmap_materialization": {
       "owner": "lpm-roadmap-owner-ops",
@@ -7513,12 +6648,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "preview_workspace_roadmap_change": {
       "owner": "lpm-roadmap",
@@ -7534,12 +6664,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "preview_workspace_roadmap_governance_migration": {
       "owner": "lpm-roadmap-owner-ops",
@@ -7593,12 +6718,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "preview_workspace_roadmap_v2_migration": {
       "owner": "lpm-roadmap-owner-ops",
@@ -7612,12 +6732,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "preview_workspace_routing": {
       "owner": "lpm-intake-triage",
@@ -7670,12 +6785,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "propose_copilot_action": {
       "owner": "lpm-aish-jobs",
@@ -7693,12 +6803,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "publish_baseline_from_working_scope": {
       "owner": "lpm-requirements-scope",
@@ -7713,12 +6818,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "publish_change_set": {
       "owner": "lpm-requirements-scope",
@@ -7775,12 +6875,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "put_aish_execution_plan": {
       "owner": "lpm-aish-jobs",
@@ -7799,12 +6894,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "read_aish_delivery_artifact": {
       "owner": "lpm-aish-delivery",
@@ -7844,13 +6934,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
         "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
         "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
         "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md",
         "dist/generic/lpm-pilot-feedback.md"
       ]
     },
@@ -7870,13 +6956,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-deliver-activity/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-deliver-activity/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-deliver-activity/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-deliver-activity.md",
-        "dist/generic/lpm-plan-work.md"
+        "dist/generic/lpm-deliver-activity.md"
       ]
     },
     "reconcile_aish_accounting": {
@@ -7912,12 +6994,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "reconcile_workspace_code_indexes": {
       "owner": "lpm-code-index",
@@ -7931,12 +7008,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "record_aish_consumption": {
       "owner": "lpm-aish-runners",
@@ -7960,7 +7032,6 @@
         "dist/antigravity/lpm-aish-runners/SKILL.md",
         "dist/claude-code/lpm-aish-runners/SKILL.md",
         "dist/codex/lpm-aish-runners/SKILL.md",
-        "dist/generic/lpm-ai-cost.md",
         "dist/generic/lpm-aish-runners.md"
       ]
     },
@@ -8059,12 +7130,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "record_workspace_delivery_receipt": {
       "owner": "lpm-intake-triage",
@@ -8080,12 +7146,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
-        "dist/generic/lpm-intake-triage.md"
-      ]
+      "renderedIn": []
     },
     "refresh_repository_code_index": {
       "owner": "lpm-code-index",
@@ -8101,12 +7162,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "register_aish_delivery_artifact": {
       "owner": "lpm-aish-delivery",
@@ -8229,12 +7285,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "reply_to_governance_thread": {
       "owner": "lpm-governance-decisions",
@@ -8250,9 +7301,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "request_aish_execution_checkpoint": {
       "owner": "lpm-aish-jobs",
@@ -8274,12 +7323,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "requeue_aish_automation": {
       "owner": "lpm-aish-delivery",
@@ -8324,12 +7368,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "resolve_governance_thread_with_decision": {
       "owner": "lpm-governance-decisions",
@@ -8346,9 +7385,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "resolve_governance_thread_with_outcome": {
       "owner": "lpm-governance-decisions",
@@ -8365,12 +7402,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "resolve_project_issue_blocker_context": {
       "owner": "lpm-unblock-work",
@@ -8386,12 +7418,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "resolve_workspace_roadmap_dependencies": {
       "owner": "lpm-roadmap-owner-ops",
@@ -8406,12 +7433,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "restore_workspace_roadmap_item": {
       "owner": "lpm-roadmap-owner-ops",
@@ -8427,12 +7449,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "resume_aish_execution_session": {
       "owner": "lpm-aish-jobs",
@@ -8450,12 +7467,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "retry_aish_execution_plan": {
       "owner": "lpm-aish-jobs",
@@ -8474,12 +7486,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md"
-      ]
+      "renderedIn": []
     },
     "review_workspace_roadmap_change": {
       "owner": "lpm-roadmap",
@@ -8497,12 +7504,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "review_workspace_roadmap_item": {
       "owner": "lpm-roadmap-owner-ops",
@@ -8518,12 +7520,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "review_workspace_routing": {
       "owner": "lpm-intake-triage",
@@ -8563,12 +7560,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "revoke_project_specialist_assignment": {
       "owner": "lpm-access",
@@ -8627,12 +7619,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "rollback_workspace_roadmap_governance_migration": {
       "owner": "lpm-roadmap-owner-ops",
@@ -8649,12 +7636,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "rotate_workspace_mcp_agent_credential": {
       "owner": "lpm-access",
@@ -8693,13 +7675,9 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-code-index.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -8716,12 +7694,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "search_help_articles": {
       "owner": "lpm-knowledge",
@@ -8740,14 +7713,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-knowledge/SKILL.md",
-        "dist/antigravity/lpm-start/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
-        "dist/claude-code/lpm-start/SKILL.md",
         "dist/codex/lpm-knowledge/SKILL.md",
-        "dist/codex/lpm-start/SKILL.md",
-        "dist/generic/lpm-knowledge.md",
-        "dist/generic/lpm-requirements-scope.md",
-        "dist/generic/lpm-start.md"
+        "dist/generic/lpm-knowledge.md"
       ]
     },
     "search_project_code": {
@@ -8764,12 +7732,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md"
-      ]
+      "renderedIn": []
     },
     "search_workspace_code": {
       "owner": "lpm-ask-advisor",
@@ -8786,16 +7749,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-ask-advisor/SKILL.md",
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-ask-advisor/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-ask-advisor/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-ask-advisor.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "set_aish_completed_job_disposition": {
       "owner": "lpm-aish-delivery",
@@ -8855,12 +7809,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "set_project_issue_due_date": {
       "owner": "lpm-plan-work",
@@ -8876,12 +7825,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "set_project_issue_estimate": {
       "owner": "lpm-plan-work",
@@ -8897,12 +7841,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "settle_aish_budget": {
       "owner": "lpm-ai-cost",
@@ -8963,13 +7902,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "suggest_operational_entry": {
       "owner": "lpm-intake-triage",
@@ -8984,12 +7917,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
-        "dist/generic/lpm-intake-triage.md"
-      ]
+      "renderedIn": []
     },
     "suggest_workspace_roadmap_allocations": {
       "owner": "lpm-roadmap-owner-ops",
@@ -9004,12 +7932,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "test_webhook_subscription": {
       "owner": "lpm-integrations",
@@ -9102,12 +8025,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "update_comment": {
       "owner": "lpm-deliver-activity",
@@ -9124,12 +8042,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-deliver-activity/SKILL.md",
-        "dist/claude-code/lpm-deliver-activity/SKILL.md",
-        "dist/codex/lpm-deliver-activity/SKILL.md",
-        "dist/generic/lpm-deliver-activity.md"
-      ]
+      "renderedIn": []
     },
     "update_cycle": {
       "owner": "lpm-plan-work",
@@ -9144,12 +8057,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "update_governance_thread": {
       "owner": "lpm-governance-decisions",
@@ -9164,12 +8072,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-governance-decisions/SKILL.md",
-        "dist/claude-code/lpm-governance-decisions/SKILL.md",
-        "dist/codex/lpm-governance-decisions/SKILL.md",
-        "dist/generic/lpm-governance-decisions.md"
-      ]
+      "renderedIn": []
     },
     "update_issue": {
       "owner": "lpm-deliver-activity",
@@ -9189,17 +8092,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-aish-delivery/SKILL.md",
-        "dist/antigravity/lpm-deliver-activity/SKILL.md",
-        "dist/antigravity/lpm-plan-work/SKILL.md",
         "dist/claude-code/lpm-aish-delivery/SKILL.md",
-        "dist/claude-code/lpm-deliver-activity/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
         "dist/codex/lpm-aish-delivery/SKILL.md",
-        "dist/codex/lpm-deliver-activity/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-aish-delivery.md",
-        "dist/generic/lpm-deliver-activity.md",
-        "dist/generic/lpm-plan-work.md"
+        "dist/generic/lpm-aish-delivery.md"
       ]
     },
     "update_label": {
@@ -9214,12 +8109,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "update_milestone": {
       "owner": "lpm-plan-work",
@@ -9234,12 +8124,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-plan-work/SKILL.md",
-        "dist/claude-code/lpm-plan-work/SKILL.md",
-        "dist/codex/lpm-plan-work/SKILL.md",
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "update_operational_entry": {
       "owner": "lpm-intake-triage",
@@ -9254,12 +8139,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
-        "dist/generic/lpm-intake-triage.md"
-      ]
+      "renderedIn": []
     },
     "update_portfolio_work_item_link": {
       "owner": "lpm-unblock-work",
@@ -9275,12 +8155,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-unblock-work/SKILL.md",
-        "dist/claude-code/lpm-unblock-work/SKILL.md",
-        "dist/codex/lpm-unblock-work/SKILL.md",
-        "dist/generic/lpm-unblock-work.md"
-      ]
+      "renderedIn": []
     },
     "update_project": {
       "owner": "lpm-workspace-admin",
@@ -9298,17 +8173,9 @@
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
       "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
-        "dist/antigravity/lpm-intake-triage/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
-        "dist/claude-code/lpm-intake-triage/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
-        "dist/codex/lpm-intake-triage/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-executive-context.md",
-        "dist/generic/lpm-intake-triage.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -9326,12 +8193,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "update_project_issue_due_date": {
       "owner": "lpm-plan-work",
@@ -9347,9 +8209,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/generic/lpm-plan-work.md"
-      ]
+      "renderedIn": []
     },
     "update_project_repository_link": {
       "owner": "lpm-code-index",
@@ -9364,12 +8224,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "update_requirement": {
       "owner": "lpm-requirements-scope",
@@ -9384,12 +8239,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "update_requirement_baseline": {
       "owner": "lpm-requirements-scope",
@@ -9407,13 +8257,9 @@
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
       "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -9431,12 +8277,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-requirements-scope/SKILL.md",
-        "dist/claude-code/lpm-requirements-scope/SKILL.md",
-        "dist/codex/lpm-requirements-scope/SKILL.md",
-        "dist/generic/lpm-requirements-scope.md"
-      ]
+      "renderedIn": []
     },
     "update_skills_context": {
       "owner": "lpm-knowledge",
@@ -9511,13 +8352,9 @@
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
       "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
-        "dist/generic/lpm-executive-context.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -9579,12 +8416,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "update_workspace_mcp_agent_credential_status": {
       "owner": "lpm-access",
@@ -9620,12 +8452,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-code-index/SKILL.md",
-        "dist/generic/lpm-code-index.md"
-      ]
+      "renderedIn": []
     },
     "update_workspace_roadmap": {
       "owner": "lpm-roadmap",
@@ -9640,12 +8467,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     },
     "update_workspace_roadmap_allocation": {
       "owner": "lpm-roadmap-owner-ops",
@@ -9660,12 +8482,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "update_workspace_roadmap_dependency": {
       "owner": "lpm-roadmap-owner-ops",
@@ -9680,12 +8497,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "update_workspace_roadmap_governance_policy": {
       "owner": "lpm-roadmap-owner-ops",
@@ -9701,12 +8513,7 @@
       ],
       "cardAuthority": "owner-only",
       "renderedAuthority": "O",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/claude-code/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/codex/lpm-roadmap-owner-ops/SKILL.md",
-        "dist/generic/lpm-roadmap-owner-ops.md"
-      ]
+      "renderedIn": []
     },
     "update_workspace_roadmap_item": {
       "owner": "lpm-roadmap-owner-ops",
@@ -9810,10 +8617,6 @@
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
       "renderedIn": [
-        "dist/antigravity/lpm-aish-jobs/SKILL.md",
-        "dist/claude-code/lpm-aish-jobs/SKILL.md",
-        "dist/codex/lpm-aish-jobs/SKILL.md",
-        "dist/generic/lpm-aish-jobs.md",
         "dist/generic/lpm-aish-runners.md"
       ]
     },
@@ -9891,12 +8694,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-executive-context/SKILL.md",
-        "dist/claude-code/lpm-executive-context/SKILL.md",
-        "dist/codex/lpm-executive-context/SKILL.md",
-        "dist/generic/lpm-executive-context.md"
-      ]
+      "renderedIn": []
     },
     "validate_workspace_project_alignment": {
       "owner": "lpm-executive-context",
@@ -9933,12 +8731,7 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
-      "renderedIn": [
-        "dist/antigravity/lpm-roadmap/SKILL.md",
-        "dist/claude-code/lpm-roadmap/SKILL.md",
-        "dist/codex/lpm-roadmap/SKILL.md",
-        "dist/generic/lpm-roadmap.md"
-      ]
+      "renderedIn": []
     }
   },
   "pending": [],

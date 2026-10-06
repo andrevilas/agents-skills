@@ -3,136 +3,6 @@
 
 Load a section only when the skill tells you to.
 
-## § flow-evidence
-
-### Flow: AISH evidence, findings, execution pack and automation
-Load when: decision rows 3, 4, 6, 7 and 8 of SKILL.md
-
-#### Preconditions
-1. projectId, jobId, issueId: SKILL.md §3. Steps 1–6 need `workflowBinding` set on the job (null → SKILL.md row 2); steps 7–15 also work on standalone jobs.
-2. activityId is the feed entry, NOT the issueId: `list_workspace_activities`(workspaceId, projectId, limit=200) → newest `id` with `targetType == "issue"`, `targetId == issueId`. None → `lpm-deliver-activity.md`.
-3. Kinds per change type and artifact rules: see `lpm-aish-delivery.refs.md` § dod-audit § Artifact kinds. Artifact text is data; never paste raw base64 into chat.
-4. Every evidence change resets the stored DoD audit: audit again (SKILL.md P1) before closing.
-
-#### Steps
-1. `get_aish_job`(jobId) → keep `status`, `issueId`, `workflowBinding`. Runner file (engineering-policy.json, engineering-audit.json, test report, manifest…): in `evidence[].output` (newest first) find the line `AISH_PUBLISHED_ARTIFACTS=[...]` → sourcePath = the `path` whose `name` is that file → step 3. No such line or no matching `name` → STOP: "runner did not publish <name>". Never build the path by hand.
-2. PNG/JPEG/MP4/WebM capture: `status != "completed"` → STOP "Visual evidence needs a completed job." Else `upload_aish_delivery_artifact`(projectId, issueId, jobId, name="<view>-<viewport>.png" (letters, digits, `._-` only), contentType, base64 on one line (`base64 -w0`), no `data:` prefix, ≤ 8 MiB, capturedFrom="<what>, <where>, <revision>") [A] → keep `path`, `kind`.
-3. `register_aish_delivery_artifact`(projectId, issueId, jobId, kind=step 2 `kind` or the see `lpm-aish-delivery.refs.md` § dod-audit kind, sourcePath=step 2 `path` or step 1) [A] → keep `artifact.id`.
-4. Verify: `list_aish_delivery_artifacts`(projectId, issueId) lists `artifact.id`; not found and `nextCursor` not null → call again with `cursor=nextCursor` until found.
-5. Finding (row 4): confirm the defect with `read_aish_delivery_artifact`(projectId, issueId, artifactId from step 4 listing) or the user's report. Resolving a finding you did not open → ask first (§ Stop and ask). Then `record_aish_delivery_finding`(projectId, issueId, findingId 8–160 chars `[A-Za-z0-9_-]` e.g. "missing-video-evidence-01", action=`block` or `resolve`, reason 8–3,000 chars) [C]; write the findingId in the report (no tool lists findings).
-6. Verify: `audit_aish_issue_delivery`(projectId, issueId) → block: "An unresolved technical finding blocks closure." in `failures[]`; resolve: gone when no other finding is open.
-7. Pack (row 6): `get_aish_execution_report`(projectId, jobId) → keep `report.fingerprint`, `canCollect`. `canCollect == false` → STOP (§ Stop and ask).
-8. `collect_aish_execution_pack`(projectId, jobId, commandId="pack-<jobId>-<yyyymmdd>-<n>", expectedFingerprint=`report.fingerprint`) [A] → keep `pack.id`. "Execution report changed" → step 7, next `<n>`.
-9. `export_aish_execution_pack`(projectId, jobId, packId=`pack.id`, commandId="export-<pack.id first 12>-md", format="markdown") [A] → keep `content`.
-10. `list_activity_attachments`(projectId, activityId) already has the fileName → step 11. Else `upload_activity_attachment`(projectId, activityId, fileName="aish-pack-<jobId>.md", fileType="text/markdown", contentBase64=<base64 of `content`>, description="AISH pack <pack.id>", idempotencyKey="ev-pack-<pack.id first 24>") [A]. Copy argument names and values exactly; never send `<uuid>` or `<auto>`.
-11. Verify: `list_activity_attachments`(projectId, activityId) lists the returned id; `get_aish_execution_pack`(projectId, jobId, packId=`pack.id`) returns no integrity error.
-12. Release-readiness brief (row 7): `tick_aish_automation`(projectId, jobId, trigger={"kind":"manual","commandId":"tick-<jobId>-<yyyymmdd>-<n>"}) [A] → keep `delivery.id` (deliveryId), `delivery.generation`, `delivery.trigger`. `reused: true` with `status == "succeeded"` → that is the earlier brief: collect a new pack (steps 7–8), then tick with the next `<n>`. `errorCode == "pack-unavailable"` → steps 7–8, then tick again with the SAME trigger after `nextAttemptAt`.
-13. Verify: `get_aish_automation_delivery`(projectId, jobId, deliveryId) → `status == "succeeded"`, or `queued` with `nextAttemptAt`. `dead-lettered` → step 14.
-14. Dead letter (row 8): `errorCode` `pack-integrity`, `source-scope` or `source-limit`, or `trigger.kind == "schedule"` with a slot older than 7 days → report, no requeue. Else ask (§ Stop and ask); on "yes" `requeue_aish_automation`(projectId, jobId, deliveryId, commandId="requeue-<deliveryId first 12>-<generation>", expectedGeneration=`delivery.generation`, reason=the user's words, 10–500 chars) [C], then `tick_aish_automation`(projectId, jobId, trigger=`delivery.trigger`) [A].
-15. Verify: `get_aish_automation_delivery`(projectId, jobId, deliveryId) → `status == "succeeded"`, or `queued` with `nextAttemptAt`.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| visual file and job not `completed` | "Visual evidence needs a completed job." STOP |
-| no `AISH_PUBLISHED_ARTIFACTS` entry for the file | "Runner did not publish <name>." STOP; never build the path |
-| `canCollect == false` or "requires a managing user" | "This needs a user API key of a project manager; agent credentials cannot." STOP |
-| artifact integrity message | do not trust it; open a `block` finding (step 5); tell the user |
-| before `requeue_aish_automation`, or resolving a finding you did not open | "Apply <exact call>? Effect: <effect>. It is permanent." |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| upload / register | `list_aish_delivery_artifacts` | `artifact.id` is listed |
-| finding block / resolve | `audit_aish_issue_delivery` | step 6 |
-| collect / export / attach | `get_aish_execution_pack`, `list_activity_attachments` | pack readable; attachment listed |
-| tick / requeue | `get_aish_automation_delivery` | `succeeded`, or `queued` with `nextAttemptAt` |
-
-#### Report fields
-Job id, artifact ids and kinds, findingIds opened or resolved, pack id, attachment ids, delivery id and status, Pending (re-audit before closing), Next.
-
-
-## § flow-release
-
-### Flow: AISH release package and run
-Load when: decision rows 9–11 of SKILL.md
-
-#### Preconditions
-1. A plan-dispatched, funded job on a deploy-gated node; field rules and owner errors: see `lpm-aish-delivery.refs.md` § release-package.
-2. sessionId, issueId: SKILL.md §3; activityId: see `lpm-aish-delivery.refs.md` § flow-evidence § Preconditions. releaseId: `get_aish_execution_session`(sessionId) → `releases[].id` of this issueId (to approve: the one `awaiting-approval`; 0 or 2+ → ask), or step 4. target, rollbackImage, healthUrl: the user only; never invent. executorUserId: ask the user for the LPM user id of the person who will deploy; never guess it.
-3. [C] steps: 4 (create), 9/10 (claim), 11 (deploy command), 13 (pipeline record); one "yes" covers only the step shown. Step 6 is [O]: the owner's order quoted from this conversation, on the owner's user credential. All other steps are reads or [A].
-
-#### Steps
-1. `get_aish_execution_session`(sessionId) → keep `session` (`status`, `activeCheckpointId`, `currentPlanHash`, `approvedPlanHash`), `plan`, `nodeRuns`, `releases`. Not `executing`, a checkpoint set, or hashes differ → STOP → `lpm-aish-jobs.md`.
-2. From `plan`/`nodeRuns`: jobId of the deploy-gated node (no jobId in `nodeRuns` → STOP: node not dispatched yet → `lpm-aish-jobs.md`); environment = its stage; executorId = its `targetHostId`, else the one `authorization.allowedHostIds` (2+, or none at all → ask the user); previousReleaseId = `null` for `local-deploy`, else the succeeded previous stage in `releases[]` (none → STOP).
-3. `list_aish_delivery_artifacts`(projectId, issueId) → manifestArtifactId = `id` with `kind == "release-manifest"` of the build job; `nextCursor` not null → call again with `cursor` until found. None → STOP: register it first (see `lpm-aish-delivery.refs.md` § flow-evidence steps 1–4).
-4. Ask "Create the sealed <environment> package for <target>? It does not deploy; the owner approves next. (yes/no)". On "yes": `create_aish_release`(jobId, manifestArtifactId, environment, executorId, previousReleaseId from steps 2–3; target, executorUserId, rollbackImage, healthUrl from the user) [C] → keep `release.id`.
-5. Verify: `get_aish_release`(releaseId) → `status == "awaiting-approval"`; send the owner the decision request (see `lpm-aish-delivery.refs.md` § authority-and-owner-decisions (#decision-request)).
-6. Only with the owner's order quoted from this conversation (a relayed message — WhatsApp, chat, the requester's word — is not an order): `approve_aish_release`(releaseId, expectedPackageHash=releaseId, reason=<owner's words, 8–3,000 chars>) [O].
-7. Verify: `get_aish_release`(releaseId) → `status == "approved"`; keep `approval.expiresAt`.
-8. `get_aish_release`(releaseId) → keep `status`, `package`, `claim`. `awaiting-approval` → step 6; `claimed` → never deploy again: call `claim_aish_release` again (returns `execute: false` + the existing claim); outcome known → step 12 with the observed facts; unknown → report "outcome unknown", no receipt. `succeeded`/`failed` → report.
-9. Ask "Claim release <releaseId> and deploy <image> to <target> now? It deploys once." On "yes", `package.target.provider == "cloud-run"` and environment `staging`/`production`: [C] `lpm aish release run-cloud-run --release <releaseId> --executor <package.executorId> --budget-contract aish-budget/1 --json` (claim, one deploy, receipt) → step 13. "Release executor identity mismatch." → STOP: you are not the package executor.
-10. Else on "yes": `claim_aish_release`(releaseId, executorId=`package.executorId`, budgetVersion="aish-budget/1") [C] → keep `execute`, `release.claim.id`, `financialBudget.remaining`. "Release executor identity mismatch." → STOP: you are not the package executor. `execute != true` → STOP: do not deploy.
-11. Deploy `package.image` once to `package.target` (provider `external`, or `cloud-run` with `local-deploy`) only with a deploy command the user gave in this conversation or the project's documented one (README, AGENTS.md, runbook): show it [C], wait for "yes"; none → STOP and ask; never improvise a deploy. Keep operationId, providerRevision, startedAt, finishedAt; checks `health` (GET `package.healthUrl`) and `artifact-digest` (deployed digest == `package.image`).
-12. `complete_aish_release`(releaseId, claimId=`release.claim.id`, executorId, revision, image, environment, target copied from `package`; operationId, providerRevision, startedAt, finishedAt, checks from step 11; status=`succeeded` only if every check passed, else `failed`) [A].
-13. Authenticated smoke on the deployed target; [C] `lpm aish pipeline record --project <projectId> --status completed|failed --revision <providerRevision> --url <healthUrl> --summary "<smoke result>" --json`.
-14. `upload_activity_attachment`(projectId, activityId, fileName="smoke-<releaseId first 12>.txt", fileType="text/plain", contentBase64=<base64 of the smoke output>, description="Smoke <releaseId first 12>", idempotencyKey="ev-smoke-<releaseId first 24>") [A].
-15. Verify: `get_aish_release`(releaseId) → `status == "succeeded"` with `completion`; `list_activity_attachments`(projectId, activityId) lists the smoke file.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| `approve_aish_release` without the owner's order quoted from this conversation, or with an agent credential | send the decision request of SKILL.md §6 to the workspace owner by name and STOP |
-| job not funded, financial circuit breaker, unreconciled attempt | STOP → `lpm-ai-cost.md`: funding is the owner's decision |
-| plan without `deployAllowed`, or "Release execution authorization expired." | STOP → `lpm-aish-jobs.md`: a new reviewed plan (owner) |
-| deploy outcome unknown | no `complete_aish_release`; keep the claim, report "outcome unknown" |
-| "Release executor identity mismatch." | STOP: you are not the package executor; the user named in `package.executorUserId` claims |
-| step 11 with no deploy command from the user or the project docs | "Which documented command deploys <image> to <target>?" STOP; never improvise |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| create / approve | `get_aish_release` | `awaiting-approval` / `approved` |
-| claim + complete, or `run-cloud-run` | `get_aish_release` | `succeeded` with `completion` |
-| smoke attach | `list_activity_attachments` | the smoke file is listed |
-
-#### Report fields
-Release id and status, environment, `approval.expiresAt`, claim id, receipt providerRevision and checks, smoke attachment id, Pending (owner approval, smoke), Next.
-
-
-## § flow-repair
-
-### Flow: AISH job integrity repair
-Load when: decision row 12 of SKILL.md
-
-#### Preconditions
-1. The user named the job and the outcome; the reason is the user's words. Never change a job the user did not name.
-2. Which repair, outcomes and field rules: see `lpm-aish-delivery.refs.md` § integrity-repair. Every repair is permanent and audited.
-
-#### Steps
-1. `get_aish_job`(jobId) → keep `status`, `issueId`, `workflowBinding`, `completionDisposition`, `lineageRepair`, `issueReconciliation`; pick the action in `lpm-aish-delivery.refs.md` § integrity-repair § Which repair. Already set → report it, no call.
-2. Lineage: `repair_aish_completed_job_lineage`(jobId, outcome, reason, targetIssueId only for `reconciled-with-issue`, idempotencyKey="lineage-<jobId>-1", dryRun=true) [C] → show `actions[]`; on "apply" the same call with dryRun=false [C].
-3. Disposition: `workflowBinding` set and the user has not said the activity is `done` or the job was replaced by a newer plan → STOP: "A disposition permanently blocks the DoD audit of <issueId>. Use it only for a job replaced by a newer plan." Else `set_aish_completed_job_disposition`(jobId, outcome=`partial`/`superseded`/`invalidated`, reason ≥ 8 chars) [C]; say "permanent; the activity status does not change".
-4. Failed, leftover or mismatched: [C] run the see `lpm-aish-delivery.refs.md` § integrity-repair command (`lpm aish jobs resolve`, `close` or `reconcile`, with `--json`).
-5. Verify: `get_aish_job`(jobId) → the field just set; `get_project_analytics`(projectId) → jobId absent from both `metrics.integrity.details.orphanAishJobs[]` and `.terminalIssueJobMismatches[]` (each `{jobId, category, reason}`); re-read once after ~10 s.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| job or outcome not named | "Which job, and which outcome: <allowed values>?" |
-| before a disposition, a lineage apply, a CLI close/resolve | "Apply <exact call>? Effect: <effect>. It is permanent." |
-| "Lineage repair evidence already exists without a matching job repair" | STOP and tell the user; no retry |
-| disposition on a job with `workflowBinding`, activity not `done`, job not replaced by a newer plan | "A disposition permanently blocks the DoD audit of <issueId>. Use it only for a job replaced by a newer plan." STOP |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| disposition, lineage, CLI close/resolve/reconcile | `get_aish_job` | `completionDisposition`, `lineageRepair`, `status` or `issueReconciliation.status` as sent |
-
-#### Report fields
-Job id, action and outcome, `lineageRepair.originalIssueId` when set, integrity signal cleared (yes/no), Pending, Next.
-
-
 ## § dod-audit
 
 ### Factory Definition-of-Done audit
@@ -152,8 +22,8 @@ The same delivery state returns the same audit `id` (`reused: true`).
 |---|---|---|
 | sessions | every bound session (1–20) completed on its approved plan, no pending checkpoint | open session or checkpoint → `lpm-aish-jobs.md` |
 | nodes and jobs | every delivery node has a completed job with evidence | a job with a disposition or administrative closure counts as incomplete |
-| engineering evidence | one `engineering-policy` and one `engineering-audit` per builder job, bound to its current completion | the runner publishes them; register their paths (see `lpm-aish-delivery.refs.md` § flow-evidence) |
-| evidence per change type | visual: `screenshot` + `video`; backend: `test`; documentation: `document`; operations: `runbook` + (`test` or `log`) | register the missing kind for the job that produced it (see `lpm-aish-delivery.refs.md` § flow-evidence) |
+| engineering evidence | one `engineering-policy` and one `engineering-audit` per builder job, bound to its current completion | the runner publishes them; register their paths (see `lpm-aish-delivery.flows.md` § flow-evidence) |
+| evidence per change type | visual: `screenshot` + `video`; backend: `test`; documentation: `document`; operations: `runbook` + (`test` or `log`) | register the missing kind for the job that produced it (see `lpm-aish-delivery.flows.md` § flow-evidence) |
 | API audit | exactly one `source`, one `openapi` and one `use-cases` artifact, with no drift; required when a node has `apiChanged: true`, OR omits `apiChanged` and its `changeType` is `visual` or `backend` (default `visual`) | a second copy also fails; register exactly one of each. `apiChanged: false` in the plan → not required (plan change → `lpm-aish-jobs.md`) |
 | findings | no open finding | resolve only after the fix is verified (row 4) |
 | bounds | ≤ 200 evidence records, ≤ 32 artifacts, ≤ 64 MiB of artifacts for the current plan | over the bound → report to the user; no workaround |
@@ -176,9 +46,9 @@ Only artifacts whose job, session and `planHash` match the current plan count. `
 | "Workflow and its approved plan must be completed without a pending checkpoint." | session not completed, plan replaced, or checkpoint open | `lpm-aish-jobs.md`; a human resolves checkpoints |
 | "Every delivery node needs a fully completed job." | a node has no completed job | wait for the runner; report pending |
 | "Job <id> is incomplete." | no evidence, or a disposition / administrative closure on it | report; a disposition is permanent |
-| "Job <id> lacks valid engineering evidence bound to its current completion." | policy/audit missing or stale | register the runner's engineering files (see `lpm-aish-delivery.refs.md` § flow-evidence) |
+| "Job <id> lacks valid engineering evidence bound to its current completion." | policy/audit missing or stale | register the runner's engineering files (see `lpm-aish-delivery.flows.md` § flow-evidence) |
 | "Evidence <id> is missing, out of scope or corrupt." | job evidence record broken | report; never edit storage |
-| "visual: screenshot and video required" (also `backend:`, `documentation:`, `operations:`) | change-type evidence missing | register the named kinds (see `lpm-aish-delivery.refs.md` § flow-evidence) |
+| "visual: screenshot and video required" (also `backend:`, `documentation:`, `operations:`) | change-type evidence missing | register the named kinds (see `lpm-aish-delivery.flows.md` § flow-evidence) |
 | "change policy is missing" / "unknown change type" | the plan has no valid change type | `lpm-aish-jobs.md` (plan) |
 | "An unresolved technical finding blocks closure." | an open finding | fix, verify, then resolve it with the same `findingId` |
 | "Exactly one source, OpenAPI JSON and use-case artifact is required for the API audit." | API kinds missing or duplicated; also hits a pure UI node that omits `apiChanged` | register exactly one of each, or the plan declares `apiChanged: false` (`lpm-aish-jobs.md`) |
@@ -232,7 +102,7 @@ A bounded-run or plan authorization never covers a deploy: each package needs it
 | receipt `checks` | 1–100 `{name, assertion (8+ chars), passed}` | `succeeded` needs all passed AND checks named `health` and `artifact-digest` |
 | receipt times | `startedAt` ≥ `claim.at`; `finishedAt` ≥ `startedAt`, ≤ 60 s in the future | observed values only |
 | receipt | immutable; a `failed` receipt is final for this package | a new attempt needs a plan retry, a new package and a new approval |
-| `lpm aish release run-cloud-run` | claims, deploys once with gcloud, checks health and records the receipt; Linux/macOS executor; only provider `cloud-run` at `staging`/`production` (other targets: see `lpm-aish-delivery.refs.md` § flow-release step 11) | "did not return a verified result" → reconcile; never start a second deploy |
+| `lpm aish release run-cloud-run` | claims, deploys once with gcloud, checks health and records the receipt; Linux/macOS executor; only provider `cloud-run` at `staging`/`production` (other targets: see `lpm-aish-delivery.flows.md` § flow-release step 11) | "did not return a verified result" → reconcile; never start a second deploy |
 | `lpm aish pipeline record` | creates a completed standalone AISH job holding the pipeline/smoke evidence | omit `--issue`: a completed standalone job with evidence is not an orphan |
 
 ##### Errors that need the owner

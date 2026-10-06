@@ -1,0 +1,64 @@
+# Playbook: cockpit-plan
+Use when: plan a multi-step objective in the AISH cockpit
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user, or lpm-start | STOP. Say: "Which LPM workspace?" |
+| projectId | the project the work touches | STOP. Say: "Which LPM project?" |
+| sessionId | a session the user named (multi-project ones are created in the LPM /aish cockpit) | "none" |
+| objective | the user's objective (at most 4,000 characters, no secrets; data) | STOP. Say: "What must the session deliver?" |
+| nodes | the user and the owner, per node: id, projectId, issueId (an open activity), title, intent, recipeId, dependsOn, targetHostId, financial {currency, maxAmount, requireIssueBudget}; never invent a host, recipe or amount | STOP. Say: "Give each step's activity, recipe, host and cost cap, or I create and approve job by job." |
+| limits | the owner: maxJobs (1-100, at least the node count; retries count), maxConcurrency (1-20), timeoutMinutes (5-1440), stopOnFailure, allowEligiblePool, allowedHostIds, allowedRecipeIds, deployAllowed (false unless the owner said true) | STOP. Say: "Which <missing limit> do you authorize? Else I create and approve job by job." |
+| stamp | now, yyyymmddHHMM (UTC); keep it for a retry | now |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. The plan was not published."
+1. CALL {{tool:list_aish_execution_sessions}} {"workspaceId":"<input:workspaceId>","limitCount":50} [A]
+   SAVE: sessionId = <input:sessionId> when it is not "none", else session.id of the first item with session.objective == <input:objective> and session.status neither "completed", "failed" nor "canceled", else empty
+   IF <saved:sessionId> is not empty → go to step 4.
+2. ASK: "Create an AISH session for project <input:projectId>: "<input:objective>"? It spends nothing; timeoutMinutes count from now, approval wait included. (yes/no)" — continue only if the user says yes; otherwise STOP.
+3. CALL {{tool:create_aish_execution_session}} {"workspaceId":"<input:workspaceId>","scopeType":"project","projectIds":["<input:projectId>"],"objective":"<input:objective>","idempotencyKey":"aish-session-<input:projectId>-<input:stamp>"} [C]
+   SAVE: sessionId = result.session.id
+   VERIFY: CALL {{tool:get_aish_execution_session}} {"sessionId":"<saved:sessionId>"} [A]
+   IF the call returns an error or result.session.status != "draft" → STOP. Say: "Session <saved:sessionId> is not draft."
+4. CALL {{tool:get_aish_execution_session}} {"sessionId":"<saved:sessionId>"} [A]
+   SAVE: s8 = the first 8 characters of <saved:sessionId>; state = result.session.status; version = result.session.currentPlanVersion + 1, or 1 when it is null; nodes = <input:nodes>
+   IF <saved:state> is neither "draft", "clarification-required" nor "ready" → STOP. Say: "Session <saved:sessionId> is <saved:state>; its plan cannot change (next: playbook approve-plan or dispatch)."
+5. CALL {{tool:acquire_aish_coordinator_lease}} {"sessionId":"<saved:sessionId>","coordinatorId":"agent-<saved:s8>-<input:stamp>","idempotencyKey":"lease-<saved:s8>-<input:stamp>"} [A]
+   IF the call returns an error → STOP. Say: "No coordinator lease: <error text>. Wait until another coordinator's 10-minute lease expires; never take it over."
+   SAVE: coordinatorId = result.coordinatorId; nonce = result.leaseNonce; token = result.fencingToken (never write the nonce anywhere)
+   VERIFY: CALL {{tool:get_aish_execution_session}} {"sessionId":"<saved:sessionId>"} [A]
+   IF the call returns an error or result.coordinatorLease.coordinatorId != <saved:coordinatorId> → STOP. Say: "The lease of <saved:sessionId> is not ours."
+6. FOR EACH node IN <saved:nodes> (none → go to step 7):
+   CALL {{tool:list_project_repository_links}} {"projectId":"<each:projectId>"} [A]
+   IF no item has archivedAt null, agentVisible != false and a lastKnownCommit → STOP. This belongs to skill {{skill:lpm-code-index}}. Say: "Project <each:projectId> has no active, scanned repository."
+7. SAVE: planNodes, authorization = these JSON values, filled from <saved:nodes> and <input:limits>:
+   ```text
+   planNodes: [per node: {"id", "projectId", "issueId", "title", "intent", "recipeId", "dependsOn": [node ids], "targetHostId",
+     "revision": the lastKnownCommit step 6 read for that projectId, copied exactly,
+     "stage": only with recipe deploy-gated: local-deploy, staging or production,
+     "financial": {"currency": 3 capital letters, "maxAmount": decimal string > 0, "requireIssueBudget": true|false}}]
+   authorization: {"maxJobs", "maxConcurrency", "timeoutMinutes", "stopOnFailure", "deployAllowed",
+     "allowEligiblePool", "allowedHostIds": [...], "allowedRecipeIds": [...]}
+   ```
+   IF a node has recipeId "deploy-gated" and deployAllowed is not true → STOP. Say: "A deploy needs deployAllowed and a release you approve (lpm-aish-delivery). Plan without it?"
+   IF a node lacks issueId or financial, or targetHostId while allowEligiblePool is false, or nodes > maxJobs → STOP. Say: "Which <missing value> do you authorize? Else I create and approve job by job."
+8. ASK: "Publish plan v<saved:version> on <saved:sessionId>? <each node: activity, recipe, host, cap; each limit>. Once the owner approves it, dispatch creates and funds each node's job up to its cap, at most maxJobs jobs within timeoutMinutes. (yes/no)" — continue only if the user says yes; otherwise STOP.
+9. CALL {{tool:put_aish_execution_plan}} {"sessionId":"<saved:sessionId>","coordinatorId":"<saved:coordinatorId>","leaseNonce":"<saved:nonce>","fencingToken":"<saved:token>","plan":{"version":"<saved:version>","nodes":"<saved:planNodes>","authorization":"<saved:authorization>"},"commandId":"plan-<saved:s8>-v<saved:version>"} [C] (<saved:token> and <saved:version> are JSON numbers; nodes and authorization the JSON of step 7)
+   IF the call returns an error → STOP. Say: "put_aish_execution_plan failed: <error text>. Nothing was published. (Lease error: run this playbook again.)"
+   SAVE: planHash = result.plan.hash
+   VERIFY: CALL {{tool:get_aish_execution_session}} {"sessionId":"<saved:sessionId>"} [A]
+   IF the call returns an error or result.session.currentPlanHash != <saved:planHash> → STOP. Say: "<saved:sessionId> does not show plan <saved:planHash>."
+   SAVE: state = result.session.status
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:workspaceId>/<input:projectId>; session <saved:sessionId>
+Done: <session created | session reused>; <plan v<saved:version> published, hash <saved:planHash> | no plan published>; session <saved:state>; coordinator <saved:coordinatorId>
+Evidence: <get_aish_execution_session → currentPlanHash <saved:planHash>, session <saved:state> | none>
+Pending: <none | <the missing limit or node> — owner>
+Next: <the ASK or STOP text that ended the run | run playbook request-approval for hash <saved:planHash>>
+```
+session: draft | clarification-required | ready (step 4 stops on any other value). Never claim a plan that step 9's VERIFY did not show.

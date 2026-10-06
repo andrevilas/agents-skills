@@ -6,8 +6,8 @@
   "kind": "tools",
   "invocation": "implicit",
   "description": "Use when work must run on AISH runners: create or approve AISH jobs, add intake reference files or transcripts, run a cockpit execution session (sessão de execução: plan, dispatch, pause, checkpoint). Not for job evidence (use lpm-aish-delivery) or commit-tracked work (use lpm-deliver-activity).",
-  "doneWhen": "The job or session is in the requested state (queued behind a closed gate, approved by the owner, or dispatched) and a re-read shows it; an approved job stays `status` queued with `executionGate.runnerMayExecute` true until a runner leases it.",
-  "authorityCeiling": "Agents create, lease, plan, dispatch and request; job/plan approval, checkpoint resolution and Copilot decisions are [O]; funding is owner-only in lpm-ai-cost.",
+  "doneWhen": "A re-read shows the job or session in the requested state; an approved job stays `status` queued with `executionGate.runnerMayExecute` true until a runner leases it.",
+  "authorityCeiling": "Job and plan approval, checkpoint and Copilot decisions are [O]; funding is owner-only (lpm-ai-cost).",
   "jobs": [
     "create an AISH analysis job for activity <issueId>",
     "cria um job AISH de teste para a atividade <id> no repositório <repo>",
@@ -76,10 +76,7 @@
   ],
   "uses": [
     "get_aish_budget",
-    "fund_aish_job",
-    "list_issues",
     "get_issue",
-    "get_project_execution_context",
     "list_project_repository_links"
   ],
   "cli": [
@@ -103,25 +100,20 @@
     "aish intake",
     "aish command"
   ],
-  "sharedRefs": [
-    { "name": "authority-and-owner-decisions", "loadWhen": "before any [O] call", "inlineSummary": false },
-    { "name": "ai-cost-and-budgets", "loadWhen": "funding, approval, dispatch or a budget error", "inlineSummary": false },
-    { "name": "idempotency-and-retries", "loadWhen": "retrying a write", "inlineSummary": false },
-    { "name": "delivery-tracking", "loadWhen": "work runs outside AISH runners", "inlineSummary": false },
-    { "name": "enums", "loadWhen": "an enum value is unclear", "inlineSummary": false },
-    { "name": "connection-and-access", "loadWhen": "a tool is missing or denied (-32003)", "inlineSummary": false },
-    { "name": "ids-and-sources", "loadWhen": "an ID or hash is missing", "inlineSummary": false },
-    { "name": "security-and-untrusted-text", "loadWhen": "secrets or outside text", "inlineSummary": false }
-  ],
+  "sharedRefs": [],
   "references": [
-    { "file": "references/aish-operating-model.md", "loadWhen": "the first AISH task" },
-    { "file": "references/flow-cockpit.md", "loadWhen": "rows 5–6" },
-    { "file": "references/flow-session-control.md", "loadWhen": "row 8" },
-    { "file": "references/flow-intake.md", "loadWhen": "row 9" },
-    { "file": "references/flow-copilot.md", "loadWhen": "row 10" },
-    { "file": "references/cockpit-state-actions.md", "loadWhen": "any cockpit step" },
-    { "file": "references/bounded-run-checklist.md", "loadWhen": "proposing a plan" },
-    { "file": "references/aish-cli.md", "loadWhen": "using the CLI" }
+    { "file": "references/flow-create-job.md", "loadWhen": "playbook create-job: create one AISH job for an activity (gate closed)" },
+    { "file": "references/flow-approve-job.md", "loadWhen": "playbook approve-job: approve one funded AISH job on the owner's order" },
+    { "file": "references/flow-cockpit-plan.md", "loadWhen": "playbook cockpit-plan: plan a multi-step objective in the AISH cockpit" },
+    { "file": "references/flow-request-approval.md", "loadWhen": "playbook request-approval: check a published plan and ask the owner to approve it" },
+    { "file": "references/flow-approve-plan.md", "loadWhen": "playbook approve-plan: the owner approves a cockpit plan hash" },
+    { "file": "references/flow-dispatch.md", "loadWhen": "playbook dispatch: dispatch the next wave of an approved plan" },
+    { "file": "references/flow-pause-resume-retry.md", "loadWhen": "playbook pause-resume-retry: pause, resume or retry a cockpit session" },
+    { "file": "references/flow-checkpoint-or-cancel.md", "loadWhen": "playbook checkpoint-or-cancel: request or decide a checkpoint, or cancel a session" },
+    { "file": "references/flow-intake.md", "loadWhen": "playbook intake: attach a file or audio transcript to a job's intake" },
+    { "file": "references/flow-copilot.md", "loadWhen": "playbook copilot: propose a Copilot action, or record the owner's decision" },
+    { "file": "references/aish-operating-model.md", "loadWhen": "background: AISH roles, job fields, recipes, limits" },
+    { "file": "references/aish-cli.md", "loadWhen": "using the `lpm aish` CLI" }
   ],
   "behaviorContracts": ["aish-jobs-approval", "missing-tool-fallback"],
   "codex": {

@@ -3,331 +3,46 @@
 
 Load a section only when the skill tells you to.
 
-## § flow-direct-ops
-
-### Flow: owner preview → commit
-Load when: SKILL.md row 6
-
-#### Preconditions
-1. The owner's order for these exact changes is quoted (SKILL.md P1 step 1). No order → SKILL.md §6 row 1; never call `preview_owner_roadmap_change` without one.
-2. Ids and `updatedAt` come from SKILL.md §3 or the table below; never invent one.
-3. Credential: API key (full/portfolio/custom) or roadmap-owner-operator agent credential. Preview and commit use the SAME credential.
-
-| Input | Get it from (call → field) | If missing |
-|---|---|---|
-| itemId + `updatedAt`, `lifecycle` | `list_workspace_roadmap_items`(workspaceId, roadmapId, compact=true) → `id`, `updatedAt`, `lifecycle` | ask |
-| roadmapId + `updatedAt`; capabilityId + `updatedAt` | `get_workspace_roadmap_overview`(workspaceId, compact=true) → `roadmaps[]`, `capabilities[]` → `id`, `updatedAt` | ask |
-| projectId (allocation) | `list_workspace_projects`(workspaceId) → `id` | ask |
-| rationale | the owner's reason, verbatim (text after "Rationale:", "Motivo:", "porque"); 10–2000 chars | ask |
-
-#### Steps
-##### A. Owner preview → commit (SKILL.md row 6)
-0. `get_workspace`(workspaceId) → `roadmapGovernanceMode` (missing → `shadow`). Do this even when the owner already said "commit" (once per turn: reuse SKILL.md P1 step 2). `enforce` → see `lpm-roadmap-owner-ops.refs.md` § enforce-mode; continue here only with the operations it allows (`create_item`, `update_roadmap`, `update_capability`).
-1. Build `operations` (1–20), one object per change, from these templates only. The key is `type` (never `op`); changed fields go inside `patch` (updates) or `values` (create). Fields outside `patch`/`values` are ignored: an update without `patch` fails, a create without `values.title` fails.
-   - `{type:"update_item", itemId, expectedVersion:<item updatedAt>, patch:{title?, description?, category?, priority?}}`
-   - `{type:"create_item", roadmapId, values:{title, description?, category?, priority?}}`
-   - `{type:"create_dependency", roadmapId, sourceItemId, targetItemId, relationship:"depends_on"|"blocks"|"relates_to"}`
-   - `{type:"create_allocation", roadmapId, itemId, projectId, role:"primary"|"contributor"|"dependent"|"observer"}`
-   - `{type:"update_roadmap", roadmapId, expectedVersion, patch:{title?, description?}}`; `{type:"update_capability", capabilityId, expectedVersion, patch:{name?, description?}}`
-2. Drop and ask: `update_item` on an item with `lifecycle == "materialized"` (§ Stop and ask). Leave out for step A6 any dependency or allocation on an item created in this same order (a preview cannot reference an item it creates).
-3. `preview_owner_roadmap_change`(workspaceId, rationale=<owner's reason>, operations=<step A1 list>) [A] (only after P1 step 1 quoted the order) → keep `id`, `digest`, `rationale`, `expiresAt`, `operations`.
-4. Returned `operations` differ from the order (cut texts, dropped priority, default role) → fix, step A3.
-5. Confirmation: the quoted order already says commit/apply/"do it" for exactly these changes and step A4 found no difference → that order is the "commit"; go to step A6 and show the operations + `digest` in the report. Otherwise show every operation and `digest`, ask "Commit these <n> operations now? It skips change-request review.", wait for "commit". `expiresAt` passed → step A3.
-6. `commit_owner_roadmap_change`(workspaceId, previewId=`id`, previewDigest=`digest`, rationale=`rationale` verbatim, idempotencyKey="owner-commit-<previewId>") [O], same credential → keep `commitId` and the COMMIT `affectedEntityIds` (one id per operation, in operation order; a `create_item` gives the new item id). Never use the preview's `affectedEntityIds`.
-7. Left-out dependencies/allocations (step A2): take each new itemId from the commit `affectedEntityIds` at its `create_item` position → steps A3–A6 with only those operations. Mode `enforce` → they go through a change request instead (see `lpm-roadmap-owner-ops.refs.md` § enforce-mode).
-8. Verify: § Verify, one call.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| no quoted owner order | SKILL.md §6 row 1 decision request; STOP; no preview |
-| before `commit_owner_roadmap_change` and the order does not say commit for exactly these changes | "Commit these <n> operations now? It skips change-request review." |
-| `update_item` and `lifecycle == "materialized"` | "Archive it, or add a follow-up item?" |
-| "preview is invalid, changed, or expired" | step A3 again; ask the owner for a new "commit" |
-| "Owner dependency items must exist in the selected roadmap" / "Owner allocation item must exist" | an item is new or in another roadmap: commit the creates first (step A7) |
-| "Unsupported owner roadmap operation", "patch is empty or invalid", "create_item requires roadmapId and title" | rebuild the operation from the step A1 template (`type`; fields inside `patch` / `values`); step A3 |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| owner commit (any kind) | `get_workspace_roadmap_overview`(workspaceId, includeArchived=true), no compact, no roadmapId | each commit `affectedEntityIds` id is in `items[]`, `itemLinks[]`, `allocations[]`, `roadmaps[]` or `capabilities[]` with the previewed values (`list_workspace_roadmap_items`(workspaceId, includeArchived=true) is an accepted re-read for items) |
-| a re-read still shows an old value, or a commit id is missing | — | do not claim done: put the id and the value read under Pending |
-
-#### Report fields
-- Done: `commit_owner_roadmap_change` → `commitId`, previewId, `digest`, commit `affectedEntityIds` with each new value.
-- Quoted owner order; dropped operations (materialized items, left-out links).
-- A `create_item` makes a `draft` item. Its next gate is `reviewed` (SKILL.md row 8, `review_workspace_roadmap_item`, needs an owner order), never `approved` directly.
-
-
-## § flow-import
-
-### Flow: TSV roadmap import
-Load when: SKILL.md row 9
-
-#### Preconditions
-1. SKILL.md P1 passed: the owner's order is quoted and the mode is not `enforce` (enforce → see `lpm-roadmap-owner-ops.refs.md` § enforce-mode: decision request, never "needs a change request"). SKILL.md row 1 (read-only): step 1 only, no P1, no write.
-2. API key whose profile lists the tool (tools.md): import commit, resolve and suggest need `full`, `planning` or `custom`; a roadmap-owner-operator agent credential runs only the preview.
-3. Load `lpm-roadmap-owner-ops.refs.md` § import-format; the owner's file is TAB-separated text with a title column. TSV text, file name (= sourceRef) and roadmap title come from the owner; an existing roadmapId from SKILL.md §3.
-
-#### Steps
-1. `preview_workspace_roadmap_import`(workspaceId, content=<TSV text>, sourceRef=<file name>) [A] → keep `rowCount`, `rows`, `warnings`.
-2. `rowCount == 0` → STOP: say "The file has no importable rows: it must be TAB-separated with a title column."
-3. Show `rowCount`, `warnings`, priorities and each row's `dependsOn` (a `blocks` column means the row depends on the reference). Wait for "import".
-4. `commit_workspace_roadmap_import`(workspaceId, content=step 1 text, sourceRef=step 1 value, roadmapId=<existing roadmap from SKILL.md §3, or omit for a new one>, title=<owner's title>, confirmed=true) [O] → keep `roadmapId`, `createdItemIds`, `importedRows`.
-5. Timeout or error on step 4 → existing roadmap: `list_workspace_roadmap_items`(workspaceId, roadmapId) and retry once with the same roadmapId (existing rows are skipped). New roadmap: `get_workspace_roadmap_overview`(workspaceId, compact=true) → `roadmaps[]` with `sourceRef` == step 1 sourceRef (or `title` == the owner's title) created in this run. Found → do NOT retry; use its `id` as roadmapId, step 6 (one atomic batch: it holds every row). None → retry once with the identical content and sourceRef.
-6. Verify: `list_workspace_roadmap_items`(workspaceId, roadmapId, compact=true) → new roadmap: item count == `rowCount`; existing roadmap: every `createdItemIds` id is listed.
-7. `resolve_workspace_roadmap_dependencies`(workspaceId, roadmapId) [O] without `confirmed` (read-only preview) → keep `candidates`, `unresolved`, `cycles`.
-8. `cycles` non-empty → report them and the `unresolved` references; go to step 11.
-9. Show `candidates`; the owner picks. `resolve_workspace_roadmap_dependencies`(workspaceId, roadmapId, confirmed=true, selectedDependencyKeys=["<sourceItemId>:<targetItemId>:depends_on"]) [O] → keep `createdLinkIds`.
-10. Verify: `list_workspace_roadmap_item_links`(workspaceId, roadmapId) lists every `createdLinkIds` id.
-11. `suggest_workspace_roadmap_allocations`(workspaceId, roadmapId) [O] without `confirmed` (read-only preview) → keep `candidates`.
-12. Show project, role, `confidence`, rationale per item; `confidence <= 0.49` → ask the owner for the project. At most one `primary` per item.
-13. `suggest_workspace_roadmap_allocations`(workspaceId, roadmapId, confirmed=true, selectedAllocationKeys=["<itemId>:<projectId>"] from `candidates[]` only) [O] → keep `createdAllocationIds`. The owner names a project not in `candidates[]` for that item → never put it in selectedAllocationKeys (the commit silently skips it); `create_workspace_roadmap_allocation`(workspaceId, roadmapId, itemId, projectId, role primary) via see `lpm-roadmap-owner-ops.refs.md` § flow-direct-edits B.
-14. Verify: `list_workspace_roadmap_allocations`(workspaceId, roadmapId) lists every `createdAllocationIds` id (and each step 13 direct allocation) with `status` active.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| the order covers the import only | stop after step 6; ask "Resolve the dependency column and suggest project allocations now? (yes/no)" |
-| `confidence <= 0.49` | "No project matched <item>. Which project owns it?" |
-| the owner's project is not a candidate for the item | direct allocation (step 13), not a selected key |
-| two `primary` candidates for one item | "Which project is the primary for <item>: <A> or <B>?" |
-| `cycles` non-empty | "These items depend on each other in a loop: <ids>. Which reference is wrong?" |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| commit | `list_workspace_roadmap_items` | count == `rowCount` (new roadmap) or all `createdItemIds` listed |
-| dependencies | `list_workspace_roadmap_item_links` | all `createdLinkIds` listed |
-| allocations | `list_workspace_roadmap_allocations` | all `createdAllocationIds` listed, one active primary per item |
-
-#### Report fields
-- roadmapId, `rowCount`, created item count, skipped rows (warnings)
-- links created, `unresolved` references, cycles
-- allocations created, items left without a project
-
-
-## § flow-materialize
-
-### Flow: materialize an approved item
-Load when: SKILL.md row 10
-
-#### Preconditions
-1. SKILL.md P1 passed: the owner's order naming the item and the project is quoted. The server does not check the governance mode here. SKILL.md row 1 (read-only): step 2 only, no P1, no write.
-2. API key whose profile lists the tool (tools.md): `full`, `requirements` or `custom`; not on connectors.
-3. Load `lpm-roadmap-owner-ops.refs.md` § materialization. itemId and roadmapId come from SKILL.md §3; the other ids from the table below.
-
-| Input | Get it from (call → field) | If missing |
-|---|---|---|
-| projectId | `list_workspace_projects`(workspaceId) → `id` | ask |
-| baselineId | `list_requirement_baselines`(projectId) → `id` where `isCurrent` | step 3 ask |
-| requirementId | preview `candidates[].requirementId`, or `list_requirements`(projectId, baselineId) → `id` | ask |
-| rationale | the owner | ask; never invent |
-
-#### Steps
-1. Item `lifecycle` (SKILL.md §3) is not `approved` → SKILL.md row 8 first, on the owner's decision.
-2. `preview_roadmap_materialization`(workspaceId, itemId, projectId) [A] → keep `item.updatedAt`, `candidates`.
-3. Candidate `method == "deferred"` → STOP, report its rationale. `new_requirement` and no `isCurrent` baseline → ask (§ Stop and ask).
-4. Show project, method, requirementId, baselineId; say "This is permanent"; wait for "yes".
-5. `commit_roadmap_materialization`(workspaceId, itemId, projectId, method, requirementId, baselineId, rationale, confirmed=true, idempotencyKey="mat:<itemId>:<projectId>:<method>:<yyyymmdd>", sourceItemVersion=`item.updatedAt`) [O]. Retry of the same call → SAME key; a new method or intent → a new key (an old key replays the old result).
-6. Verify: `list_workspace_roadmap_materializations`(workspaceId, roadmapId, projectId) has `itemId`; new requirement → `list_requirements`(projectId, baselineId) lists `requirementId`.
-7. Next project → step 2 (the commit changed `item.updatedAt`).
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| before `commit_roadmap_materialization` | "Record the materialization of <item> in <project> as your decision? Materialization is permanent." |
-| `new_requirement` and no `isCurrent` baseline | "Link an existing requirement, or create a baseline first (`lpm-requirements-scope.md`)?" |
-| "A productive materialization already exists" | check `list_workspace_roadmap_materializations`; own earlier attempt → retry with the original key; else report it |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| materialization | `list_workspace_roadmap_materializations` | record with this `itemId`, `projectId` and method |
-| new requirement | `list_requirements`(projectId, baselineId) | `requirementId` listed |
-
-#### Report fields
-- itemId, projectId, method, requirementId, baselineId
-- `materializationSummary.state`, `lineageState`
-- next: new requirements → `lpm-requirements-scope.md`
-
-
-## § flow-governance
-
-### Flow: governance mode and roadmap migrations
-Load when: SKILL.md rows 11–12
-
-#### Preconditions
-1. SKILL.md P1 passed: the owner's order naming the mode, migration or run is quoted. These rows run in every mode. SKILL.md row 1 (read-only): step 4 only, no P1, no write.
-2. API key whose profile lists the tool (tools.md): mode and governance migration `full`, `portfolio` or `custom`; v2 migration `full` or `custom`.
-3. Load `lpm-roadmap-owner-ops.refs.md` § migrations; P1 step 2 kept `roadmapGovernanceMode`, `updatedAt` and `roadmapGovernancePolicy.soloMaterialAlertThreshold` (missing → 5).
-
-#### Steps
-1. Mode (row 11): say "<previousMode> → <mode>: <effect from the migrations ref>". Wait for "yes".
-2. `update_workspace_roadmap_governance_policy`(workspaceId, mode=<owner's mode>, expectedUpdatedAt=`updatedAt`, soloMaterialAlertThreshold=<current value, or the owner's new value>, idempotencyKey="gov-mode-<workspaceId>-<mode>-<yyyymmddhhmm>") [O] → `result.mode` must equal the requested mode; else new key, step 2.
-3. Verify: `get_workspace`(workspaceId) → `roadmapGovernanceMode` == mode. Mode-only request ends here.
-4. Migration (row 12): `preview_workspace_roadmap_governance_migration`(workspaceId) [A] or `preview_workspace_roadmap_v2_migration`(workspaceId) [A] → show the counts or rows.
-5. v2: `valid != true` or `mode != "migration-required"` → STOP: report the preview rows; no apply.
-6. Governance apply: `apply_workspace_roadmap_governance_migration`(workspaceId, idempotencyKey="gov-migration-<workspaceId>-<yyyymmddhhmm>", confirmed=true) [O] → keep `id` (migrationId), `appliedWrites`. Retry after a timeout → SAME key; a new apply after a rollback → NEW key.
-7. v2 apply: `apply_workspace_roadmap_v2_migration`(workspaceId, idempotencyKey="roadmap-v2-<workspaceId>-<yyyymmdd>", confirmed=true) [O] → keep `appliedItemIds`. No rollback exists.
-8. Rollback of a run the owner names: run the governance preview (step 4) → keep `roadmapItemsToSnapshot` + `legacyIssuesToClassify` as the before-rollback sum. Say "Rollback also deletes roadmap lineage added to those activities after the run." Wait for "yes". `rollback_workspace_roadmap_governance_migration`(workspaceId, migrationId=<step 6 `id`, or the id the owner gives>, idempotencyKey="gov-rollback-<migrationId>", confirmed=true) [O] → keep `rolledBackWrites`.
-9. Verify: run the step 4 preview again → pass per § Verify.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| before `update_workspace_roadmap_governance_policy`, an apply or a rollback | "Run <tool> on workspace <name>? Effect: <line from see `lpm-roadmap-owner-ops.refs.md` § migrations>." |
-| the order names no mode, run or workspace | "Which workspace and which <mode / migration / run id>?" |
-| v2 preview `valid != true` | "The v2 migration cannot run: <preview rows>. No change was made." |
-| apply again after a rollback | use a NEW idempotencyKey with the current `<yyyymmddhhmm>` (the old one replays the old run and writes nothing) |
-| migrationId unknown | "Which migration run (id `migration_…`)? Or give the apply idempotencyKey and I replay it to get the id." |
-| `rolledBackWrites == 0` | "Run <migrationId> wrote nothing to undo, or the id is wrong. Recover the id by replaying apply with its original key?" |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| mode change | `get_workspace` | `roadmapGovernanceMode` == requested mode |
-| governance apply | `preview_workspace_roadmap_governance_migration` | `roadmapItemsToSnapshot == 0` and `legacyIssuesToClassify == 0` |
-| v2 apply | `preview_workspace_roadmap_v2_migration` | `legacyItemCount == 0` (`rows` empty) and no `appliedItemIds` id in `rows`; `mode` is information only (it can stay `migration-required`) |
-| rollback | `preview_workspace_roadmap_governance_migration` | `roadmapItemsToSnapshot` + `legacyIssuesToClassify` rose above the step 8 sum, by at most `rolledBackWrites` (deleted activities are not counted); report both sums |
-
-#### Report fields
-- previousMode → mode, threshold sent
-- migration kind, migrationId, `appliedWrites` / `appliedItemIds`, `rolledBackWrites`
-- preview counts before and after (rollback: both sums)
-
-
 ## § enforce-mode
 
-### Enforce mode: what to do per operation
-Load when: SKILL.md row 4 (mode `enforce` and an owner-ordered write of rows 5–9)
-Applies to: lpm-roadmap-owner-ops    Source: lpm `server.ts` (`assertLegacyRoadmapMutationAllowed` callers, `applyWorkspaceRoadmapChangeCommand`, `commitOwnerRoadmapChangeCommand`), `src/lib/workspaceRoadmapGovernance.ts` (`ROADMAP_CHANGE_TYPES`), card `update_workspace_roadmap_dependency`
+### Enforce mode: what each owner operation does
+Load when: background for maintainers; the playbooks already hold these rules as steps
+Applies to: lpm-roadmap-owner-ops    Source: lpm `server.ts` (`assertLegacyRoadmapMutationAllowed` callers: update/archive/restore item, bulk commit, create/update dependency, create/update allocation, review item; archive dependency/allocation call the update commands), `commitOwnerRoadmapChangeCommand`, `src/lib/workspaceRoadmapGovernance.ts` (`ROADMAP_CHANGE_TYPES`); lpm-product-items (no governed create, no governed unlink/unallocate)
 
 #### Summary
-In `enforce` the server blocks the direct item, bulk, dependency, allocation and lifecycle tools (`GOVERNANCE_REVIEW_REQUIRED`).
-Only some operations have a working change request (CR); the others need the owner's decision, never "needs a change request".
-The owner commit, item create, import and roadmap archive are not blocked by the server. Every row below still needs a quoted owner order (SKILL.md P1 step 1).
+In `enforce` the server blocks the direct item, bulk, dependency, allocation and lifecycle tools with `GOVERNANCE_REVIEW_REQUIRED`.
+LPM has no working change request (CR) that creates an item, imports, archives a roadmap, unlinks or unallocates.
+So each operation has one path. The skill never answers "needs a change request" for an operation that has no CR type.
 
 #### Facts
-| Operation in mode `enforce` | Server / CR | Do |
+| Operation in mode `enforce` | Server / CR | Playbook path |
 |---|---|---|
-| (a) edit, prioritize, archive or restore an item; lifecycle gate; new dependency link; new allocation (one item or many) | direct tool blocked; CR changeType edit, prioritize, archive, restore, lifecycle, link, allocate applies it | change request via `lpm-roadmap.md`; STOP |
-| (b) create an item; edit a roadmap header title/description or a capability name/description | not blocked; no CR (`create` previews an edit of an existing item and its apply writes nothing) | only with a quoted owner order (the speaker said they are the owner, P1 step 1): SKILL.md row 6 with ONLY `create_item`, `update_roadmap`, `update_capability` operations. No owner order → `lpm-roadmap.md` row 10 decision request; STOP; no preview. New items start `draft`, so later gates still go through CRs |
-| owner commit `update_item`, `create_dependency`, `create_allocation` | not blocked, but a CR exists | use row (a), not the owner commit |
-| (c) import a TSV; archive a roadmap | not blocked; no CR type | decision request (Rule 2); STOP |
-| (c) archive, reject or reactivate a dependency; archive an allocation or change its role/status | blocked; no CR type for unlink, unallocate or role change | decision request (Rule 2); STOP |
-| materialization, mode change, migration | the mode is not checked | SKILL.md rows 10–12 as usual |
+| edit, prioritize, archive or restore items; lifecycle gate; new dependency; new allocation | direct tool blocked; CR changeType edit, prioritize, archive, restore, lifecycle, link, allocate works | hand-off to lpm-roadmap (change request) |
+| create an item; edit roadmap header or capability text | not blocked; changeType create previews an edit and applies nothing (LPM gap) | owner-commit on the owner's order; the Answer says no CR exists |
+| owner commit `update_item` | not blocked, but a CR exists | owner-commit stops: CR via lpm-roadmap |
+| import a TSV; archive a roadmap | not blocked; no CR type | import / items on the owner's order, with a confirmation that names enforce |
+| change, reject, reactivate or archive a dependency or allocation | blocked; no CR type | enforce-window: decision request, then option A (shadow, one write, enforce) in one run |
+| materialization | mode not checked; changeType materialize only sets a flag nothing reads | materialize on the owner's order |
+| mode change, migrations | mode not checked | governance, migration |
 
 #### Rules
-1. Read the mode in P1 step 2; resolve the ids (P1 step 3) before any reply; pick the row above by operation, not by tool.
-2. Decision request (see `lpm-roadmap-owner-ops.refs.md` § authority-and-owner-decisions (#decision-request)) for a (c) operation, filled from this run:
-   "Decision needed: <operation> on <ids>. Context: <workspaceId> is in `enforce`; the server blocks <tool> and no change-request type exists. Options: A) `update_workspace_roadmap_governance_policy`(workspaceId, mode=shadow, expectedUpdatedAt=<get_workspace `updatedAt`>, idempotencyKey=<new>) → <tool>(<ids>, reason=<owner's words>) → `update_workspace_roadmap_governance_policy`(workspaceId, mode=enforce, idempotencyKey=<new>): a short window without review, reversible; B) wait for an LPM fix; C) do nothing. Recommendation: A when the owner's order names this operation, else C." Then STOP.
-3. "Pode fazer direto" / "do it directly" is NOT an order to change the mode: the owner must pick option A.
-4. Never answer "needs a change request" for import, roadmap archive, unlink, unallocate or a role change, even when a tools.md card's `GOVERNANCE_REVIEW_REQUIRED` fix text says "propose a change request".
+1. "Pode fazer direto" / "do it directly" is not an order to change the mode; only option A of the decision request opens the window.
+2. The window always closes: playbook enforce-window sets enforce again even when the write fails.
+3. Changing the mode resets `soloMaterialAlertThreshold` to 5 (the call sends a literal 5); the playbooks ask first when it is not 5.
 
 #### Examples
 ```text
-example: owner in enforce: "I am the workspace owner: cria o item 'SSO' no roadmap R"
-→ preview_owner_roadmap_change(operations=[{type:"create_item", roadmapId:"<R>", values:{title:"SSO"}}]) → commit (flow-direct-ops A5)
-example: no owner statement, enforce: "add item 'SSO'"
-→ decision request (lpm-roadmap row 10); STOP; no preview_owner_roadmap_change
-example: owner in enforce: "remove a dependência A → B"
-→ list_workspace_roadmap_item_links → linkId → decision request (Rule 2: A shadow then back / B wait for LPM fix / C nothing); STOP
-```
-
-
-## § owner-direct-operations
-
-### Owner direct operations
-Load when: before any direct operation
-Applies to: lpm-roadmap-owner-ops    Source: cards of the owner preview/commit, item, bulk, dependency, allocation and lifecycle tools (`src/lib/ownerRoadmapChange.ts`, `assertLegacyRoadmapMutationAllowed`, `planRoadmapPrimaryAllocation`, `assertRoadmapItemLifecycleTransitionAllowed`)
-
-#### Summary
-Direct tools skip change-request review, so each call needs the owner's order for that exact change.
-Mode `enforce` blocks the item, bulk, dependency, allocation and lifecycle tools with `GOVERNANCE_REVIEW_REQUIRED`.
-The owner commit, item create, import, roadmap archive, resolve/suggest commits and materialization are NOT blocked: see `lpm-roadmap-owner-ops.refs.md` § enforce-mode decides per operation.
-Every write here is [O]. Previews and reads are [A].
-
-#### Facts
-##### Governance mode
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| `roadmapGovernanceMode == "enforce"` | governed changes only | rows 5–9 → see `lpm-roadmap-owner-ops.refs.md` § enforce-mode: change request, owner commit (creates and header/capability text) or decision request |
-| `shadow` or missing | direct tools allowed | still only on the owner's order |
-| `off` (or `roadmapGovernanceEnabled == false`) | no review flow | direct tools allowed on the owner's order |
-
-##### Owner preview → commit (`preview_owner_roadmap_change`, `commit_owner_roadmap_change`)
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| `operations` 1–20 | one preview holds at most 20; key `type` (never `op`); fields inside `patch` / `values` | split bigger orders; templates: see `lpm-roadmap-owner-ops.refs.md` § flow-direct-ops step A1 |
-| `type:"update_item"` | itemId, expectedVersion=`updatedAt`, patch{title ≤300, description ≤5000, category ≤200, priority}; no lifecycle check | expectedVersion stale → version conflict → re-read, preview again; `materialized` item → drop and ask (LPM inconsistency) |
-| `type:"create_item"` | roadmapId, values{title (required, ≤300), description, category, priority (default none)}; new item lifecycle `draft` | its id exists only after the commit: commit `affectedEntityIds` at that position |
-| `type:"create_dependency"`, `type:"create_allocation"` | items must already exist in that roadmap | an item created in the same preview fails: second preview after the commit |
-| `type:"create_dependency"` | roadmapId, sourceItemId, targetItemId, relationship `depends_on`/`blocks`/`relates_to` | default `depends_on` |
-| `type:"create_allocation"` | roadmapId, itemId, projectId, role `primary`/`contributor`/`dependent`/`observer` | default `contributor`; commit does NOT enforce one primary |
-| `type:"update_roadmap"`, `type:"update_capability"` | roadmapId / capabilityId + expectedVersion=`updatedAt`, patch{title (roadmap) or name (capability), description} | — |
-| archive, restore, lifecycle, capability links | not supported | use rows 5, 7, 8 |
-| `rationale` 10–2000 chars | stored on the preview | commit must repeat it verbatim |
-| `expiresAt` | 15 minutes | expired → new preview and a new owner "commit" |
-| silent normalization | long texts cut, bad priority dropped, bad role/relationship → default | compare returned `operations` with the order |
-| credential | commit needs the credential that previewed | never switch keys between the two calls |
-| idempotencyKey 12–160 `[A-Za-z0-9._:-]` | replay returns `idempotentReplay: true` | retry with the SAME key; a preview commits once |
-
-##### Item, roadmap and bulk edits
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| `update_workspace_roadmap_item` fields | roadmapId (move), title (non-empty), description, category (empty string clears), priority `urgent`/`high`/`medium`/`low`/`none` | send only changed fields; lifecycle cannot change here |
-| `lifecycle == "materialized"` | item locked for edits | archive it or add a follow-up item; delivered/closed items stay editable |
-| move to another roadmap | links and allocations keep the old roadmapId | tell the owner |
-| `archive_workspace_roadmap_item` | needs `reason`; lifecycle unchanged; links/allocations hidden from default reads | undo = `restore_workspace_roadmap_item` (reason kept only in history) |
-| `archive_workspace_roadmap` | needs `reason`; items, links and allocations are NOT archived | undo = roadmap update to `draft`/`active` (`lpm-roadmap.md`) |
-| bulk `itemIds` 1–100 | one atomic write; one bad item aborts all | preview first; drop missing, archived and materialized ids for `update` |
-| bulk `updates` | the same values go to every item | never bulk-set `title`; check `updates.roadmapId` in the overview `roadmaps[]` (not validated) |
-| bulk `operation` | other values are treated as `update` | pass `update`, `archive` or `restore` exactly; archive/restore need `reason` |
-
-##### Dependencies and allocations
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| link `type` | `blocks`/`depends_on`/`relates_to`/`shared_capability`/`enables_future_use`; read as `source <type> target` | use only these values (server does not validate) |
-| same roadmap | both items must have the given roadmapId | cross-roadmap links are not possible |
-| cycle check | counts archived and rejected links of every type | a refusal can be a stale link: report it to the owner |
-| reactivate link (`status: active`) | skips duplicate and cycle checks | check `list_workspace_roadmap_item_links` first |
-| `archive_workspace_roadmap_dependency` `reason` | replaces the link's rationale | undo = update `status: active`; archived/rejected linkId → overview includeArchived `itemLinks[]` |
-| allocation `role` | `primary` (create default), `contributor`, `dependent`, `observer` | observer cannot be materialized |
-| one active primary per item | `PRIMARY_ALREADY_ASSIGNED` on a second | switch with `replacesAllocationId` (MCP only; the CLI has no flag) |
-| `update_workspace_roadmap_allocation` `role`/`status` | not validated; can create two primaries | never set `primary` here |
-| archived or rejected allocation | hidden from lists | id → overview includeArchived `allocations[]` |
-| superseded allocation | still listed | only `status` active or missing is current |
-
-##### Lifecycle
-| From | Allowed next (`review_workspace_roadmap_item`) |
-|---|---|
-| `draft`, `imported` | `reviewed`, `deferred`, `rejected` |
-| `reviewed` | `approved`, `deferred`, `rejected` |
-| `approved` | `deferred` |
-| `deferred`, `rejected` | `reviewed` |
-| `materialized` | `delivered` |
-| `delivered` | `closed` (final) |
-
-#### Rules
-1. Quote the owner's order before every write; one order covers only the changes it names.
-2. Repeating the current lifecycle fails: report it as already done.
-3. An archived item cannot change lifecycle: ask the owner to restore it first.
-4. Never pick a primary project, a gate or a reason yourself: they are the owner's decisions.
-
-#### Examples
-```text
-example: owner says "move items A and B to high priority and make A depend on B"
-operations=[{type:"update_item", itemId:"<A>", expectedVersion:"<A.updatedAt>", patch:{priority:"high"}},
- {type:"update_item", itemId:"<B>", expectedVersion:"<B.updatedAt>", patch:{priority:"high"}},
- {type:"create_dependency", roadmapId:"<R>", sourceItemId:"<A>", targetItemId:"<B>", relationship:"depends_on"}]
+example: owner in enforce: "sou o dono: cria o item 'SSO' no roadmap R"
+→ owner-commit: preview_owner_roadmap_change(create_item) → commit_owner_roadmap_change
+example: no owner statement, enforce: "add item 'SSO'" → lpm-roadmap decision request; no preview here
+example: owner in enforce: "remove a dependência A → B" → dependency → enforce-window decision request (A/B/C); STOP
 ```
 
 
 ## § import-format
 
 ### Roadmap import format (TSV)
-Load when: importing
+Load when: background on the TSV format; playbooks import and import-links already hold the steps
 Applies to: lpm-roadmap-owner-ops    Source: cards `preview_workspace_roadmap_import`, `commit_workspace_roadmap_import`, `resolve_workspace_roadmap_dependencies`, `suggest_workspace_roadmap_allocations` (`parseRoadmapTsv`, `buildRoadmapItemFromImportRow`, `resolveRoadmapDependencies`, `suggestRoadmapProjectAllocations`)
 
 #### Summary
@@ -360,7 +75,7 @@ Without `roadmapId` every commit creates a NEW roadmap: a blind retry duplicates
 | commit with `roadmapId` | rows whose key already exists there are skipped | compare `createdItemIds.length` with `importedRows` |
 | `importedRows` | rows parsed, NOT rows created | count created items with `createdItemIds` |
 | empty or invalid content on commit | still creates an empty roadmap | always preview first |
-| enforce mode | commit does not check it; no change-request type imports | the skill sends a decision request (see `lpm-roadmap-owner-ops.refs.md` § enforce-mode); never "needs a change request" |
+| enforce mode | commit does not check it; no change-request type imports | playbook import asks a confirmation that names enforce; never "needs a change request" |
 
 ##### Dependencies and allocations after the import
 | Field / value | Meaning | Consequence for the agent |
@@ -388,179 +103,6 @@ R1	Login with SSO	auth	alta
 R2	Audit log	security	2	R1
 example key: selectedDependencyKeys=["<itemId of R2>:<itemId of R1>:depends_on"]
 ```
-
-
-## § materialization
-
-### Roadmap materialization
-Load when: materializing
-Applies to: lpm-roadmap-owner-ops    Source: cards `preview_roadmap_materialization`, `commit_roadmap_materialization`, `list_workspace_roadmap_materializations` (`previewRoadmapMaterializationCommand`, `validateRoadmapMaterializationV2`, `computeRoadmapMaterializationSummary`)
-
-#### Summary
-Materialization records that an approved roadmap item is covered in one project: it links an existing requirement or creates a new pending requirement in the project baseline.
-It creates NO activities (issues). The item+project lineage claim is permanent: no tool undoes it.
-Always preview right before the commit, copy `item.updatedAt` as `sourceItemVersion`, and retry with the SAME idempotencyKey.
-After the commit, the new requirements belong to `lpm-requirements-scope.md` (working scope, baseline, publication).
-
-#### Facts
-##### Methods
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| `linked_existing` | links a requirement that already exists in the project | requires `requirementId` (preview candidate or `list_requirements`) |
-| `new_requirement` | creates a requirement: item title, type `business`, status `pending` | requires a project requirement baseline |
-| `split_from_parent` | records a split of a parent requirement | requires `rationale` |
-| `conflict` | records a conflict, no requirement | `requirementId` must be empty; requires `rationale` |
-| `deferred` | records a deferred decision | requires `rationale` |
-| productive methods | `linked_existing`, `new_requirement`, `split_from_parent` | only one productive lineage per item+project |
-| `lineageState` | `productive` or `attention` (legacy records may lack it) | report it with the method |
-
-##### Preconditions and fields
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| item lifecycle `approved` | required | not approved → the owner decides the gate first (two calls from `imported`) |
-| allocation for the project | active, role not `observer` | missing → the owner allocates first; observer is never eligible |
-| preview candidate `method == "deferred"` with "must be approved" or "has no confirmed project allocation" | blocking reason | STOP; never commit that candidate |
-| preview candidates | may include superseded or observer allocations | the commit rejects them; choose active non-observer ones |
-| `projectId` on preview | matches only that project's current baseline and fills `baselineId` | always pass it |
-| `sourceItemVersion` | preview `item.updatedAt`, copied exactly | item changed → "Roadmap item changed after preview" → preview again |
-| `idempotencyKey` | `^[A-Za-z0-9._:-]{12,160}$`, e.g. `mat:<itemId>:<projectId>:<method>:<yyyymmdd>`; a completed key returns its old result (`idempotentReplay`) | retry of the same call → same key; a new method or intent (e.g. `new_requirement` after `deferred`) → new key; a new key can fail with "A productive materialization already exists" |
-| `confirmed` | must be `true` | only after the owner's "yes" |
-| `baselineId` | default: the project's current baseline | from `list_requirement_baselines` (`isCurrent`) |
-| commit changes the item's `updatedAt` | the next project needs a new version | preview again before the second project |
-| stored item lifecycle | stays `approved` | progress is in `materializationSummary.state`; `delivered` then fails |
-| `materializationSummary.state` | `unmaterialized`, `partial`, `complete`, `attention` | report it after each commit |
-| governance mode | the commit does not check it | owner order is the only gate |
-
-#### Rules
-1. One project per commit; one fresh preview per commit.
-2. Show project, method, requirementId and baselineId and say "This is permanent" before the commit.
-3. After a timeout or error, check `list_workspace_roadmap_materializations` first, then retry with the SAME key.
-4. Never create activities here; planning them is a later step outside this skill.
-
-#### Examples
-```text
-example: `commit_roadmap_materialization`(workspaceId, itemId="<item>", projectId="<project>",
-  method="new_requirement", confirmed=true, idempotencyKey="mat:<item>:<project>:new_requirement:<yyyymmdd>",
-  sourceItemVersion="<preview item.updatedAt>")
-→ returns id, requirementId, baselineId, lineageKey, materializationSummary{state}
-```
-
-
-## § migrations
-
-### Roadmap governance mode and migrations
-Load when: migrating
-Applies to: lpm-roadmap-owner-ops    Source: cards `update_workspace_roadmap_governance_policy`, `preview_workspace_roadmap_v2_migration`, `apply_workspace_roadmap_v2_migration`, `preview_workspace_roadmap_governance_migration`, `apply_workspace_roadmap_governance_migration`, `rollback_workspace_roadmap_governance_migration` (`src/lib/roadmapMaterializationV2.ts`, `updateWorkspaceRoadmapGovernancePolicyCommand`)
-
-#### Summary
-Two unrelated one-off migrations exist. The v2 migration is destructive, not atomic and has no rollback.
-The governance migration stamps fields in chunks and can be rolled back, but the rollback can delete real lineage.
-Changing the governance mode changes which roadmap tools work. All of these are the owner's decisions ([O]).
-Previews are read-only ([A]); run one right before every apply and again to verify.
-
-#### Facts
-##### Governance mode (`update_workspace_roadmap_governance_policy`)
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| `mode` | `off`, `shadow` or `enforce` | anything else → `INVALID_GOVERNANCE_MODE` |
-| `enforce` | blocks direct item, bulk, dependency, allocation and lifecycle tools (`GOVERNANCE_REVIEW_REQUIRED`) | does NOT block the owner commit |
-| `off` | change-request preview/submit fail with `ROADMAP_GOVERNANCE_DISABLED` | tell the owner the review flow stops working |
-| `soloMaterialAlertThreshold` | 1–100, default 5; every Nth solo non-routine approval alerts all members | omitted → reset to 5: always pass the current value |
-| `expectedUpdatedAt` | workspace `updatedAt` | `VERSION_CONFLICT` → re-read the workspace, retry |
-| `idempotencyKey` | required; a reused key returns the earlier result, even for another mode | new key per change; check `result.mode` |
-| returns | `mode`, `previousMode`, `policy{policyVersion, soloMaterialAlertThreshold}` | report `previousMode` → `mode` |
-
-##### v2 materialization migration
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| purpose | rewrites legacy materialized items (lifecycle `materialized`, schema not 2) and creates lineage claims | not for routine materialization |
-| hard-coded scope | written for exactly 10 legacy lineages | any other count → `valid: false` |
-| preview `valid == true` and `mode == "migration-required"` | the only state that allows apply | else STOP and report the rows |
-| preview `legacyItemCount == 0` (`rows` empty), or `mode == "no-op"` | nothing to migrate | report; no apply |
-| `alreadyMigrated` / `mode` | `no-op` only when EXACTLY 10 items are v2 `complete`; every later materialization adds one | after an apply `mode` can stay `migration-required`: judge by `legacyItemCount` (LPM bug) |
-| access | API key profile `full` or `custom` (sensitive) | -32003 → core rule 2; never look for another key |
-| apply | one transaction per item, no rollback tool | a failure midway leaves the rest unmigratable; report the preview |
-| status | legacy one-off | treat as deprecated: apply only when the owner names the workspace |
-
-##### Governance migration
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| preview | `roadmapItemsToSnapshot`, `legacyIssuesToClassify`, `inferredRoadmapOrigins: 0` | show both counts to the owner |
-| apply | stamps `governanceVersion` 1 on items and `workOrigin: "legacy-unknown"` on activities without an origin | never infers roadmap origin |
-| writes | chunks of 400, no global transaction | after a timeout retry with the SAME key |
-| `legacyIssuesToClassify` | excludes deleted activities; apply also stamps them | `appliedWrites` can exceed the preview count |
-| apply `id` | `migration_<32 hex>`, needed for rollback | keep it; lost → call apply with the SAME key (replay) |
-| rollback | deletes the run's fields, incl. `workOrigin` and `roadmapLineageRefs` on activities | lineage added after the run is lost too: say so before rollback |
-| rollback `migrationId` | not validated | wrong id → `rolledBackWrites: 0` and still records a run |
-| apply after a rollback | the old key replays the old run and writes nothing | use a NEW key |
-| access | not sensitive; `portfolio` API-key profiles can call it | the owner's order is still required |
-
-#### Rules
-1. Preview → show → owner's order → apply → preview again (Verify).
-2. Rollback only for a run the owner names, after stating the lineage-loss risk.
-3. Never fix migration data by hand; report the preview rows to the owner.
-
-#### Examples
-```text
-example: governance apply → {id:"migration_<32 hex>", status:"completed", appliedWrites:<n>}
-example: verify after apply → preview shows roadmapItemsToSnapshot 0, legacyIssuesToClassify 0
-example: idempotencyKey="gov-migration-<workspaceId>-202610061430" (a new apply after a rollback needs a new minute stamp)
-```
-
-
-## § flow-direct-edits
-
-### Flow: direct item, bulk, dependency, allocation and lifecycle edits
-Load when: SKILL.md rows 5, 7, 8
-
-#### Preconditions
-1. The owner's order for this exact operation is quoted (SKILL.md P1 step 1). SKILL.md row 1 (read-only): step B2 preview only, no P1, no write.
-2. Load `lpm-roadmap-owner-ops.refs.md` § owner-direct-operations. Ids and `updatedAt` come from SKILL.md §3 or the table below; never invent one.
-3. Connector: only `update_workspace_roadmap_item`. Other writes: API key whose profile lists the tool (tools.md).
-
-| Input | Get it from (call → field) | If missing |
-|---|---|---|
-| linkId | `list_workspace_roadmap_item_links`(workspaceId, roadmapId) → `id` by `sourceItemId` / `targetItemId` | ask |
-| allocationId, projectId | `list_workspace_roadmap_allocations`(workspaceId, roadmapId) → `id` with `status` active or missing; `list_workspace_projects`(workspaceId) → `id` | ask |
-| archived/rejected linkId or allocationId; links/allocations of an archived item | `get_workspace_roadmap_overview`(workspaceId, roadmapId, includeArchived=true) → `itemLinks[].id` / `allocations[].id` (the two lists above hide them) | ask |
-| reason | the owner's words verbatim (text after "Motivo:", "porque", or the clause saying why) | ask |
-
-#### Steps
-##### B. Direct edit (SKILL.md rows 5, 7, 8)
-0. `get_workspace`(workspaceId) → `roadmapGovernanceMode` (missing → `shadow`). Do this even when the owner already said "do it" (once per turn: reuse SKILL.md P1 step 2). `enforce` → see `lpm-roadmap-owner-ops.refs.md` § enforce-mode and stop this flow.
-1. Pick the tool; send only changed fields. One item: `update_workspace_roadmap_item`(workspaceId, itemId, title?, description?, category?, priority?) / `archive_workspace_roadmap_item`(workspaceId, itemId, reason) / `restore_workspace_roadmap_item`(workspaceId, itemId, reason); roadmap: `archive_workspace_roadmap`(workspaceId, roadmapId, reason); dependency: `create_workspace_roadmap_dependency`(workspaceId, roadmapId, sourceItemId, targetItemId, type, rationale?) / `update_workspace_roadmap_dependency`(workspaceId, linkId, type?, rationale?, status?) / `archive_workspace_roadmap_dependency`(workspaceId, linkId, reason); allocation: `create_workspace_roadmap_allocation`(workspaceId, roadmapId, itemId, projectId, role, rationale?, replacesAllocationId?) / `update_workspace_roadmap_allocation`(workspaceId, allocationId, role?, rationale?, status?) / `archive_workspace_roadmap_allocation`(workspaceId, allocationId, reason); lifecycle (row 8): `review_workspace_roadmap_item`(workspaceId, itemId, lifecycle, rationale?).
-2. Bulk (row 5): `preview_workspace_roadmap_item_bulk`(workspaceId, itemIds=<SKILL.md §3 itemIds, 1–100>, operation) [A]; drop `missingItemIds` (they abort the commit); for `update` only, also drop items with `isArchived` or `lifecycle == "materialized"` (archive/restore keep them); tell the owner.
-3. Lifecycle (row 8): next allowed gate only (see `lpm-roadmap-owner-ops.refs.md` § owner-direct-operations § Lifecycle); `imported` → `approved` is two calls.
-4. Link or allocation already active in the inputs list → report "already done", no call. New primary while one is active → create with `replacesAllocationId`.
-5. Confirmation: the quoted order already names this exact operation and says do/apply it → show the exact call in the report and go to step B6. Otherwise ask the § Stop and ask question and wait.
-6. Call the row's tool [O]; bulk: `commit_workspace_roadmap_item_bulk`(workspaceId, itemIds=step B2 list, operation, updates (update) or reason (archive/restore), confirmed=true) [O]. These tools take no idempotencyKey: after a timeout re-read (§ Verify) before any retry.
-7. Verify: the § Verify row for that tool.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| before an item or roadmap write, or `commit_workspace_roadmap_item_bulk`, and the order does not name it | "Apply <exact call with every argument, including confirmed=true for bulk> now? It skips change-request review." |
-| before a dependency or allocation write the order does not name | list each link or allocation key; "Create/change exactly these?" |
-| before `review_workspace_roadmap_item` the order does not name | "Record <gate> for <item> as your decision?" |
-| edit and `lifecycle == "materialized"` | "Archive it, or add a follow-up item?" |
-| archive/restore without a reason | "Why <archive/restore> <item/roadmap>? The reason is stored." |
-| dependency between items of two roadmaps | "Which roadmap holds both?" |
-| `PRIMARY_ALREADY_ASSIGNED` | "Replace the primary (`replacesAllocationId` = id in the error) or add this project as `contributor`?" |
-| "transition from approved to delivered" | the item was materialized (stored lifecycle stays `approved`); report it, try no other value |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| item edit, archive, restore, bulk, lifecycle | `list_workspace_roadmap_items`(workspaceId, roadmapId, includeArchived=true) | new fields, `isArchived` or `lifecycle` as requested; bulk `updatedCount` == itemIds count |
-| roadmap archive | `get_workspace_roadmap_overview`(workspaceId, includeArchived=true) | `roadmaps[]` entry `status == "archived"` |
-| dependency write | `list_workspace_roadmap_item_links`(workspaceId, roadmapId); an endpoint item archived → the includeArchived overview `itemLinks[]` | active `id` listed with `status` active; archived `id` absent (overview: `status == "archived"`) |
-| allocation write | `list_workspace_roadmap_allocations`(workspaceId, roadmapId); item archived → the includeArchived overview `allocations[]` | active `id` listed, one active primary per item; archived/rejected `id` absent (overview: that `status`) |
-| a re-read still shows an old value | — | do not claim done: put the id and the value read under Pending |
-
-#### Report fields
-- quoted owner order; tool → ids changed, new values or lifecycle
-- dropped ids (bulk, materialized items), already-done links or allocations
-- archive → undo: `restore_workspace_roadmap_item` per item, or bulk `restore` with a reason
 
 
 ## § authority-and-owner-decisions
@@ -619,68 +161,6 @@ Fill rules: every number comes from a tool result of this run; one recommendatio
 example: report line after an owner-ordered change
 Owner instruction (quoted): "pode aplicar a CR rcr_123 agora"
 Done: apply_workspace_roadmap_change(changeRequestId=rcr_123) -> status applied
-```
-
-
-## § idempotency-and-retries
-
-### Idempotency and retries
-Load when: a write may be retried, or a write timed out or is unclear
-Applies to: every write-heavy skill    Source: cards `idempotency` and `idempotencyKey` notes (counted at build time: 42 tools take a key, 71 writes are not idempotent); lpm `src/server/mcpBatch.ts`
-Owner skill: catalog
-
-#### Summary
-- Pass `idempotencyKey` whenever the tool accepts one. Same logical write → same key; new content → new key.
-- After a timeout: re-read the target first; retry only with the SAME key and the SAME payload.
-- A tool without a key: re-read before any retry, because a second call creates a second record.
-- Optimistic-concurrency fields (`expectedUpdatedAt`, `expectedGeneration`, hashes) come from a fresh read; a conflict means re-read, never force.
-- Some fields replace the whole stored value: read first and resend everything you keep.
-
-#### Facts
-| Tool or group | Key rule | Retry behavior |
-|---|---|---|
-| `create_comment` | optional, ≤500 chars, e.g. `progress-<issueId>-<yyyymmdd>-<n>` | same key + different text silently returns the ORIGINAL comment |
-| `upload_activity_attachment` | optional, 16–128 `[A-Za-z0-9_-]` | same key + same file → same id; different file → generic error |
-| `batch_issue_operations`, `batch_workspace_roadmap_changes` | required, 8–200 `[A-Za-z0-9._:-]` | replay returns the recorded summary and runs nothing, failed items included; retry failed items with a NEW key |
-| `submit_workspace_roadmap_change` | required, new per change | a reused key returns the OLD request |
-| `review_workspace_roadmap_change`, `revise_workspace_roadmap_change`, `withdraw_workspace_roadmap_change`, `comment_workspace_roadmap_change`, `update_workspace_roadmap_governance_policy` | required | same key replays the earlier result |
-| `commit_owner_roadmap_change`, `commit_roadmap_materialization`, `apply_workspace_roadmap_v2_migration` | 12–160 `[A-Za-z0-9._:-]`, e.g. `mat:<itemId>:<projectId>:<yyyymmdd>` | reuse the same key on every retry |
-| `create_aish_job` | ≤500 chars | same key + same payload → same job; different payload fails |
-| AISH sessions, coordinator leases, runner actions, legacy runner migrations | required, 8–240 chars | reuse only to retry the identical request; a new lease key renews the lease |
-| `refresh_repository_code_index` | stored only; dedupe is by commit | on a client timeout wait ~10 min, then call once |
-| `activate_repository_code_index` | `expectedGeneration` | re-sending after success fails with a generation conflict: verify with `get_repository_index_status` |
-
-| Not idempotent: re-read before any retry | Check with |
-|---|---|
-| `review_workspace_routing` | `list_operational_entries` (sourceWorkspaceIntakeEntryId) or `get_protocol_lineage` |
-| `create_governance_thread`, `reply_governance_thread` | `list_governance_threads`, `get_governance_thread_messages` |
-| `create_change_set` (live), `publish_baseline_from_working_scope`, `publish_project_baseline_from_resolution` | `list_change_sets`, `list_requirement_baselines` |
-| `create_webhook_subscription`, `test_webhook_subscription` | `list_webhook_subscriptions`, `list_webhook_deliveries` |
-| `create_project_specialist_assignment` | `list_project_specialist_assignments` |
-| `record_workspace_delivery_receipt`, `create_analytics_bridge_run` | `get_protocol_lineage`, `list_analytics_bridge_runs` |
-| `create_label`, `create_cycle`, `create_milestone`, `create_project`, `create_issue_link`, `create_activity_attachment` | the matching `list_*` tool |
-| `set_project_issue_blocker_context` (replaces the active one) | `get_issue` → `blockerContext` |
-
-| Full-replace field | Tool | Do |
-|---|---|---|
-| `routingProfile`, `governanceAssignments` | `update_project` | `get_project` first; send the full object |
-| `events` | `update_webhook_subscription` | resend the full list |
-| `allowedTools` (custom key) | `update_api_key` | omitting it EMPTIES the key |
-| whole AI config | `update_workspace_ai_config` | read, change one field, resend every field |
-| executive-context arrays | `apply_workspace_context_update` | arrays replace; `null` does not clear |
-| `labelIds` | `update_issue` | resend every label you keep |
-
-#### Rules
-1. Build keys from stable parts (task, target id, date, step); never random on a retry.
-2. One timeout → one re-read → at most one retry. Still unclear → report, do not loop.
-3. `actualHoursDelta` adds on every call: never retry it blindly.
-4. Never reuse a key for different content.
-
-#### Examples
-```text
-example: create_comment timed out
--> list_comments(projectId, issueId) -> no comment with that text -> retry with the SAME key
-example: batch_issue_operations -> 2 of 25 failed -> fix them -> new batch with only those 2 and a NEW key
 ```
 
 

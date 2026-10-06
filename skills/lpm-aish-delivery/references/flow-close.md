@@ -1,0 +1,66 @@
+# Playbook: close
+Use when: run the DoD audit of an AISH factory activity and close it, or answer "can I close it?"
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| jobId | the user: any AISH job of the activity | "none" |
+| projectId | the user, or step 2 | "none" |
+| issueId | the user (the activity id), or step 2 | "none" |
+| order | "close" for an order ("feche", "conclua", "close it"); "question" for a readiness question ("posso fechar?") without a closure order | "question" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "Closure check incomplete: <tool> failed: <error text>. Nothing was closed."
+1. IF <input:jobId> == "none" and <input:issueId> == "none" → STOP. Say: "Which AISH job or activity? (id)"
+   IF <input:jobId> == "none" and <input:projectId> == "none" → STOP. Say: "Which LPM project is <input:issueId> in?"
+   IF <input:jobId> == "none" → SAVE: projectId = <input:projectId>; issueId = <input:issueId>; go to step 3.
+2. CALL {{tool:get_aish_job}} {"jobId":"<input:jobId>"} [A]
+   IF result is null → STOP. Say: "AISH job <input:jobId> was not found. Which job? (id)"
+   SAVE: projectId, issueId = those fields of result
+   IF result.workflowBinding is null → STOP. This belongs to skill {{skill:lpm-deliver-activity}}. Say: "Job <input:jobId> is not plan-bound: its activity closes with normal acceptance criteria."
+   IF <saved:issueId> is empty → STOP. Say: "Job <input:jobId> has no activity; there is nothing to close."
+3. CALL {{tool:get_issue}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>"} [A]
+   SAVE: title, status, workspaceId = those fields of result; sessions = one item {sessionId} per entry of result.factoryGovernance.sessionIds
+   IF result.factoryGovernance is not set → STOP. This belongs to skill {{skill:lpm-deliver-activity}}. Say: "<saved:issueId> is not an AISH factory activity."
+   IF <saved:status> is "done" or "canceled" → STOP. Say: "<saved:issueId> is already <saved:status>."
+4. CALL {{tool:list_aish_jobs}} {"projectId":"<saved:projectId>"} [A]
+   Always make this call. Ignore jobs of other activities.
+   SAVE: open = id and status of each item with issueId == <saved:issueId> and status "queued", "leased" or "running"; completedJobs = id of each item with issueId == <saved:issueId> and status "completed"
+   IF <saved:open> is not empty → STOP. Say: "Not yet: job <saved:open> of <saved:issueId> is still open. Wait for it, or close it with playbook repair."
+5. CALL {{tool:list_workspace_activities}} {"workspaceId":"<saved:workspaceId>","projectId":"<saved:projectId>","limit":200} [A]
+   SAVE: activityId = id of the FIRST item with targetType "issue" and targetId == <saved:issueId> (never the issueId)
+   IF no item matches → STOP. This belongs to skill {{skill:lpm-deliver-activity}}. Say: "<saved:issueId> has no feed entry, so its evidence cannot be attached. Comment on it once, then run this again."
+6. CALL {{tool:list_activity_attachments}} {"projectId":"<saved:projectId>","activityId":"<saved:activityId>"} [A]
+   SAVE: attachments = every item's fileName, fileType, id; missingPacks = each id in <saved:completedJobs> with no attachment fileName exactly "aish-pack-<id>.md"
+   Evidence IDs and local files are not attachments.
+7. FOR EACH session IN <saved:sessions> (none → go to step 8):
+   CALL {{tool:get_aish_execution_session}} {"sessionId":"<each:sessionId>"} [A]
+   IF a result.releases item has issueId == <saved:issueId> and status != "succeeded" → STOP. Say: "Not yet: release <that id> of <saved:issueId> is <that status>; a release counts only when succeeded."
+   IF a result.releases item has issueId == <saved:issueId> and <saved:attachments> has no fileName "smoke-<first 12 characters of that id>.txt" → STOP. Say: "Not yet: the smoke evidence of release <that id> is not attached. Run playbook release-smoke."
+   IF a result.plan.nodes item has issueId == <saved:issueId> and changeType "visual" or no changeType, and <saved:attachments> has no fileType "image/png" or "image/jpeg" → STOP. This belongs to skill {{skill:lpm-deliver-activity}}. Say: "Not yet: visual change, but no screenshot (PNG/JPEG) is attached to <saved:issueId>."
+8. IF <saved:missingPacks> is empty → go to step 9.
+   IF <input:order> == "question" → STOP. Say: "Not yet: the AISH pack of job <saved:missingPacks> is not attached to <saved:issueId>. Say "feche" and I attach it and close."
+   IF <input:order> == "close" → switch to playbook pack.
+9. CALL {{tool:audit_aish_issue_delivery}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>"} [A]
+   IF the call returns an error → STOP. Say: "Audit failed: <error text>. ("Factory delivery governance is missing" = not a factory activity: lpm-deliver-activity. "Delivery changed during audit" = run this playbook again.) Nothing was closed."
+   SAVE: auditId = result.id; auditStatus = result.status; failures = result.failures
+   VERIFY: CALL {{tool:get_issue}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>"} [A]
+   IF the call returns an error or result.factoryAuditId != <saved:auditId> → STOP. Say: "Audit <saved:auditId> is not the current audit of <saved:issueId>; run this playbook again. Nothing was closed."
+   IF <saved:auditStatus> == "blocked" → STOP. Say: "DoD audit blocked: <saved:failures>. Missing artifacts → evidence; open findings → finding; incomplete plan/checkpoint → lpm-aish-jobs; corrupt evidence or lineage → owner. Nothing was closed."
+10. IF <input:order> == "question" → ASK: "DoD audit <saved:auditId> passed, jobs terminal, packs attached. Close <saved:issueId> now? (yes/no)" — continue only if the user says yes; otherwise STOP.
+11. CALL {{tool:update_issue}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>","status":"done"} [A]
+   IF the call returns an error → STOP. Say: "update_issue failed: <error text>. ("Factory Definition of Done is missing, blocked or stale." = evidence changed after the audit: run this playbook again.) <saved:issueId> is not closed."
+   VERIFY: CALL {{tool:get_issue}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>"} [A]
+   IF the call returns an error or result.status != "done" → STOP. Say: "<saved:issueId> is <result.status>, not done."
+   SAVE: status = result.status
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:workspaceId>/<saved:projectId>/<saved:issueId> <saved:title>; jobs <saved:completedJobs>
+Done: <audit <saved:auditId> <saved:auditStatus>; status <saved:status> | preliminary reads only>
+Evidence: <each attachment fileName (id) of <saved:attachments> on <saved:activityId> | none checked>
+Pending: <none | the item in the STOP text — who acts>
+Next: <the ASK or STOP text that ended the run | none — activity closed>
+```
+status: backlog | todo | in-progress | done | canceled, from your last get_issue. audit: passed | blocked. Never claim a check that a step above did not run and pass; never write "closed" unless step 11 VERIFY showed done.

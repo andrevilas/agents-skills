@@ -1,0 +1,60 @@
+# Playbook: propose-change
+Use when: change request: edit, prioritize, lifecycle, archive or restore one item
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user | STOP. Say: "Which LPM workspace? (id or name)" |
+| item | the id or title of the ONE existing item | STOP. Say: "Which roadmap item?" |
+| changeType | "edit", "prioritize", "lifecycle", "archive" or "restore" (allocate, link, capability-link → playbook propose-link) | STOP. Say: "Which change: edit, prioritize, lifecycle, archive or restore?" |
+| value | edit: the new title, description or category (ONE field per request); prioritize: the new priority; lifecycle: the target lifecycle; archive or restore: "none" | STOP. Say: "What is the new value?" |
+| rationale | why, in the user's words | STOP. Say: "Why is this change needed?" |
+| stamp | the current UTC time as yyyymmddHHMMss | the current UTC time |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was submitted."
+1. CALL {{tool:get_workspace}} {"workspaceId":"<input:workspaceId>"} [A]
+   SAVE: mode = result.roadmapGovernanceMode when it is "off", "shadow" or "enforce", else "off" when result.roadmapGovernanceEnabled == false, else "shadow"
+   IF <input:changeType> is "allocate", "link" or "capability-link" → switch to playbook propose-link.
+   IF <input:changeType> == "create" → switch to playbook create-item.
+   IF <input:changeType> == "materialize" → STOP. This belongs to skill {{skill:lpm-roadmap-owner-ops}}. Say: "Materialization is an owner operation."
+   IF <saved:mode> == "off" → STOP. This belongs to skill {{skill:lpm-roadmap-owner-ops}}. Say: "Governance is off: no change requests. A direct edit needs the owner's order."
+2. CALL {{tool:list_workspace_roadmap_items}} {"workspaceId":"<input:workspaceId>","includeArchived":true,"compact":true} [A]
+   SAVE: itemId, title, lifecycle, isArchived, roadmapId = those fields of the only item whose id == <input:item> or whose title equals <input:item> ignoring case and accents; itemUpdatedAt = its updatedAt, copied exactly
+   IF no item or 2+ items match → STOP. Say: "Which item exactly? <each id with its title>"
+   IF <saved:isArchived> == true and <input:changeType> != "restore" → STOP. Say: "<saved:title> is archived: restore it first."
+   IF <saved:isArchived> != true and <input:changeType> == "restore" → STOP. Say: "<saved:title> is not archived."
+   IF <input:changeType> == "edit" and <saved:lifecycle> == "materialized" → STOP. Say: "A materialized item cannot be edited."
+   SAVE: openStatuses = ["awaiting-review", "changes-requested", "approved"]
+3. FOR EACH openStatus IN <saved:openStatuses> (none → go to step 4):
+   CALL {{tool:list_workspace_roadmap_change_requests}} {"workspaceId":"<input:workspaceId>","status":"<each:openStatus>","compact":true,"limit":100} [A]
+   IF a result.requests item has itemId == <saved:itemId> or itemIds containing it → STOP. Say: "Request <that id> (<each:openStatus>) is already open on <saved:title>: comment on it, revise it or withdraw it."
+4. SAVE: field, newValue = by <input:changeType>:
+     edit → field "title", "description" or "category" (the one the user named), newValue <input:value>
+     prioritize → field "priority", newValue <input:value>: "urgent" | "high" | "medium" | "low" | "none"
+     lifecycle → field "lifecycle", newValue <input:value>; allowed from <saved:lifecycle>: draft → imported/reviewed/deferred/rejected; imported → reviewed/deferred/rejected; reviewed → approved/deferred/rejected; approved → deferred; deferred or rejected → reviewed; materialized → delivered; delivered → closed. Never "materialized".
+     archive or restore → field "reason", newValue <input:rationale>
+   IF the user named 2+ fields, or <saved:newValue> is empty or not allowed above → STOP. Say: "One field per request, with an allowed value. Nothing was submitted."
+   SAVE: key = "cr-<saved:itemId>-<input:changeType>-<input:stamp>"
+5. CALL {{tool:preview_workspace_roadmap_change}} {"workspaceId":"<input:workspaceId>","itemId":"<saved:itemId>","changeType":"<input:changeType>","patch":{"<saved:field>":"<saved:newValue>","rationale":"<input:rationale>"},"expectedUpdatedAt":"<saved:itemUpdatedAt>"} [A]
+   Write the patch key as the field name itself (e.g. {"priority":"high","rationale":"…"}).
+   SAVE: before, after, riskClass = those fields of result; reviewMode = result.policy.reviewMode
+6. ASK: "Submit a change request on <saved:title> (<saved:itemId>): <input:changeType> <saved:before> → <saved:after>; risk <saved:riskClass>, review <saved:reviewMode>; rationale "<input:rationale>". (yes/no)" — continue only if the user says yes; otherwise STOP.
+7. CALL {{tool:submit_workspace_roadmap_change}} {"workspaceId":"<input:workspaceId>","itemId":"<saved:itemId>","changeType":"<input:changeType>","patch":{"<saved:field>":"<saved:newValue>","rationale":"<input:rationale>"},"expectedUpdatedAt":"<saved:itemUpdatedAt>","rationale":"<input:rationale>","idempotencyKey":"<saved:key>"} [C]
+   IF result.idempotentReplay == true → STOP. Say: "Key <saved:key> was used before (old request <result.id>): run again with a new stamp."
+   SAVE: changeRequestId = result.id; assignedReviewerId = result.assignedReviewerId
+   VERIFY: CALL {{tool:get_workspace_roadmap_change_request}} {"workspaceId":"<input:workspaceId>","changeRequestId":"<saved:changeRequestId>"} [A]
+   IF the call returns an error or result.status != "awaiting-review" or result.itemIds does not contain <saved:itemId> → STOP. Say: "<saved:changeRequestId> is not awaiting review."
+   SAVE: status, requiredApprovals, ownerConfirmationRequired = those fields of result
+   Stop here: never review or apply your own request.
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:workspaceId>/<saved:roadmapId>/<saved:itemId> <saved:title>; mode <saved:mode>
+Done: submitted <saved:changeRequestId> (<input:changeType>, risk <saved:riskClass>), status <saved:status> | reads only, nothing submitted
+Evidence: get_workspace_roadmap_change_request → status <saved:status> | none
+Pending: none | <saved:requiredApprovals> approval(s) by members other than the author, owner confirmation <saved:ownerConfirmationRequired>, reviewer <saved:assignedReviewerId>
+Next: <the ASK or STOP text that ended the run> | the reviewer decides in LPM; then the owner orders the apply (playbook apply)
+```
+mode: off | shadow | enforce, from step 1. status: awaiting-review. risk: routine | material | exceptional. Never claim a submit that the VERIFY did not show.

@@ -2,7 +2,7 @@
   "id": "roadmap-cr-apply",
   "title": "Roadmap CR apply: owner-ordered apply of an approved request with the read updatedAt, then read-back",
   "skill": "lpm-roadmap",
-  "source": "lpm-roadmap §4 row 8 → references/change-request-lifecycle.md P4 Apply",
+  "source": "lpm-roadmap §4 row 8 → references/flow-apply.md (steps 1-2 reads, 3 owner order, 4 apply + VERIFY, 6 item read-back)",
   "request": "Workspace ws_trace, roadmap rm_1. Change request cr_301 (prioritize item ri_11 \"Checkout redesign\" to high) was approved by the reviewer. Apply it.",
   "ownerInstruction": "I am the workspace owner: apply change request cr_301 now.",
   "fixtures": {

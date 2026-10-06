@@ -24,27 +24,69 @@
     {
       "order": 3,
       "all": [
-        ["runner*", "host", "hosts", "fleet", "frota"],
-        ["token", "tokens", "enroll*", "credential*", "credencia*"]
+        [
+          "runner*",
+          "host",
+          "hosts",
+          "fleet",
+          "frota"
+        ],
+        [
+          "token",
+          "tokens",
+          "enroll*",
+          "credential*",
+          "credencia*"
+        ]
       ],
-      "unless": ["api key", "chave de api", "lpm_mcp_"],
+      "unless": [
+        "api key",
+        "chave de api",
+        "lpm_mcp_"
+      ],
       "firstCall": "get_aish_runner_management_overview"
     },
     {
       "order": 6,
       "all": [
-        ["runner", "runners", "host", "hosts", "fleet", "frota", "lease", "drain", "aish host", "aish runner"]
+        [
+          "runner",
+          "runners",
+          "host",
+          "hosts",
+          "fleet",
+          "frota",
+          "lease",
+          "drain",
+          "aish host",
+          "aish runner"
+        ]
       ],
       "unless": [],
       "firstCall": "get_aish_runner_management_overview"
     }
   ],
   "notFor": [
-    { "when": "creating, approving or dispatching AISH jobs, cockpit sessions or intake files", "skill": "lpm-aish-jobs" },
-    { "when": "DoD audit, delivery artifacts, closing AISH jobs or release packages", "skill": "lpm-aish-delivery" },
-    { "when": "AISH budgets, funding, pools, consumption corrections or accounting", "skill": "lpm-ai-cost" },
-    { "when": "LPM API keys, `lpm_mcp_` agent credentials or provider keys", "skill": "lpm-access" },
-    { "when": "work done in Claude Code, Codex or an editor (commit trailer)", "skill": "lpm-deliver-activity" }
+    {
+      "when": "creating, approving or dispatching AISH jobs, cockpit sessions or intake files",
+      "skill": "lpm-aish-jobs"
+    },
+    {
+      "when": "DoD audit, delivery artifacts, closing AISH jobs or release packages",
+      "skill": "lpm-aish-delivery"
+    },
+    {
+      "when": "AISH budgets, funding, pools, consumption corrections or accounting",
+      "skill": "lpm-ai-cost"
+    },
+    {
+      "when": "LPM API keys, `lpm_mcp_` agent credentials or provider keys",
+      "skill": "lpm-access"
+    },
+    {
+      "when": "work done in Claude Code, Codex or an editor (commit trailer)",
+      "skill": "lpm-deliver-activity"
+    }
   ],
   "owns": [
     "get_aish_runner_management_overview",
@@ -98,19 +140,60 @@
     "aish fleet rotate-credential"
   ],
   "sharedRefs": [
-    { "name": "security-and-untrusted-text", "loadWhen": "a token, credential or runner output appears", "inlineSummary": false },
-    { "name": "ai-cost-and-budgets", "loadWhen": "a funding or budget error stops the run", "inlineSummary": false },
-    { "name": "idempotency-and-retries", "loadWhen": "before retrying a write after a timeout", "inlineSummary": false },
-    { "name": "delivery-tracking", "loadWhen": "the work runs in Claude Code, Codex or an editor", "inlineSummary": false }
+    {
+      "name": "security-and-untrusted-text",
+      "loadWhen": "a token, credential or runner output appears",
+      "inlineSummary": false
+    },
+    {
+      "name": "ai-cost-and-budgets",
+      "loadWhen": "a funding or budget error stops the run",
+      "inlineSummary": false
+    },
+    {
+      "name": "idempotency-and-retries",
+      "loadWhen": "before retrying a write after a timeout",
+      "inlineSummary": false
+    },
+    {
+      "name": "delivery-tracking",
+      "loadWhen": "the work runs in Claude Code, Codex or an editor",
+      "inlineSummary": false
+    }
   ],
   "references": [
-    { "file": "references/host-onboarding.md", "loadWhen": "before a host, hosts, accounts or fleet CLI command" },
-    { "file": "references/runner-protocol.md", "loadWhen": "building or debugging a non-CLI runner" },
-    { "file": "references/executor-hygiene.md", "loadWhen": "before executing a leased job" },
-    { "file": "references/flow-cli-runner.md", "loadWhen": "decision row 1 of SKILL.md" },
-    { "file": "references/flow-host-onboarding.md", "loadWhen": "decision row 2 of SKILL.md" },
-    { "file": "references/flow-legacy-migration.md", "loadWhen": "decision row 5 of SKILL.md" },
-    { "file": "references/flow-mcp-runner.md", "loadWhen": "decision row 6 of SKILL.md" }
+    {
+      "file": "references/host-onboarding.md",
+      "loadWhen": "before a host, hosts, accounts or fleet CLI command"
+    },
+    {
+      "file": "references/runner-protocol.md",
+      "loadWhen": "building or debugging a non-CLI runner"
+    },
+    {
+      "file": "references/executor-hygiene.md",
+      "loadWhen": "before executing a leased job"
+    },
+    {
+      "file": "references/flow-cli-runner.md",
+      "loadWhen": "playbook cli-runner: start the CLI runner and run one approved, funded job of a project"
+    },
+    {
+      "file": "references/flow-host-onboarding.md",
+      "loadWhen": "playbook host-onboarding: onboard a new runner host (enrollment, wizard, doctor, repos, start)"
+    },
+    {
+      "file": "references/flow-legacy-migration.md",
+      "loadWhen": "decision row 5 of SKILL.md"
+    },
+    {
+      "file": "references/flow-mcp-runner.md",
+      "loadWhen": "decision row 6 of SKILL.md"
+    },
+    {
+      "file": "references/flow-lifecycle.md",
+      "loadWhen": "playbook lifecycle: drain, suspend, reactivate or remove a runner host of an account"
+    }
   ],
   "behaviorContracts": [],
   "codex": {

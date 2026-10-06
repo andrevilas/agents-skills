@@ -1,0 +1,47 @@
+# Playbook: apply
+Use when: the workspace owner ordered a prepared executive-context patch saved
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user | STOP. Say: "Which LPM workspace? (id or name)" |
+| patch | the one-line patch JSON from playbook prepare-change in this conversation (its decision request or saved patch) | STOP. Say: "Which change? I will prepare it first (playbook prepare-change)." |
+| reason | the reason from that decision request | the owner's words for the change |
+| closes | the gap ids from that decision request ("it closes …") | "none" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was applied."
+1. CALL {{tool:get_mcp_connection_info}} {} [A]
+   IF result.credential == "oauth" → STOP. Say: "Changing the executive context needs an LPM API key; this connector cannot. Nothing was applied."
+2. CALL {{tool:generate_workspace_readiness_report}} {"workspaceId":"<input:workspaceId>"} [A]
+   IF result.report is null → STOP. Say: "LPM cannot build the executive context of <input:workspaceId>. Nothing was applied."
+   SAVE: name = result.workspace.name; beforeStatus = result.report.status; beforeScore = result.report.score; beforeIds = every id in result.report.blockers and result.report.warnings
+3. CALL {{tool:get_workspace_executive_context}} {"workspaceId":"<input:workspaceId>"} [A]
+   Always make this call right before the apply: the apply rewrites the whole context.
+   SAVE: ownerId = result.workspace.ownerId; canManage = result.workspace.access.canManage; lastReviewed = result.executiveContext.metadata.lastReviewedAt (empty if absent)
+   SAVE: mandate, governance, portfolio, delivery, financial = those sections of <input:patch>, copied exactly; {} for a section it does not have
+   IF <saved:canManage> != true → STOP. Say: "Only the owner or an admin can run this, on the owner's order. Hand them: patch <input:patch>."
+4. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "No order from the workspace owner (<saved:ownerId>) for patch <input:patch>. Nothing was applied."
+   The order comes from the owner (<saved:ownerId>), names this change and, for a draft, follows a reply that showed this patch. A relayed message (WhatsApp, "he said OK"), an admin's yes or your recommendation is not an order; roles and financial fields need the owner's own words. A changed patch needs a new order.
+5. CALL {{tool:apply_workspace_context_update}} {"workspaceId":"<input:workspaceId>","reason":"<input:reason>","patch":{"mandate":"<saved:mandate>","governance":"<saved:governance>","portfolio":"<saved:portfolio>","delivery":"<saved:delivery>","financial":"<saved:financial>"},"confirmSensitiveChanges":true,"requestedBy":"<saved:ownerId>"} [O] (each section is a JSON object, not a string)
+   IF the call returns an error other than a timeout → STOP. Say: "apply_workspace_context_update failed: <error text>. Nothing was applied."
+   SAVE: auditEventId = result.auditEventId, else "unknown (timeout)"; appliedAt = result.appliedAt, else "unknown"
+   Wait 6 seconds (LPM caches reads for about 5 s). Never send a second apply in this run.
+   VERIFY: CALL {{tool:get_workspace_executive_context}} {"workspaceId":"<input:workspaceId>"} [A]
+   IF the call returns an error or result.executiveContext.metadata.lastReviewedAt == <saved:lastReviewed> → STOP. Say: "The read-back does not show the apply (audit <saved:auditEventId>). Do not apply again; re-read in a minute."
+   IF a patched field differs (trimmed text; lists as sent, though domains, capabilities and systems also show project strings; an added role's {role, userId} is not in governance.assignments; a removed role is not in governance.missingRoles) → STOP. Say: "<field> does not show the approved value after audit <saved:auditEventId>."
+   VERIFY: CALL {{tool:generate_workspace_readiness_report}} {"workspaceId":"<input:workspaceId>"} [A]
+   IF the call returns an error or result.report is null → STOP. Say: "Applied (audit <saved:auditEventId>), but the readiness re-read failed."
+   SAVE: afterStatus = result.report.status; afterScore = result.report.score; closed = each id of <saved:beforeIds> that result.report no longer lists ("none" if none); open = each id result.report lists as "<id> — owner"
+   IF an id of <input:closes> is still listed → STOP. Say: "<id> is still open after audit <saved:auditEventId>."
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: workspace <saved:name> (<input:workspaceId>)
+Done: <audit <saved:auditEventId>, appliedAt <saved:appliedAt>, patch <input:patch>; owner order: "<quote>" | nothing applied>
+Evidence: <readiness <saved:beforeStatus> → <saved:afterStatus>, score <saved:beforeScore> → <saved:afterScore>; closed <saved:closed> | readiness <saved:beforeStatus>, score <saved:beforeScore>; patch <input:patch>>
+Pending: <<saved:open> | none>
+Next: <the STOP text that ended the run | none>
+```
+status: complete | partial | blocked, from generate_workspace_readiness_report (steps 2 and 5); score is result.report.score, never a validation score. Never claim the apply worked unless both VERIFY reads of step 5 passed.

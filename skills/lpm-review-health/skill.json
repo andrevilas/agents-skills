@@ -66,10 +66,11 @@
   "cli": [],
   "sharedRefs": [],
   "references": [
-    { "file": "references/health-thresholds.md", "loadWhen": "classifying a project or portfolio status" },
-    { "file": "references/integrity-signals.md", "loadWhen": "any integrity signal, risk id or other finding is present" },
-    { "file": "references/report-template.md", "loadWhen": "writing the report" },
-    { "file": "references/flow-portfolio-connector.md", "loadWhen": "a portfolio or weekly review; one project on a connector or after -32003" }
+    { "file": "references/flow-project.md", "loadWhen": "playbook project: health, status, risks or weekly review of one project or cycle, with an LPM API key" },
+    { "file": "references/flow-connector.md", "loadWhen": "playbook connector: review of one project on a ChatGPT/Claude connector, or when playbook project hit -32003" },
+    { "file": "references/flow-portfolio.md", "loadWhen": "playbook portfolio: portfolio or workspace review, \"what needs my attention\", or a weekly review of a whole workspace" },
+    { "file": "references/flow-changes.md", "loadWhen": "playbook changes: owner-agent snapshot of a workspace, or \"what changed since version <v>\", with an LPM API key" },
+    { "file": "references/health-thresholds.md", "loadWhen": "background for maintainers: how LPM computes each health status (the playbooks already hold every rule they need)" }
   ],
   "behaviorContracts": ["missing-tool-fallback"],
   "codex": {

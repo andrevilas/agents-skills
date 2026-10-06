@@ -170,7 +170,8 @@
     "list_workspace_projects",
     "list_requirement_baselines",
     "list_requirements",
-    "get_workspace"
+    "get_workspace",
+    "get_mcp_connection_info"
   ],
   "cli": [
     "roadmap archive",
@@ -196,51 +197,58 @@
   "sharedRefs": [
     {
       "name": "authority-and-owner-decisions",
-      "loadWhen": "before any [O] call or a decision request",
-      "inlineSummary": false
-    },
-    {
-      "name": "idempotency-and-retries",
-      "loadWhen": "before retrying a write",
+      "loadWhen": "background on [O] and decision requests; the playbooks hold the gates and the decision request text",
       "inlineSummary": false
     }
   ],
   "references": [
     {
-      "file": "references/flow-direct-ops.md",
-      "loadWhen": "SKILL.md row 6"
+      "file": "references/flow-owner-commit.md",
+      "loadWhen": "playbook owner-commit: create items, or edit item, roadmap or capability text, in one owner commit"
+    },
+    {
+      "file": "references/flow-items.md",
+      "loadWhen": "playbook items: update, archive or restore items, or archive a roadmap"
+    },
+    {
+      "file": "references/flow-lifecycle.md",
+      "loadWhen": "playbook lifecycle: move one item through a lifecycle gate (approve, deliver, close)"
+    },
+    {
+      "file": "references/flow-dependency.md",
+      "loadWhen": "playbook dependency: add, change or remove a dependency between roadmap items"
+    },
+    {
+      "file": "references/flow-allocation.md",
+      "loadWhen": "playbook allocation: add, change or remove a project allocation on an item"
     },
     {
       "file": "references/flow-import.md",
-      "loadWhen": "SKILL.md row 9"
+      "loadWhen": "playbook import: import a TSV file of roadmap items"
+    },
+    {
+      "file": "references/flow-import-links.md",
+      "loadWhen": "playbook import-links: link and allocate the items of an import"
     },
     {
       "file": "references/flow-materialize.md",
-      "loadWhen": "SKILL.md row 10"
+      "loadWhen": "playbook materialize: materialize an approved item into one project"
     },
     {
       "file": "references/flow-governance.md",
-      "loadWhen": "SKILL.md rows 11–12"
+      "loadWhen": "playbook governance: change the governance mode, or run the enforce window the owner chose"
+    },
+    {
+      "file": "references/flow-migration.md",
+      "loadWhen": "playbook migration: apply or roll back a roadmap migration (governance or v2)"
     },
     {
       "file": "references/enforce-mode.md",
-      "loadWhen": "SKILL.md row 4"
-    },
-    {
-      "file": "references/owner-direct-operations.md",
-      "loadWhen": "before any direct operation"
+      "loadWhen": "background for maintainers: the path of each owner operation in enforce mode; the playbooks hold the rules"
     },
     {
       "file": "references/import-format.md",
-      "loadWhen": "importing"
-    },
-    {
-      "file": "references/materialization.md",
-      "loadWhen": "materializing"
-    },
-    {
-      "file": "references/migrations.md",
-      "loadWhen": "migrating"
+      "loadWhen": "background on the TSV import format; playbooks import and import-links hold the steps"
     }
   ],
   "behaviorContracts": [

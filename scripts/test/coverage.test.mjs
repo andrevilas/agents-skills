@@ -31,7 +31,8 @@ test("coverage.json has exactly the schema v2 shape of §5.5", () => {
   assert.deepEqual(cov.policy, { schemaDrift: "warn" });
   assert.deepEqual(cov.skills.map((s) => s.id), ["lpm-deliver-activity", "lpm-release-product", "lpm-roadmap", "lpm-start"]);
   for (const s of cov.skills) {
-    assert.deepEqual(Object.keys(s), ["id", "version", "pack", "kind", "owns", "uses", "rendered"]);
+    assert.deepEqual(Object.keys(s), ["id", "version", "pack", "kind", "owns", "uses", "rendered", "playbooks"]);
+    assert.ok(Array.isArray(s.playbooks));
     assert.deepEqual(s.rendered, renderedPaths(s.id));
     assert.deepEqual(Object.keys(s.rendered), ["codex", "claude-code", "antigravity", "generic"]);
     for (const p of Object.values(s.rendered)) assert.ok(fs.existsSync(path.join(root, p)), p);
@@ -126,7 +127,7 @@ test("coverage matrix is generated from coverage.json with totals, tools by cate
   assert.match(m, /^### portfolio$/m);
   assert.match(m, /^\| `create_workspace_roadmap` \| `lpm-roadmap` \| O \| roadmap:manage \| — \|$/m);
   assert.match(m, /^\| `get_orphan_report` \| \*\*unowned\*\* \|/m);
-  assert.match(m, /^\| `lpm-deliver-activity` \| core \| tools \| 8 \| 7\/1\/0 \| 1 \| mostly KEY \| 1 \|$/m);
+  assert.match(m, /^\| `lpm-deliver-activity` \| core \| tools \| 8 \| 7\/1\/0 \| 1 \| mostly KEY \| 1 \| — \|$/m);
   assert.ok(m.includes("| get_mcp_connection_info first when a tool is missing | core rule 2; contract missing-tool-fallback |"));
   assert.ok(m.includes("| `get_orphan_report` | fixture: card not written yet | 2099-01-01 | owner |"));
   assert.ok(!m.includes("Cobertura funcional completa"));

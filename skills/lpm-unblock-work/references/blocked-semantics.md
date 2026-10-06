@@ -1,5 +1,5 @@
 # Blocked semantics
-Load when: when explaining why an activity is or is not blocked
+Load when: background: why an activity is or is not blocked
 Applies to: lpm-unblock-work    Source: `src/lib/projectResolution.ts:443-478,592-606`, `src/lib/projectResolution.test.ts:448-483`, `src/lib/issueLinkDirection.ts`, `src/services/dependencyIntelligence.ts`; cards {{tool:list_blocked_project_issues}}, {{tool:set_project_issue_blocker_context}}, {{tool:get_project_dependency_graph}}, {{tool:list_issue_links}}
 ## Summary
 An open activity (status not `done`/`canceled`, not deleted) is blocked when ANY of these holds:
@@ -33,10 +33,10 @@ One blocker context per activity: a second set REPLACES the first without a reso
 | `density.limited == true` | `maxTaskNodes` cut nodes (`omittedTaskCount`) | say the graph is truncated |
 | summary chain status `blocked` | derived: open blocker link OR active context | summary `criticalBlockers[]` = chains with an open blocker |
 | graph, summary, heatmap inputs | every issue, project link and same-workspace cross-project link of the workspace | slow on big workspaces; set `maxTaskNodes` |
-| cross-workspace (portfolio) link | not among those inputs | also set a blocker context naming the link id so the block shows; resolve that context when the link is closed ({{ref:flow-remove-link}} step 6) |
+| cross-workspace (portfolio) link | not among those inputs | also set a blocker context naming the link id so the block shows; resolve that context when the link is closed (playbook close-portfolio-link does both) |
 | "Project is not linked to a workspace." | graph, summary and heatmap cannot run | use {{tool:list_blocked_project_issues}}, {{tool:list_issue_links}}, same-project links and blocker contexts (they need no workspace) |
 | risk ids | `delivery:blocked`, `delivery:overdue`, `delivery:ownership-gaps`, `delivery:unestimated`, `governance:decision-needed`, `scope:*` | only firing risks are listed; titles are in Portuguese |
-| {{tool:list_project_resolution_risks}} with an API key | may spend grounding quota and re-attach orphan requirements to the current baseline | call it only on the connector path (row 1) |
+| {{tool:list_project_resolution_risks}} with an API key | may spend grounding quota and re-attach orphan requirements to the current baseline | the playbooks do not call it; health reports belong to lpm-review-health |
 | portfolio link `status` | `active`, `resolved`, `archived` | pass `status="active"` to see current blockers only |
 
 ## Rules

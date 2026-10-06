@@ -851,65 +851,6 @@ Gotchas:
 Pairs with: `list_projects`, `list_aish_jobs`, `configure_aish_budget`, `settle_aish_budget`, `get_aish_financial_pool`
 CLI: `lpm aish command get_aish_budget --file <payload.json> [--transport rest|mcp] [--json]`
 
-### `fund_aish_job` [O] · destructive · KEY · owner `lpm-ai-cost` · profiles: full, custom · sensitive: yes · idempotency: naturally idempotent
-Purpose: Reserves a capped amount of the project (and optionally issue) budget for one queued standalone AISH job so a runner may spend up to that cap.
-Use when: Only when the owner explicitly instructs you to fund a specific standalone job with a stated currency and maximum amount    Avoid when: Jobs created by an execution plan (they have workflowBinding): funding comes from the approved plan via dispatch_aish_execution_plan / retry_aish_execution_plan; Checking capacity or an existing reservation: use get_aish_budget; No budget exists: the owner must use configure_aish_budget first; Authorizing technical execution: approve_aish_job_execution is a separate decision
-| Param | Req | Source (call → field) | Notes |
-|---|---|---|---|
-| jobId | yes | create_aish_job -> id or list_aish_jobs -> id | Standalone job in status queued |
-| financial | yes | user (owner decision) | {currency: 3 uppercase letters equal to the budget currency, e.g. 'BRL'; maxAmount: positive decimal STRING with up to 12 decimals, e.g. '5.00'; requireIssueBudget: boolean (true = the issue must have its own budget)} |
-| reason | yes | user | 8-1,000 chars; stored in the audit; no secrets |
-Preconditions: Credential is a human user who manages the project (workspace agent credentials are rejected); Job exists, status queued, not leased, has no workflowBinding, has a workspaceId; Project budget exists in the same currency, is not paused, needs no reconciliation, and limit - consumed - reserved >= maxAmount; If the issue has a budget (or requireIssueBudget is true) the same checks apply to the issue budget; A financial pool bound to the project budget, if any, admits the amount
-Returns: {reservation: {id (= jobId), financial, budgetIds, consumed, remaining, status:'reserved', authorizedBy}}. The server then enqueues the job for dispatch.
-Errors → fix:
-| When | Fix |
-|---|---|
-| Financial authority requires a managing user. | Agent credentials cannot fund; ask the owner to do it. |
-| Direct funding requires an unleased standalone queued job; workflow funding belongs to its approved plan. | The job is part of a plan, already leased or not queued; do not fund it directly. |
-| Financial budget is not configured; spending remains blocked. | Owner decision: configure_aish_budget. |
-| Insufficient financial reservation capacity. | Report the available amount from get_aish_budget; the owner decides. |
-| Financial budget is paused or outside the declared scope/currency. | Use the budget currency; if paused, the owner decides. |
-| Required issue budget is not configured. / Issue budget requires an issue binding. | Ask the owner to configure the issue budget or to fund with requireIssueBudget=false. |
-| Job financial reservation conflicts. | The job is already funded with a different envelope; inspect get_aish_budget with jobId; do not fund again. |
-| A settled job needs a new job identity before execution. | Create a new job. |
-| Financial reason contains sensitive material. | Remove secrets from reason. |
-| Financial job scope mismatch. / Invalid financial job id. | jobId not found; take it from list_aish_jobs. |
-Gotchas:
-- Owner-only by LPM rule even when your API key is a user key (the server only blocks workspace agent credentials).
-- Same jobId with an identical financial envelope returns the existing reservation while the job is still queued; after a runner leases it, a repeat call errors.
-- Funding does not approve execution.
-- Amounts are decimal strings, never numbers.
-Pairs with: `create_aish_job`, `get_aish_budget`, `approve_aish_job_execution`, `get_aish_job`, `settle_aish_budget`
-CLI: `lpm aish command fund_aish_job --file payload.json [--transport rest|mcp]`
-
-### `list_issues` [A] · read · portfolio:read · owner `lpm-deliver-activity` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
-Purpose: Lists the issues (activities) of one project, optionally filtered by status, priority, assignee, cycle or milestone, with optional cursor pagination.
-Use when: You need issue IDs (e.g. for update_issue, comments, or the commit trailer 'LPM-Activity: <id>'); User asks for the backlog, the work in progress, or the issues of a cycle, milestone or person    Avoid when: You need one known issue: use get_issue; You need overdue, unassigned, unestimated or blocked issues: use list_overdue_project_issues, list_unassigned_project_issues, list_unestimated_project_issues or list_blocked_project_issues; You need the prioritized open work with context: use get_project_execution_context
-| Param | Req | Source (call → field) | Notes |
-|---|---|---|---|
-| projectId | yes | list_projects -> id |  |
-| status | no | constant | backlog \| todo \| in-progress \| done \| canceled (exact match). |
-| priority | no | constant | none \| low \| medium \| high \| urgent. |
-| assigneeId | no | list_project_assignable_members -> uid |  |
-| cycleId | no | list_cycles -> id |  |
-| milestoneId | no | list_milestones -> id |  |
-| cursor | no | list_issues -> nextCursor | Only valid with the SAME projectId and filters that produced it. |
-| limitCount | no | constant | Integer 1-100. Passing it switches the response to the paginated shape. |
-Preconditions: Caller can read the project; Under OAuth the project must belong to a workspace in the grant
-Returns: Without cursor/limitCount: a JSON array of ALL matching issues. With cursor or limitCount: {items, nextCursor, hasMore}. Each issue: id, title, description, status, priority, assigneeId, cycleId, milestoneId, estimate, dueDate, labelIds, requirementId, baselineId, startedAt, completedAt, actualHours, createdAt, updatedAt.
-Errors → fix:
-| When | Fix |
-|---|---|
-| Invalid OAuth tool arguments / 'OAuth grant does not permit this operation or resource.' on a paginated call | Bad cursor or limitCount: restart without cursor, keep the same filters, use an integer limitCount 1-100. |
-| Project <id> not found / You do not have access to this project | Check projectId with list_projects; ask the user for access. |
-Gotchas:
-- Always pass limitCount (e.g. 50) on big projects: without it the whole project is returned in one response.
-- Loop while hasMore is true, passing nextCursor.
-- Filters are exact matches and combine with AND.
-- The issue id is the value for the commit trailer 'LPM-Activity: <id>'.
-Pairs with: `list_projects`, `get_issue`, `update_issue`, `create_comment`
-CLI: `lpm issues list --project <projectId> [--status <status>] [--priority <priority>] [--assignee <userId>] [--cycle <cycleId>] [--milestone <milestoneId>] [--json]`
-
 ### `get_issue` [A] · read · portfolio:read · owner `lpm-deliver-activity` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
 Purpose: Returns one issue with all its fields, including materialized actual hours.
 Use when: Read the current state of an issue before changing it; Confirm an update or a creation took effect; User gives an activity ID and asks about it    Avoid when: You need many issues: use list_issues; You need the comments of the issue: use list_comments; You need its evidence files: use list_activity_attachments
@@ -931,27 +872,6 @@ Gotchas:
 - blockerContext is absent until set_project_issue_blocker_context runs; status 'resolved' only after resolve_project_issue_blocker_context, so an issue with status 'active' blockerContext is blocked even when no issue link blocks it.
 Pairs with: `list_issues`, `update_issue`, `list_comments`, `list_activity_attachments`
 CLI: `lpm issues get --project <projectId> --issue <issueId> [--json]`
-
-### `get_project_execution_context` [A] · read · portfolio:read · owner `lpm-plan-work` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
-Purpose: Returns the agent-oriented working context of a project: owner view, top open issues, active cycles, open milestones, decision inbox, scope/baseline publication gate and change sets.
-Use when: First call when you start working on a project: what is open, what is blocked on decisions, what to do next; User asks 'what should we work on now' for a project; Before proposing scope changes, to see the current baseline, working scope delta and publication gate    Avoid when: You only need issues with filters or more than 50 open issues: use list_issues; You only need the executive summary: use get_project_owner_surface; You need decisions only: use get_project_decision_inbox
-| Param | Req | Source (call → field) | Notes |
-|---|---|---|---|
-| projectId | yes | list_projects -> id |  |
-Preconditions: Caller can read the project AND holds a project governance role (project-owner, product-owner or delivery-lead; the ownerId counts): the tool reads the project decision inbox, which reads the owner surface; Under OAuth the project must belong to a workspace in the grant
-Returns: {project, generatedAt, ownerView, planning:{openIssues (max 50, not done/canceled, urgent first), activeCycles (status=active), openMilestones (status!=closed), nextRecommendedActivity}, governance (decision inbox, up to 20), scope:{currentBaseline, workingScope, delta, publicationGate}, changeSets:{totalCount, activeCount, items (first 20)}}.
-Errors → fix:
-| When | Fix |
-|---|---|
-| Project <id> not found / You do not have access to this project | Check projectId with list_projects; ask the user for access. |
-| -32003 (OAuth) not authorized | Project outside the grant or without a workspace; call get_mcp_connection_info. |
-| You do not have access to this owner surface | The caller has no project governance role; use get_project_read_model or list_issues instead, or ask the owner to assign a role. |
-Gotchas:
-- Built on get_project_read_model, so it is heavy and has the same API-key side effect (orphan requirements re-pointed to the current baseline).
-- openIssues is capped at 50; use list_issues for the rest.
-- Decisions listed in governance belong to the owner: present them, do not decide them.
-- With an API key and grounding enabled, the owner-surface step may run a document search that spends the daily grounding quota: do not call it in a loop.
-Pairs with: `list_projects`, `get_issue`, `list_issues`, `update_issue`, `get_project_decision_inbox`
 
 ### `list_project_repository_links` [A] · read · portfolio:read · owner `lpm-code-index` · profiles: full, read-only, portfolio, planning, requirements, roadmap-owner-advisor, roadmap-owner-operator, custom · sensitive: no · idempotency: naturally idempotent
 Purpose: List the GitHub read-only repository links attached to one project (active links only, unless includeArchived is true).

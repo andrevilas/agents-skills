@@ -1,4 +1,4 @@
-# Review project or portfolio health (read-only)
+# {{title}}
 > Done when: {{doneWhen}}
 {{banner:access}}
 {{banner:authority}}
@@ -6,7 +6,10 @@
 {{partial:tool-naming}}
 
 ## 1. Use when / Do not use
-Use when: a health, status or risk review ("o que precisa da minha atenção?", "revisão semanal").
+Use when:
+- "revisão de saúde do projeto <nome>", "is project <id> healthy?", "list the risks"
+- "o que precisa da minha atenção no portfólio?", "weekly review", "relatório de status semanal"
+- "what changed?", intake queue health, workspace readiness
 Do not use:
 | If the request is about | Use |
 |---|---|
@@ -18,80 +21,63 @@ Do not use:
 | historical health trends (daily exports) | {{skill:lpm-integrations}} |
 
 ## 2. Preconditions
-1. Connector (ChatGPT/Claude) = {{tool:get_project_analytics}} absent: one project → row 3, portfolio → P3. Rows 6, 7, P1, P2: LPM API key, profile read-only (portfolio/planning lack {{tool:get_project_scope_resolution_context}}, {{tool:list_aish_jobs}}).
-2. Exception to core rule 2: -32003 or a missing tool in P1/P2 → do NOT stop; run P4, `howToEnable` text under Pending.
-3. Owner surface and risk tools need a governance role; denied → row 4.
-4. Name the scope (workspace/project/cycle) first. Archived projects: not reviewed. No write tool.
-5. `ownerView.finance` (always sent): only when asked, as "owner-level rollups, not a budget authorization".
-6. Never offer to cancel, delete or clean up anything. Both → {{skill:lpm-aish-delivery}}: `orphan-aish-jobs` "lineage repair or administrative closure with evidence"; `orphan-autopilot-issues` "inspect run and job lineage before any cancel" (title heuristic).
+1. Run one §4 row. CALL row: make that one call, reply with §8. Playbook row: open its file, do its steps in order, reply with its Answer block only.
+2. Read-only: no write tool. A fix asked together with a review → the playbook's step 1 asks first; a fix alone → §6.
+3. Connector = {{tool:get_project_analytics}} is not in your tool list. -32003 inside playbook project → it switches to playbook connector (exception to core rule 2).
 
 ## 3. Inputs
-| Input | Get it from (call → field) | If missing |
+| Input | Where it comes from | If missing |
 |---|---|---|
-| scope | the user: project, cycle or workspace | ask (§6) |
-| workspaceId | {{tool:list_workspaces}} → `id` (the only one, or exactly one `name` match) | ask |
-| projectId | the user's id; a name → P1 step 0; P3 step 1 `ownerView.projects[].projectId` | ask |
-| cycleId | {{tool:list_cycles}}(projectId) → `id` with `status == "active"` | none → "no active cycle" |
+| projectId | the user, or {{tool:list_projects}} → `id` of the one name match | ask "Which project? (id or name)" |
+| workspaceId | the user or this session, or {{tool:list_workspaces}} → `id` | ask "Which workspace?" |
 
 ## 4. Decision table (first match wins)
 | # | If the user wants / you see | Do | Auth | Stop if |
 |---|---|---|---|---|
-| 1 | a fix (change, close, cancel, assign) | owner skill = §1 table | A | before the first call → §6 row 2; after yes → continue (row 10/12) |
-| 2 | burndown, velocity, trend | "not returned over MCP"; P1 / P4 | A | history → {{skill:lpm-integrations}} |
-| 3 | a review of one project on a connector, or -32003 / missing tool in P1/P2 | P4 ({{ref:flow-portfolio-connector}}) | A | P4 tool missing → core rule 2 |
-| 4 | "You do not have access to this owner surface" | skip P1 step 3, P2; risks ← {{tool:get_project_read_model}} `ownerView.risks[]` | A | ask for a role |
-| 5 | project risks, "list the risks" | P2 | A | — |
-| 6 | late or unassigned items | {{tool:list_overdue_project_issues}}, {{tool:list_unassigned_project_issues}}(projectId, limitCount=100) | A | fix → {{skill:lpm-plan-work}} |
-| 7 | intake queue health | {{tool:get_operational_analytics}}(projectId) | A | → {{skill:lpm-intake-triage}} |
-| 8 | owner-agent snapshot, "what changed" | {{tool:get_workspace_owner_context_bundle}}(workspaceId, sinceVersion) ({{ref:integrity-signals}}) | A | connector → P3 |
-| 9 | workspace readiness | {{tool:generate_workspace_readiness_report}}(workspaceId) | A | → {{skill:lpm-executive-context}} |
-| 10 | weekly review | one project: P1 (a name → step 0) + P2; else P3, then P1 + P2 (connector P4) per candidate | A | over 5 candidates → ask |
-| 11 | portfolio, "what needs my attention" | P3 | A | — |
-| 12 | any other review of one project or cycle | P1, a name → step 0 (cycle: Scope names `cycleId`; metrics are project-wide) | A | archived → "not reviewed" |
+| 1 | a review of one project on a ChatGPT/Claude connector | playbook {{ref:flow-connector}} | A | — |
+| 2 | health, status, risks or weekly review of one project or cycle; burndown, velocity, trend | playbook {{ref:flow-project}} | A | archived → "not reviewed" |
+| 3 | portfolio, "what needs my attention", weekly review of a workspace | playbook {{ref:flow-portfolio}} | A | too large → user picks ≤ 5 |
+| 4 | owner-agent snapshot, "what changed" | playbook {{ref:flow-changes}} | A | connector → row 3 |
+| 5 | late (overdue) items | CALL {{tool:list_overdue_project_issues}} {"projectId":"<input:projectId>","limitCount":100} | A | fix → {{skill:lpm-plan-work}} |
+| 6 | unassigned items | CALL {{tool:list_unassigned_project_issues}} {"projectId":"<input:projectId>","limitCount":100} | A | fix → {{skill:lpm-plan-work}} |
+| 7 | intake queue health | CALL {{tool:get_operational_analytics}} {"projectId":"<input:projectId>"} | A | fix → {{skill:lpm-intake-triage}} |
+| 8 | workspace readiness | CALL {{tool:generate_workspace_readiness_report}} {"workspaceId":"<input:workspaceId>"} | A | fix → {{skill:lpm-executive-context}} |
 
 ## 5. Procedures
-### P1 Project health (API key) — rows 2, 10, 12
-0. Project given by name: {{tool:list_projects}}(workspaceId) → exactly one `name` match → projectId = its `id`; 0 or 2+ → ask "Which project: <names>?".
-1. Before any other project read: {{tool:get_project_scope_resolution_context}}(projectId) → `currentBaseline`, `requirementsAwaitingBaseline.count` = n. n > 0 → Pending "<n> requirements awaiting baseline → lpm-requirements-scope — the owner" (not optional). n > 0 and any later owner surface, read model or risk read in this run → the Done line MUST end with "; LPM may have re-attached <n> orphan requirements (server side effect)".
-2. {{tool:get_project_analytics}}(projectId) → status = `metrics.healthStatus` + threshold fired ({{ref:health-thresholds}}). `metrics.integrity.signals[]` non-empty → never "healthy" ({{ref:integrity-signals}}); `healthStatus == "healthy"` anyway → status = `metrics.integrity.status` (source: get_project_analytics metrics.integrity.status) + Pending "LPM defect: healthStatus healthy with integrity signals".
-3. Skip when P2 runs (quota): {{tool:get_project_owner_surface}}(projectId) → `ownerView.delivery`, `.governance`, `.decisions.pendingCount` (> 0 → Pending "decisions → lpm-governance-decisions — the owner").
-4. `blockedIssuesOpen > 0` → {{tool:list_blocked_project_issues}}(projectId, limitCount=25) (denied → step 2 `projects[0].blockedIssues`); {{tool:get_project_dependency_summary}}(projectId) → `criticalBlockers[]`.
-5. Verify: every number is in a result of steps 1–4.
-### P2 Owner risks — rows 5, 10
-1. P1 step 1 first. {{tool:list_project_resolution_risks}}(projectId) → `risks[]` (riskId = `id`, `severity`, `entityCount`, `requiresHumanReview`); empty → "no firing risks". Decisions = `entityCount` of `governance:decision-needed` (absent → 0).
-2. Up to 5, high first: {{tool:get_project_resolution_context}}(projectId, riskId, limitCount=25); actions only → {{tool:get_project_resolution_action_catalog}}; all items → {{tool:list_project_resolution_entities}} to `nextCursor` null.
-3. Risk id → owner skill ({{ref:integrity-signals}}). `allowed` is not a permission. `requiresHumanReview == true` → write "Who decides: the owner" in that Recommended actions row and continue. NOT a stop; no decision request.
-4. Verify: every risk id is in step 1 `risks[].id`.
-P3 (portfolio), P4 (connector): {{ref:flow-portfolio-connector}}.
+| Playbook | Use when | File |
+|---|---|---|
+| project | health, status, risks or weekly review of one project or cycle, with an LPM API key | {{ref:flow-project}} |
+| connector | review of one project on a ChatGPT/Claude connector, or when playbook project hit -32003 | {{ref:flow-connector}} |
+| portfolio | portfolio or workspace review, "what needs my attention", or a weekly review of a whole workspace | {{ref:flow-portfolio}} |
+| changes | owner-agent snapshot of a workspace, or "what changed since version <v>", with an LPM API key | {{ref:flow-changes}} |
 
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
 |---|---|
 | no scope | "Which scope: project <name>, one of its cycles, or workspace <name>?" |
-| a fix is asked | BEFORE any tool call ask exactly (user's language): "Esta revisão não altera nada; <the fix asked> é feito com <owner skill>. Termino o relatório primeiro?" Yes → run the review with no further question; put the fix under Pending and Next. No → hand off to <owner skill> and STOP. |
+| only a fix (change, close, cancel, assign), no review | name the owner skill from §1 and stop; never offer to cancel, delete or clean up |
 
 ## 7. Verify
 | After | Re-read with | Pass when |
 |---|---|---|
-| a fix by someone | {{tool:get_project_analytics}} after ~10 s | signal gone |
-| the report | {{ref:report-template}} | each number names its tool |
+| a fix made with another skill | {{tool:get_project_analytics}} after ~10 s (cached) | the signal or count is gone |
+| the report | the steps run | each number names its tool, else "not read" |
 
 ## 8. Report (copy and fill)
-Full report: {{ref:report-template}}.
-Write every label and sentence in the user's language (PT-BR request → PT-BR report: Escopo, Feito, Evidências, Pendências, Próximo, "sem filtro de ciclo"). Keep ids, tool names and riskIds verbatim.
+A playbook's Answer block is this report, filled in; send it alone.
 ```text
-Scope: <workspace / project / cycle, with ids>
-Done: read-only review; status <healthy|watch|critical> (source: <tool>)[; LPM may have re-attached <n> orphan requirements (server side effect)]
-Evidence: <metric = value (tool)>; risks <riskId severity>
+Scope: <workspaceId> / <projectName (projectId) | all non-archived projects> / <no cycle filter | cycle: metrics are project-wide>
+Done: read-only review; status <healthy | watch | critical> (source: <tool>)[; LPM may have re-attached <n> orphan requirements (server side effect)]
+Evidence: <metric value (tool)>; risks <riskId severity> | not read
 Pending: <finding → owner skill — who decides> | none
-Next: <owner skill + its first step>
+Next: <the ASK or STOP text that ended the run> | <owner skill + its first action>
 ```
-`[…]`: P1 step 1.
 
 ## 9. Failures → fix
-{{errors:auto}}
 | Error or result contains | Do |
 |---|---|
+| "You do not have access to this project" (get_project_analytics) | archived or not visible: "not reviewed"; do not retry |
+| "You do not have access to this owner surface" | no project governance role: risks and decisions "not read"; ask the project owner for a role |
 
 ## 10. Tools and references
 {{tools:index}}

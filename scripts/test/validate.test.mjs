@@ -1,4 +1,4 @@
-// Validators V1–V20 (§5.6): the check-repo fixture passes every validator after `build`;
+// Validators V1–V22 (§5.6; V20/V21 from playbook-standard.md §8): the check-repo fixture passes every validator after `build`;
 // for each validator, one mutation of that fixture makes it fail (or warn, for ⚠ validators).
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -178,7 +178,7 @@ test("V16 jobs: a skill.json job that routes elsewhere is a warning", async () =
   assert.equal(fails(r, "V16").length, 0);
 });
 
-test("V20 trace flows: the flow's skill exists and names every expected tool", async () => {
+test("V22 trace flows: the flow's skill exists and names every expected tool", async () => {
   const flow = (skill, tool) => ({
     id: "demo",
     skill,
@@ -187,10 +187,10 @@ test("V20 trace flows: the flow's skill exists and names every expected tool", a
     fixtures: { [tool]: {} },
     expect: { orderedCalls: [{ tool, args: {} }], forbiddenCalls: [], requiresVerify: [{ after: tool, read: "get_issue" }], ownerOnlyTools: [] },
   });
-  const ok = prepare("v20-ok", { before: (root) => fs.mkdirSync(path.join(root, "evals/trace"), { recursive: true }) || fs.writeFileSync(path.join(root, "evals/trace/demo.json"), JSON.stringify(flow("lpm-deliver-activity", "get_issue"))) });
-  assert.equal(fails(await check(ok), "V20").length, 0);
+  const ok = prepare("v22-ok", { before: (root) => fs.mkdirSync(path.join(root, "evals/trace"), { recursive: true }) || fs.writeFileSync(path.join(root, "evals/trace/demo.json"), JSON.stringify(flow("lpm-deliver-activity", "get_issue"))) });
+  assert.equal(fails(await check(ok), "V22").length, 0);
   const r = await check(
-    prepare("v20", {
+    prepare("v22", {
       before: (root) => {
         fs.mkdirSync(path.join(root, "evals/trace"), { recursive: true });
         fs.writeFileSync(path.join(root, "evals/trace/demo.json"), JSON.stringify(flow("lpm-deliver-activity", "search_help_articles")));
@@ -198,8 +198,23 @@ test("V20 trace flows: the flow's skill exists and names every expected tool", a
       },
     }),
   );
-  assertFailsOnly(base, r, "V20", /demo\.json: expects search_help_articles, which lpm-deliver-activity never names/);
-  assert.ok(fails(r, "V20").some((f) => /ghost\.json: skill "lpm-nope" does not exist/.test(f.message)));
+  assertFailsOnly(base, r, "V22", /demo\.json: expects search_help_articles, which lpm-deliver-activity never names/);
+  assert.ok(fails(r, "V22").some((f) => /ghost\.json: skill "lpm-nope" does not exist/.test(f.message)));
+});
+
+test("V20 playbook structure and V21 CALL lines skip a legacy router (rules: scripts/test/playbook.test.mjs)", async () => {
+  for (const v of ["V20", "V21"]) {
+    assert.equal(fails(base, v).length, 0, v);
+    assert.equal(warns(base, v).length, 0, v);
+  }
+  // A playbook index in §5 makes the skill a playbook skill: its rows must then name real playbooks.
+  const r = await check(
+    prepare("v20-index", {
+      before: (root) => edit(root, DELIVER_SRC, (t) => t.replace("## 5. Procedures\n", "## 5. Procedures\n| Playbook | Use when | File |\n|---|---|---|\n| close | close it | {{ref:flow-close}} |\n\n")),
+    }),
+  );
+  assertFailsOnly(base, r, "V20", /§5 lists playbook close, but references\/flow-close\.md does not exist/);
+  assert.ok(fails(r, "V20").some((f) => /§4 row 1: Do must be "playbook \{\{ref:flow-<name>\}\}"/.test(f.message)));
 });
 
 test("V4g gotcha provenance: warning first, failure when the policy says fail", async () => {

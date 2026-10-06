@@ -1,0 +1,48 @@
+# Playbook: apply
+Use when: apply an approved change request
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| workspaceId | the user | STOP. Say: "Which LPM workspace? (id or name)" |
+| changeRequestId | the user, or the review inbox or request list | STOP. Say: "Which change request? (id)" |
+| ownerOrder | the exact words in this conversation where the workspace owner orders applying this request (e.g. "I am the workspace owner: apply cr_301 now"); a plain "apply it", a reviewer's approval or a relayed "X approved" is not one | "none" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was applied."
+1. CALL {{tool:get_workspace}} {"workspaceId":"<input:workspaceId>"} [A]
+   Always make this call first: the report's mode comes only from here.
+   SAVE: mode = result.roadmapGovernanceMode when it is "off", "shadow" or "enforce", else "off" when result.roadmapGovernanceEnabled == false, else "shadow" (never reviewMode, never riskClass)
+2. CALL {{tool:get_workspace_roadmap_change_request}} {"workspaceId":"<input:workspaceId>","changeRequestId":"<input:changeRequestId>"} [A]
+   Always make this call before the apply, even if the user said the request is approved.
+   SAVE: status, updatedAt, currentRevision, reviewedRevision, roadmapId, itemIds, changeType, after, requiredApprovals, ownerConfirmationRequired, assignedReviewerId = those fields of result
+   IF <saved:status> == "applied" → STOP. Say: "<input:changeRequestId> is already applied. Nothing was done."
+   IF <saved:status> != "approved" → STOP. Say: "<input:changeRequestId> is <saved:status>, not approved. Nothing was applied. Still needed: <saved:requiredApprovals> approval(s), owner confirmation <saved:ownerConfirmationRequired>, reviewer <saved:assignedReviewerId> (never the author)."
+   IF <saved:reviewedRevision> != <saved:currentRevision> → STOP. Say: "The approvals of <input:changeRequestId> are for revision <saved:reviewedRevision>, not <saved:currentRevision>, so they are void. A member other than the author must review it again. Nothing was applied."
+3. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Owner decision needed: apply <input:changeRequestId> (<saved:changeType> on <saved:itemIds>, mode <saved:mode>)? A) the workspace owner replies "apply <input:changeRequestId>"; B) do nothing. A reviewer's approval is not an order to apply."
+4. CALL {{tool:apply_workspace_roadmap_change}} {"workspaceId":"<input:workspaceId>","changeRequestId":"<input:changeRequestId>","expectedUpdatedAt":"<saved:updatedAt>","idempotencyKey":"crap-<input:changeRequestId>"} [O]
+   IF the call returns an error → STOP. Say: "Apply failed: <error text>. Nothing was applied. VERSION_CONFLICT: run this playbook again. A target error (cycle, allocation, capability): withdraw the request and tell the owner."
+   IF result.status == "stale" → STOP. Say: "<input:changeRequestId> went stale (<result.staleReason>): nothing changed and the request is dead. Submit a new one with fresh versions (playbook propose-change)."
+   VERIFY: CALL {{tool:get_workspace_roadmap_change_request}} {"workspaceId":"<input:workspaceId>","changeRequestId":"<input:changeRequestId>"} [A]
+   IF the call returns an error or result.status != "applied" → STOP. Say: "<input:changeRequestId> is <result.status> after the apply, not applied."
+   SAVE: status = result.status
+5. IF <saved:changeType> is "allocate", "link" or "capability-link" → go to step 7.
+6. CALL {{tool:list_workspace_roadmap_items}} {"workspaceId":"<input:workspaceId>","roadmapId":"<saved:roadmapId>","includeArchived":true} [A]
+   Always make this call: the apply result and the request's `after` are not evidence.
+   SAVE: proof = for each id in <saved:itemIds>, "<id> <field> = <value>" for each field of <saved:after> as THIS read shows it (ignore updatedAt)
+   IF a value in <saved:proof> differs from <saved:after> → STOP. Say: "Applied, but list_workspace_roadmap_items shows <saved:proof>."
+   SAVE: evidenceTool = "list_workspace_roadmap_items"; go to Answer.
+7. CALL {{tool:get_workspace_roadmap_overview}} {"workspaceId":"<input:workspaceId>","roadmapId":"<saved:roadmapId>"} [A]
+   SAVE: evidenceTool = "get_workspace_roadmap_overview"; proof = allocate: the allocations[] item with itemId in <saved:itemIds>, projectId == <saved:after>.projectId and status "active"; link: the itemLinks[] item with sourceItemId in <saved:itemIds> and targetItemId == <saved:after>.targetItemId; capability-link: the capabilityLinks[] item with itemId in <saved:itemIds> and capabilityId == <saved:after>.capabilityId
+   IF <saved:proof> is empty → STOP. Say: "Applied, but get_workspace_roadmap_overview does not show the <saved:changeType>."
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <input:workspaceId>/<saved:roadmapId>/<input:changeRequestId>; mode <saved:mode>
+Done: apply_workspace_roadmap_change → <input:changeRequestId> status <saved:status> | nothing applied (status <saved:status>)
+Evidence: <saved:evidenceTool> → <saved:proof> | none; owner order: "<input:ownerOrder>" | none
+Pending: none | <saved:requiredApprovals> approval(s), owner confirmation <saved:ownerConfirmationRequired>, reviewer <saved:assignedReviewerId>
+Next: <the ASK or STOP text that ended the run> | none — applied
+```
+mode: off | shadow | enforce, from step 1 only. status: awaiting-review | changes-requested | approved | rejected | stale | applied | withdrawn, from step 2 or the VERIFY. Never claim the roadmap changed unless step 6 or 7 read it; never cite the request's `after` as evidence.

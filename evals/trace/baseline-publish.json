@@ -2,7 +2,7 @@
   "id": "baseline-publish",
   "title": "Baseline publish: owner order, pre-publication checks, one live publication, closure re-read",
   "skill": "lpm-requirements-scope",
-  "source": "lpm-requirements-scope §4 row 10 → P5 Publish a baseline (+ references/publication-checklist.md)",
+  "source": "lpm-requirements-scope §4 row 10 → playbook publish-baseline (references/flow-publish-baseline.md)",
   "request": "Workspace ws_trace, project prj_trace. Change set cs_42 (\"Q4 scope: SSO and audit log\") was approved. Publish the new baseline from the working scope: name \"Escopo Q4\", version \"v2.0\".",
   "ownerInstruction": "I am the workspace owner: publish the working scope of project prj_trace as baseline \"Escopo Q4\" version \"v2.0\", with change set cs_42.",
   "fixtures": {

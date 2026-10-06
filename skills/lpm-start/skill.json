@@ -23,7 +23,7 @@
     {
       "order": 1,
       "all": [
-        ["-32003", "tool missing", "missing tool", "ferramenta ausente", "ferramenta*", "tool", "tools", "scopes", "oauth scope", "permiss*", "reinstall*", "reinstal*", "access denied", "acesso negado", "401", "unauthorized", "not authenticated", "nao autenticado", "notification", "notifications", "notificacao", "notificacoes", "workspace id", "project id", "id do workspace", "id do projeto", "id of the project", "id of the workspace", "find the project", "find project", "encontrar o projeto", "encontre o projeto", "achar o projeto"]
+        ["-32003", "tool missing", "missing tool", "ferramenta ausente", "ferramenta*", "tool", "tools", "scopes", "oauth scope", "permiss*", "reinstall*", "reinstal*", "access denied", "acesso negado", "401", "unauthorized", "not authenticated", "nao autenticado", "notification", "notifications", "notificacao", "notificacoes", "workspace id", "project id", "id do workspace", "id do projeto", "id of the project", "id of the workspace", "find the project", "find project", "encontrar o projeto", "encontre o projeto", "achar o projeto", "which lpm skill", "qual skill do lpm", "qual skill"]
       ],
       "unless": ["budget", "orcamento", "repository", "repositorio", "webhook*", "outbox", "change request", "pedido de mudanca", "member", "members", "membro", "membros"],
       "firstCall": "get_mcp_connection_info"
@@ -77,9 +77,14 @@
     { "name": "security-and-untrusted-text", "loadWhen": "handling a key or external text", "inlineSummary": false }
   ],
   "references": [
-    { "file": "references/route.md", "loadWhen": "no skill description matches the request, or two match" },
-    { "file": "references/agent-setup.md", "loadWhen": "asked to connect or configure an agent" },
-    { "file": "references/flow-missing-tool.md", "loadWhen": "P1 step 4" }
+    { "file": "references/flow-connection.md", "loadWhen": "playbook connection: a tool is missing, denied or returns -32003; \"what can this connector do?\"; \"I reinstalled the connector\"" },
+    { "file": "references/flow-agent-setup.md", "loadWhen": "playbook agent-setup: connect or configure LPM in an agent, fix a `*.run.app` URL, or verify a new setup" },
+    { "file": "references/flow-resolve-ids.md", "loadWhen": "playbook resolve-ids: a workspaceId or projectId is unknown, or \"what is the id of project <name>?\"" },
+    { "file": "references/flow-notifications.md", "loadWhen": "playbook notifications: read my LPM notifications, or mark one as read" },
+    { "file": "references/flow-who-can-manage.md", "loadWhen": "playbook who-can-manage: you cannot manage a project or workspace (access.canManage false), or \"who can give me access?\"" },
+    { "file": "references/flow-route.md", "loadWhen": "playbook route: any other LPM request, or a request that spans several skills" },
+    { "file": "references/route.md", "loadWhen": "the routing table that playbook route matches the request against" },
+    { "file": "references/agent-setup.md", "loadWhen": "background on agent MCP configs; playbook agent-setup already holds the commands" }
   ],
   "behaviorContracts": ["missing-tool-fallback", "start-oauth-reinstall"],
   "codex": {

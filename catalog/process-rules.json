@@ -56,11 +56,11 @@
     },
     {
       "rule": "Advisor pipeline, fields, `codeEvidence.status`, guards, certainty, code ≠ production, docs/tests ≠ implementation",
-      "enforcedBy": "`advisor-semantics.md`; `lpm-ask-advisor` rules; `answer-template.md`"
+      "enforcedBy": "`advisor-semantics.md`; `lpm-ask-advisor` playbooks (Answer blocks)"
     },
     {
       "rule": "`read_repository_file_excerpt` takes a workspace or project link id",
-      "enforcedBy": "`lpm-ask-advisor` tools card + Inputs"
+      "enforcedBy": "`lpm-ask-advisor` tools card; playbooks take repositoryLinkId from a search hit"
     },
     {
       "rule": "Scans > 24 h stale; refresh → activate(versionId, expectedGeneration); 5,000-chunk cap",

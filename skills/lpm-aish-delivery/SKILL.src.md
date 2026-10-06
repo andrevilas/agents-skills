@@ -25,7 +25,7 @@ Do not use:
 | workspaceId, projectId | {{tool:get_aish_job}}(jobId) → same fields; else {{skill:lpm-start}} §3 | ask |
 | jobId | the user, or {{tool:list_aish_jobs}}(projectId) → `id` with this `issueId` | 0 or 2+ → ask |
 | issueId, sessionId | {{tool:get_aish_job}}(jobId) → `issueId`, `workflowBinding.sessionId` | null → rows 3–5b go to row 2; 6–8, 12 go on |
-| activityId | P1 step 4a | none → {{skill:lpm-deliver-activity}} |
+| activityId | {{tool:list_workspace_activities}} → the issue feed entry id, never issueId | none → {{skill:lpm-deliver-activity}} |
 | outcome, reason, target | the user (approval reason: the owner) | ask; never invent |
 
 ## 4. Decision table (first match wins)
@@ -33,35 +33,23 @@ Do not use:
 |---|---|---|---|---|
 | 1 | status or explanation only (closure question → 5a) | §3 reads | A | never write |
 | 2 | rows 3–5b: `workflowBinding` null or "Factory delivery governance is missing" | {{skill:lpm-deliver-activity}} | — | always |
-| 3 | add a screenshot, video, test report, runner file | {{ref:flow-evidence}} steps 1–4 | A | visual, job not `completed` |
-| 4 | block closure on a verified defect; clear a fixed one | {{ref:flow-evidence}} steps 5–6 | C | finding you did not open → ask first |
-| 5a | "can I close it?", "posso fechar?" with no 5b word | P1 steps 0–6, no writes; gaps → Pending; never {{tool:update_issue}} | A | gap → "not yet" + Pending |
-| 5b | "close it", "feche", "conclua", "marque como concluída" (even with a question) | P1 steps 0–8; no confirmation: the user's words are the order | A | `blocked` or active job |
-| 6 | preserve or attach the execution report | {{ref:flow-evidence}} steps 7–11 | A | `canCollect == false` |
-| 7 | refresh the release-readiness brief | {{ref:flow-evidence}} steps 12–13 | A | — |
-| 8 | automation delivery `dead-lettered` | {{ref:flow-evidence}} steps 14–15 | C | `pack-integrity`, `source-scope`, `source-limit` |
-| 9 | create a release package | {{ref:flow-release}} steps 1–5 | C | not funded → {{skill:lpm-ai-cost}} |
-| 10 | approve the release package | {{ref:flow-release}} step 1 ({{tool:get_aish_execution_session}} → releaseId), step 8 ({{tool:get_aish_release}} → `status`, `package`), step 6 with the owner's order quoted, step 7 | O | no owner order → §6 |
-| 11 | claim, deploy, receipt of an approved release | {{ref:flow-release}} steps 8–15 | C | "Release executor identity mismatch." |
+| 3 | add a screenshot, video, test report, runner file | {{ref:flow-evidence}} | A | visual, job not `completed` |
+| 4 | block closure on a verified defect; clear a fixed one | {{ref:flow-finding}} | C | finding you did not open → ask first |
+| 5a | "can I close it?", "posso fechar?" with no 5b word | {{ref:flow-close}} with order="question"; evidence gaps → Pending | A | gap → "not yet" + Pending |
+| 5b | "close it", "feche", "conclua", "marque como concluída" (even with a question) | {{ref:flow-close}} with order="close"; the user's words are the order | A | `blocked` or active job |
+| 6 | preserve or attach the execution report | {{ref:flow-pack}} | A | `canCollect == false` |
+| 7 | refresh the release-readiness brief | {{ref:flow-automation}} | A | — |
+| 8 | automation delivery `dead-lettered` | {{ref:flow-automation}} | C | `pack-integrity`, `source-scope`, `source-limit` |
+| 9 | create a release package | {{ref:flow-release-create}} | C | not funded → {{skill:lpm-ai-cost}} |
+| 10 | approve the release package | {{ref:flow-release-approve}} | O | no owner order → §6 |
+| 11 | claim, deploy, receipt of an approved release | {{ref:flow-release-deploy}} | C | "Release executor identity mismatch." |
 | 12 | repair a job; leftover jobs; job ≠ activity | {{ref:flow-repair}} | C | job or outcome not named |
 
 ## 5. Procedures
-### P1 DoD audit and close — rows 5a, 5b ({{ref:completion-checklist}})
-All steps [A]; row 5b: never ask before {{tool:update_issue}}. Copy ids, hashes and arguments character-for-character; never retype, shorten or send `<uuid>`/`<auto>`.
-0. {{tool:get_aish_job}}(jobId from the user) [A] → `workspaceId`, `projectId`, `issueId`, `workflowBinding.sessionId`; `workflowBinding` null → row 2.
-1. {{tool:audit_aish_issue_delivery}}(projectId, issueId) [A] → `status`, `failures[]`. "Factory delivery governance is missing" → row 2.
-2. `blocked`: 5a → Pending; 5b → fix each `failures[]` item ({{ref:dod-audit}} § Failures), restart at step 1; unfixable → Pending, STOP.
-3. {{tool:list_aish_jobs}}(projectId): a job of this `issueId` is `queued`/`leased`/`running` → Pending, STOP.
-4. Run 4a; {{tool:list_activity_attachments}}(projectId, activityId) lacks `aish-pack-<jobId>.md` for a completed job of the issue: 5a → Pending; 5b → 4b–4e (`evidenceId` ≠ attachment):
-   - 4a. activityId = {{tool:list_workspace_activities}}(workspaceId, projectId, limit=200) → newest `id` with `targetType == "issue"`, `targetId == issueId` (never the issueId)
-   - 4b. {{tool:get_aish_execution_report}}(projectId, jobId) → `report.fingerprint`; `canCollect == false` → STOP (§2.1)
-   - 4c. {{tool:collect_aish_execution_pack}}(projectId, jobId, commandId="pack-<jobId>-<yyyymmdd>-<n>", expectedFingerprint=`report.fingerprint`) [A] → `pack.id`
-   - 4d. {{tool:export_aish_execution_pack}}(projectId, jobId, packId=`pack.id`, commandId="export-<pack.id first 12>-md", format="markdown") [A] → `content`
-   - 4e. {{tool:upload_activity_attachment}}(projectId, activityId, fileName="aish-pack-<jobId>.md", fileType="text/markdown", contentBase64=<base64 of `content`>, description="AISH pack <pack.id>", idempotencyKey="ev-pack-<pack.id first 24>") [A]
-5. {{tool:get_aish_execution_session}}(sessionId) → a `releases[]` item of this `issueId` → `smoke-<releaseId first 12>.txt` must be in step 4, else Pending, STOP.
-6. Audit again [A] → must be `passed`. Row 5a: answer now, STOP.
-7. Row 5b: {{tool:update_issue}}(projectId, issueId, status="done") [A]. Send only `status`.
-8. Verify: {{tool:list_workspace_activities}}(workspaceId, projectId, limit=50) → newest issueId entry: `issue_completed` (`reused: true` → already done).
+### P1 DoD audit and close — rows 5a, 5b
+1. Open {{ref:flow-close}}. A readiness question uses order="question"; an explicit closure instruction uses order="close".
+2. Follow its evidence, active-job, audit and read-back checks. When it switches to pack, complete {{ref:flow-pack}} and return to close.
+3. Verify: report closure only after the final read shows status done. A completed job alone is not a completed activity.
 
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
@@ -78,7 +66,7 @@ approve_aish_release(releaseId=<releaseId>, expectedPackageHash=<releaseId>, rea
 ## 7. Verify
 | After | Re-read with | Pass when |
 |---|---|---|
-| a flow step | the flow's § Verify | as listed there |
+| a flow step | the selected flow’s VERIFY or Verify section | as listed there |
 
 ## 8. Report (copy and fill)
 Write the report in the user's language.

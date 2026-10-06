@@ -1,5 +1,5 @@
 # AISH CLI for jobs and cockpit sessions
-Load when: using the CLI
+Load when: using the `lpm aish` CLI
 Applies to: lpm-aish-jobs    Source: `catalog/lpm-cli.snapshot.json` (lpm `src/cli/lpm.ts` `commands` Map); cards `cli` fields; digest `legacy-aish-governed-development-operator.md` §2.2
 
 ## Summary

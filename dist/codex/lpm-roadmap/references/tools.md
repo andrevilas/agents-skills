@@ -293,7 +293,7 @@ Errors → fix:
 | Invalid workspace roadmap status: <value>. | Use draft or active, or omit status. |
 | Use the archive command to archive a workspace roadmap. | Do not pass status archived. |
 | You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.') | Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry. |
-| Connector: JSON-RPC -32003 'The OAuth scope "roadmap:manage" is required for ...' | Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes. |
+| Connector: JSON-RPC -32003 'The OAuth scope "roadmap:manage" is required for ...' | Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes. |
 | Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id) | Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry. |
 Gotchas:
 - Every call creates a new roadmap (no dedupe by title): check list_workspace_roadmaps first and never retry blindly after a timeout.
@@ -324,7 +324,7 @@ Errors → fix:
 | Workspace roadmap title cannot be empty. | Pass a non-empty title or omit it. |
 | Invalid workspace roadmap status: <value>. / Use the archive command to archive a workspace roadmap. | Use draft or active; archive with archive_workspace_roadmap. |
 | You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.') | Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry. |
-| Connector: JSON-RPC -32003 'The OAuth scope "roadmap:manage" is required for ...' | Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes. |
+| Connector: JSON-RPC -32003 'The OAuth scope "roadmap:manage" is required for ...' | Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes. |
 | Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id) | Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry. |
 Gotchas:
 - Also works on archived headers: setting status draft or active on an archived roadmap un-archives it (archivedAt/archiveReason stay set).
@@ -355,7 +355,7 @@ Errors → fix:
 | Invalid roadmap item lifecycle: <value>. | Omit lifecycle (draft) or pass imported. |
 | Invalid roadmap item priority: <value>. | Use urgent, high, medium, low or none. |
 | You do not have permission to manage this workspace roadmap (connectors get JSON-RPC -32003 'The requested operation or resource is not authorized.') | Only the workspace owner or an owner/admin member may do this. Stop and ask the workspace owner; do not retry. |
-| Connector: JSON-RPC -32003 'The OAuth scope "roadmap:manage" is required for ...' | Call get_mcp_connection_info. The user must remove and reinstall the connector and tick roadmap:manage under 'Permissões adicionais (opcional)'; disconnect/connect does not refresh scopes. |
+| Connector: JSON-RPC -32003 'The OAuth scope "roadmap:manage" is required for ...' | Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes. |
 | Connector: JSON-RPC -32602 'Invalid OAuth tool arguments.' (data.field + data.problem: unknown_field, too_long, invalid_value, invalid_id) | Follow data.hint: drop fields not in the schema, shorten text, use an allowed value or a real document ID, then retry. |
 Gotchas:
 - No dedupe: check list_workspace_roadmap_items for the same title first and never retry blindly after a timeout.
@@ -477,7 +477,7 @@ Errors → fix:
 | Archived roadmap items cannot be edited / Materialized roadmap items cannot be edited / Use the review command to change roadmap item lifecycle | Use changeType restore first, or create follow-up scope; use changeType lifecycle for lifecycle |
 | INVALID_LIFECYCLE_TRANSITION / Invalid roadmap item lifecycle transition | Follow the allowed transitions listed in gotchas |
 | Roadmap item not found (OAuth: OPERATION_FAILED) | Check itemId/itemIds and workspaceId with list_workspace_roadmap_items |
-| -32003 scope roadmap:manage required | Call get_mcp_connection_info; the user must reinstall the connector and tick roadmap:manage |
+| -32003 scope roadmap:manage required | Call get_mcp_connection_info and follow howToEnable. roadmap:manage is a default OAuth scope; only portfolio:manage is opt-in. A stale grant may require connector removal and reinstallation; reconnect alone does not refresh scopes. |
 Gotchas:
 - Risk: description/category edit of one item = routine; title or priority fields, any non-edit type, or more than 1 item = material; more than 20 items or materialize = exceptional.
 - Lifecycle transitions: draft->imported/reviewed/deferred/rejected; imported->reviewed/deferred/rejected; reviewed->approved/deferred/rejected; approved->materialized/deferred; deferred->reviewed; rejected->reviewed; materialized->delivered; delivered->closed.
@@ -833,3 +833,16 @@ Errors → fix:
 Gotchas:
 - Raw record: it does not tell your role; use list_workspaces access.canManage for that.
 Pairs with: `list_workspaces`, `list_workspace_projects`
+
+### `get_mcp_connection_info` [A] · read · workspace:read · owner `lpm-start` · profiles: full, read-only, portfolio, planning, requirements, custom · sensitive: no · idempotency: naturally idempotent
+Purpose: Describes the caller's own MCP connection: credential type, granted scopes or tool count, workspace reach, and how to unlock missing tools.
+Use when: FIRST call when an expected tool is missing or a call returns -32003 (access denied).; The user asks what this connector can do or which permissions it has.; Before telling the user a feature is unavailable.    Avoid when: Workspace details: use get_workspace.; Managing your API keys: use list_api_keys.
+Preconditions: Any authenticated connection (OAuth or API key).
+Returns: OAuth: {credential:'oauth', scopes[], workspaceAccess (single|all), workspaceId (only when single), connectorRegisteredAt, accessTokenExpiresAt, availableToolCount, unavailableToolGroups[{scope, title, optional, tools[], howToEnable}]}. API key: {credential:'api_key', allowedToolCount, workspaceId:null, howToChange}.
+Gotchas:
+- howToEnable is Portuguese text for the end user: relay it as is.
+- On ChatGPT, disconnect/connect does NOT re-run OAuth or refresh the tool list: the connector must be removed and reinstalled and the optional box ticked (e.g. 'Gestão de atividades dos projetos' = portfolio:manage).
+- For API keys the allowed tools are set on the key by its owner (update_api_key). Returns no tokens.
+- Owner-agent credentials (lpm_mcp_...) cannot call it: it is not in the roadmap-owner profile tool lists.
+- 'lpm mcp status' only counts tools.
+Pairs with: `list_workspaces`

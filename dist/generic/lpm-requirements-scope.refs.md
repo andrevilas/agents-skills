@@ -3,615 +3,6 @@
 
 Load a section only when the skill tells you to.
 
-## § requirement-fields
-
-### Requirement fields
-Load when: before a requirement write
-Applies to: lpm-requirements-scope    Source: cards `create_requirement`, `update_requirement`, `delete_requirement`, `list_requirements`, `list_requirement_groups`, `create_requirement_group`, `delete_requirement_group` (`createRequirementCommand`, `updateRequirementCommand`, `deleteRequirementCommand`, `validateRequirementStructure`, `src/lib/requirementWorkItemState.ts`); CLI snapshot `requirements *`
-
-#### Summary
-A requirement is scope, not work: it lives in one baseline and links to activities, cycles and milestones.
-`create_requirement` needs 6 fields: projectId, baselineId, title, description, type, status ("pending" for new scope).
-Link lists replace the stored list: always send the FULL desired list.
-Any create or edit in the current baseline (even a status change) shows as `changed` in the working-scope delta.
-Prefer status `obsolete` over `delete_requirement`: a delete strips every link for good and the delta never shows it.
-Requirement status is never synced from activity status: set it yourself, and `met` only with done work.
-
-#### Facts
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| `projectId`, `baselineId` | required on create; baselineId = the `isCurrent` baseline | a non-current baseline is accepted but invisible to the delta |
-| `title` | short statement | check `list_requirements` for the same title first (no duplicate check) |
-| `description` | testable statement / acceptance intent | required on create |
-| `type` | `functional`, `non-functional`, `interface`, `business`, `technical` | not validated by the server: copy it exactly |
-| `status` | `pending`, `met`, `not-met`, `in-progress`, `obsolete` | new scope = `pending`; never auto-synced from activity status |
-| `groupId` | from `list_requirement_groups` → `id` | update: `""` clears, `null` is ignored |
-| `issueId` | primary linked activity, from `list_issues` → `id` | update: `""` clears, `null` is ignored; also send the full `linkedIssueIds` |
-| `linkedIssueIds`, `linkedCycleIds`, `linkedMilestoneIds` | arrays of linked work | FULL desired list; it replaces the stored set (left-out ids are unlinked) |
-| linked work item with another `baselineId` | "does not belong to the selected baseline" | link only work of this baseline |
-| a cycle | can belong to one requirement only | "Linked cycle is already associated with another requirement" → unlink it there first |
-| `sourceDocumentId` | project knowledge item, from `list_project_knowledge_items` → `id` | not validated; `null` clears |
-| create result | plain text "Requirement created with ID: <id>" | parse the id after "ID: " |
-| update | every key you send is written | send only the fields you change |
-| soft-deleted requirement | an update on it "succeeds" silently | confirm the id in `list_requirements` first |
-| published baseline | holds its own copies with new ids (`previousRequirementId` points to the older copy) | use ids from the current baseline |
-| `list_requirements` | not paginated; over 1 MB → `{items, truncated: true}` | filter by groupId, status or type |
-| `delete_requirement` | soft delete; clears issue, cycle, milestone, parent and dependency links for good; no restore | prefer `obsolete`; state the deletion in the change-set summary |
-| groups | project-wide, shared by all baselines; names not unique; unordered | reuse an existing `name`; sort by name yourself |
-| `create_requirement_group` | no duplicate or empty-name check | list first; a retry creates a duplicate |
-| `delete_requirement_group` | deletes the group in every baseline; its requirements get `groupId: null` and a new `updatedAt` | they show as `changed` and can raise materiality |
-| side effects | create/update fire webhooks `requirement_created` / `requirement_updated` and a semantic re-index | none for the agent to do |
-| CLI `--clear-group`, `--clear-issue` | send `null`, which the server ignores | clear with `update_requirement` and `""` instead |
-| document analysis (`requirementsDocumentAnalysis`) | a workspace AI feature flag; runs only in the web UI (Requirements → Análise de documento) | no MCP tool or CLI runs it; ask the owner to run it, then review the drafts |
-
-#### Rules
-1. Resolve baselineId and groupId before any create; never guess them.
-2. State the intent of each write: authoring, refinement, deprecation or structural cleanup.
-3. Keep traceability: when you edit links, re-send every link you keep.
-4. Never create a new baseline for wording edits; edit the requirement in the current baseline.
-5. Set `met` only when at least one issue, cycle or milestone is linked and every linked activity has `status == "done"` (its evidence is checked by lpm-deliver-activity closure), or the owner states it is met. Zero links → "not met yet: no linked delivery".
-6. A linked activity that is missing, `done` or `canceled` while the requirement is `pending` is a traceability review item: report it.
-7. Never infer coverage from activity titles when requirement records exist.
-
-#### Examples
-```text
-example: create_requirement(projectId="p1", baselineId="b-current", title="Export CSV",
-  description="A manager can export the activity list as CSV with all visible columns.",
-  type="functional", status="pending", linkedIssueIds=["i1"]) → "Requirement created with ID: r9"
-
-example: link a second activity to r9 that already links i1:
-  update_requirement(projectId="p1", requirementId="r9", linkedIssueIds=["i1", "i2"])   (not ["i2"])
-
-example: CLI equivalents
-  lpm requirements list --project p1 --baseline b-current --status pending --json
-  lpm requirements link-issue --project p1 --requirement r9 --issue i2 --json
-```
-
-
-## § change-set-state-machine
-
-### Change-set state machine
-Load when: before any change-set write
-Applies to: lpm-requirements-scope    Source: cards `create_change_set`, `create_project_change_set_from_resolution`, `update_change_set`, `update_project_change_set_status`, `publish_change_set`, `get_change_set`, `publish_baseline_from_working_scope` (`src/lib/changeSetStateMachine.ts`, `src/lib/projectChangeSet.ts`, `src/server/immutableRequirementChangeSetCommands.ts`, `src/server/immutableRequirementProposal.ts`); help `change-sets-e-aprovacoes`
-
-#### Summary
-A change set packages a scope change for review. It never replaces the baseline: the change ends only when a baseline is published.
-States: `draft` → `in-review` → `approved` | `rejected`; `published` is terminal. Material sets cannot skip review.
-Two kinds: a LIVE set snapshots the current working-scope delta; a PROPOSAL (immutable) carries requirement copies or description rewrites and never edits live requirements.
-`approved` and `rejected` are [O]: the owner's decisions. The server does not check who approves, so a user's "yes" never counts.
-Publication goes through `publish_baseline_from_working_scope`; when `requiresFormalReview == true` it marks the matching approved set `published` by itself. At low or no materiality no set is needed, matched or marked.
-
-#### Facts
-##### Transitions
-| From | Allowed to | Note |
-|---|---|---|
-| `draft` | `in-review`, `approved` | `approved` only when `reviewPolicy.requiresFormalReview == false` |
-| `in-review` | `draft`, `approved`, `rejected` | `approved` / `rejected` are [O]: the owner's words only |
-| `approved` | `draft`, `published` | `published` needs a publication baseline |
-| `rejected` | `draft` | — |
-| `published` | none | terminal; reversal = publish or promote another baseline |
-Any other move fails with "Invalid change set transition from <X> to <Y>".
-
-##### Live set vs proposal
-| Topic | Live set | Immutable proposal |
-|---|---|---|
-| create | `create_project_change_set_from_resolution` (returns JSON `changeSetId`) or `create_change_set` without `requirementProposal` (plain text "Change set created with ID: <id>") | `create_change_set` with `requirementProposal` + `sourceBaselineId` = the current baseline: `dryRun: true` first, then the same call with `expectedProposalFingerprint` |
-| `sourceBaselineId` | omit (another id breaks gate matching) | required; must be the unique current baseline |
-| content | frozen snapshot of the delta at creation | `additions` OR `revisions`, never both |
-| status tool | `update_project_change_set_status` or `update_change_set` | `update_change_set` with ONLY projectId, changeSetId, status, expectedProposalFingerprint |
-| review | formal when materiality is medium/high | always formal (`draft → in-review → approved`) |
-| same status sent again | no-op | error "Invalid change set transition" |
-| publish | `publish_baseline_from_working_scope` (or the twin `publish_project_baseline_from_resolution`) | `publish_baseline_from_working_scope` with changeSetId, expectedProposalFingerprint, name and a NEW version |
-| retry safety | not idempotent: a retry creates another draft | same content → same id `proposal-<fingerprint>`, `reused: true` |
-| access | project read | project manage |
-
-##### Proposal payload (`requirementProposal`)
-| Shape | Fields | Limits |
-|---|---|---|
-| `additions[]` | `key` (`[A-Za-z0-9_-]`, unique), `title` (≤300), `description` (≤20000), `type`, `source{projectId, baselineId, requirementId}`, `linkedIssueIds` (≤50, issues of this project) | 1-200 rows; each source once; `source.baselineId` = that requirement's baseline |
-| `revisions[]` | `requirementId` (current baseline), `title` (exact current), `beforeDescription` (exact current), `description` (new, different) | 1-200 rows |
-Additions must copy an existing requirement: there is no free-text new-requirement proposal (use a governance thread).
-
-##### Traps
-| Situation | Effect | Do |
-|---|---|---|
-| scope edited after a live set was created | edits that change ids, titles, links, linked issue estimates or cost break the match; text, status or type edits of a requirement already in the snapshot do NOT | compare every delta `changedAt` with the set's `createdAt` (draft, in-review) or `approvedAt` (approved) yourself; a later one → new set, review again; moving back to `draft` does not refresh it |
-| `publicationBaselineId` set on an approved live set before publishing | the set no longer matches the gate | never set it before publication |
-| `publish_change_set` | bookkeeping only: marks an approved live set `published`; creates no baseline, does not validate the id | only to close an approved set against a baseline already published by other means |
-| `publish_change_set` on an already published set | silently overwrites `publicationBaselineId` | never call it after a publication |
-| `update_project_change_set_status` on a proposal | always fails ("Immutable proposal metadata cannot be edited") | use `update_change_set` |
-| "Proposal or base changed; create and review a fresh proposal" | live requirements, issues, costs or the source changed | new proposal (dryRun → create), review again |
-| proposal publication | refused with orphan requirements, or above 480 writes | reconcile orphans first; split the proposal |
-
-#### Rules
-1. Read `get_change_set` before every status move: `status`, `reviewPolicy.requiresFormalReview`, `scopeProposal`.
-2. Reuse a `draft` or `in-review` set only when `workingScopeSnapshot.affectedRequirementIds` equals the delta ids AND every delta `changedAt` <= its `createdAt`. An `approved` set counts only when the ids are equal AND every `changedAt` <= its `approvedAt`; else create a new set. Never send an `approved` set to `in-review` (invalid transition).
-3. Write the summary as: what changes, why, and every removed or deleted requirement (the delta cannot show removals).
-4. Move to `approved` or `rejected` [O] only when the owner's own words in this conversation say so; quote them in the report.
-5. Never approve a set you drafted on your own judgment, and never skip `in-review` for a material set.
-6. After approval, change nothing in scope or in the linked work (requirements, links, linked issue estimates, cycles or milestones, project rate) until publication. `matchedApprovedChangeSetId` becomes null → create a new change set.
-
-#### Examples
-```text
-example: live: create_project_change_set_from_resolution(projectId="p1", title="Q4 scope",
-  summary="Adds export (r9). Removed or deleted: none in this run; the delta cannot show removals")
-  → {changeSetId: "cs7"}; update_project_change_set_status(projectId="p1", changeSetId="cs7", status="in-review")
-
-example: proposal: create_change_set(projectId="p1", sourceBaselineId="b-current", dryRun=true,
-  requirementProposal={revisions:[{requirementId:"r3", title:"Login", beforeDescription:"<exact>", description:"<new>"}]})
-  → draft.scopeProposal.contentFingerprint "f00d"; same call without dryRun + expectedProposalFingerprint="f00d"
-  → {id: "proposal-f00d", reused: false}
-```
-
-
-## § materiality-and-gate
-
-### Materiality and the publication gate
-Load when: the gate blocks or materiality needs explaining
-Applies to: lpm-requirements-scope    Source: cards `get_project_scope_resolution_context`, `list_working_scope_delta_entities`, `list_requirements_awaiting_baseline`, `create_requirement_baseline`, `update_requirement_baseline`, `delete_requirement_baseline` (`src/lib/changeSetMaterialityPolicy.ts`, `src/lib/changeSetPublicationGate.ts`, `src/lib/projectWorkingScopeDelta.ts`); help `baselines-e-working-scope`
-
-#### Summary
-The working scope is the live requirements; the current baseline is the approved scope. The delta between them has a materiality (`materiality-v1`).
-Materiality `medium` or `high` sets `requiresFormalReview`: a new current baseline then needs an approved change set that still matches the live scope. `low` or `none`: no change set is needed, matched or auto-published.
-Without a current baseline the gate never blocks.
-The delta never detects removals: `removedCount` is always 0 and `canDetectRemovals` is false.
-Report the gate with the returned fields (`shouldBlockPublication`, `matchedApprovedChangeSetId`, `materiality`, `reasonCodes`), never with judgment words.
-
-#### Facts
-##### Working-scope delta
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| `mode: "unbaselined"` | no current baseline | every requirement counts as `added`; publication is not gated |
-| `mode: "inferred-live-requirements"` | compared with the current baseline | `added` / `changed` / `unchanged` below |
-| `added` | requirement with an empty `baselineId` | an orphan; see `list_requirements_awaiting_baseline` |
-| `changed` | requirement of the current baseline with `updatedAt` after the baseline was created | includes new requirements created in it and status-only edits |
-| `unchanged` | the rest of the current baseline | — |
-| `removedCount` | always 0 | state removals and deletions yourself; never claim "no removals" |
-| requirements of non-current baselines | ignored | edits there do not show in the delta |
-| `affectedCount` | added + changed | 0 → no change set is needed |
-
-##### Materiality reason codes (`materiality-v1`)
-| Reason code | Fires when | Level it can set |
-|---|---|---|
-| `cost-threshold` | forecast cost delta ≥ 1000 | high |
-| `schedule-threshold` | cycles + milestones touched ≥ 2 | high |
-| `scope-threshold` | affected requirements ≥ 4 | high |
-| `delivery-threshold` | linked issues ≥ 3 | medium |
-| `activity-threshold` | affected activities ≥ 3 | medium |
-| `scope-without-delivery` | an affected requirement has no linked issue, cycle or milestone | medium |
-Levels: `none` = 0 affected requirements; `high` = a cost, schedule or scope threshold; `medium` = forecast cost > 0, a delivery, activity or no-delivery reason, or ≥ 2 affected requirements; `low` = anything else. `requiresFormalReview` = `medium` or `high`.
-
-##### Gate fields (`publicationGate`)
-| Field | Meaning | Consequence for the agent |
-|---|---|---|
-| `requiresFormalReview` | materiality is medium or high (false without a current baseline) | true: the change set must go `draft → in-review → approved`; false: no change set needed, `matchedApprovedChangeSetId` stays null |
-| `shouldBlockPublication` | a current baseline exists, review is required and no matching approved change set exists | publish only after the owner approves a matching change set |
-| `matchedApprovedChangeSetId` | the approved live change set whose fingerprint (ids, titles, counts, links, cost, materiality) equals the live scope | edits that change ids, titles, links or cost break the match; text, status or type edits do NOT: compare `changedAt` with `approvedAt` yourself. Null → new change set |
-| `reasonCodes` | the codes above | name each one in the report |
-| `blockingReasons` contains `material_change_requires_approved_change_set` | same as `shouldBlockPublication == true` | run the change-set procedure |
-| error "Material baseline publication requires an approved change set for the current working scope" | the gate refused a publication or a promotion | change set → review → the owner's approval → publish, with no edit in between |
-
-##### Ways around the gate (never use them)
-| Action | What it does | Rule |
-|---|---|---|
-| `isCurrent: false` on create or publish | skips the gate; promotion later is gated anyway | never use it to dodge review |
-| `delete_requirement_baseline` of the current baseline | the newest other baseline becomes current WITHOUT the gate | owner order only, after the §6 warning |
-| `update_requirement_baseline` with `isCurrent: false` | leaves the project with no current baseline (gate off) | never send `false` |
-
-##### Side effects that move the numbers
-| Action | Effect |
-|---|---|
-| `reconcile_orphan_requirements_into_baseline`, a group delete | the touched requirements get a new `updatedAt` → `changed` → materiality can rise |
-| read-model calls with an API key (`get_project_execution_context` and other project read models) | silently attach orphans to the current baseline, so `list_requirements_awaiting_baseline` is usually empty |
-
-#### Rules
-1. Read `get_project_scope_resolution_context` before any requirement, baseline or change-set write, and again after it.
-2. Explain "not ready" with `reasonCodes` and `matchedApprovedChangeSetId`; explain "ready" with `shouldBlockPublication == false`.
-3. Treat a medium or high delta as a proposal for the owner, never as approved scope.
-4. After approval, change nothing in scope or in the linked work until publication (see `lpm-requirements-scope.refs.md` § change-set-state-machine rule 6).
-
-#### Examples
-```text
-example: publicationGate {requiresFormalReview: true, shouldBlockPublication: true,
-  matchedApprovedChangeSetId: null, materiality: "medium", reasonCodes: ["scope-without-delivery"]}
-  → say: "Publication is blocked: requirement r9 has no linked delivery (scope-without-delivery).
-  A change set must be reviewed and approved by the owner first."
-```
-
-
-## § publication-checklist
-
-### Publication checklist
-Load when: publishing a baseline
-Applies to: lpm-requirements-scope    Source: cards `publish_baseline_from_working_scope`, `publish_project_baseline_from_resolution`, `get_project_scope_resolution_context`, `get_change_set`, `list_requirement_baselines`, `list_requirements` (`publishBaselineFromWorkingScopeCommand`, `createRequirementBaselineCommand`, `immutableRequirementChangeSetCommands.publish`); help `baselines-e-working-scope`, `change-sets-e-aprovacoes`
-
-#### Summary
-Baseline publication is owner-only: publish only on the owner's explicit order in this conversation, and quote it in `publicationNotes`.
-Before: the gate is open (or a matching change set is approved), no orphans exist, the version is new.
-Live publication copies the current baseline's requirements (new ids), attaches orphans, demotes the old baseline and, only when `requiresFormalReview == true`, marks the matching approved change set `published`.
-Each live call creates another baseline: after a timeout, list baselines before any retry.
-Done only when the re-read shows the new current baseline, `addedCount == 0`, `changedCount == 0` and, when a change set is in play, `get_change_set` shows it `published` against it (formal review) or still `approved` (no formal review).
-
-#### Facts
-##### Before publishing (all must pass)
-| Check | Read with | Pass when | Fail → do |
-|---|---|---|---|
-| mode | `get_change_set`(projectId, changeSetId) → `scopeProposal` (no change set in play → live) | absent = live, present = proposal | — |
-| owner order | this conversation | the owner ordered this publication of this project | decision request, STOP |
-| gate | `get_project_scope_resolution_context` → `publicationGate` | `shouldBlockPublication == false`; write down `requiresFormalReview` and `matchedApprovedChangeSetId` (both reset after publication) | change set → review → owner approval |
-| no edits since approval (only `requiresFormalReview == true`) | `get_change_set`(projectId, changeSetId) → `status`, `approvedAt`; `list_working_scope_delta_entities`(projectId, changeType="added") AND (projectId, changeType="changed"), every page (cursor=`nextCursor`) → `items[].changedAt` | `status == "approved"`, its id == `matchedApprovedChangeSetId`, every `changedAt` present and <= `approvedAt` | any `changedAt` missing or > `approvedAt` → STOP: new change set, review again |
-| orphans | `requirementsAwaitingBaseline.count` | 0 | reconcile them (confirm first) |
-| version | `list_requirement_baselines` → `version` | the new version is not listed | ask the owner for another version |
-| proposal only | `get_change_set` → `scopeProposal.contentFingerprint`, `approvedContentFingerprint` | equal; it will be passed as `expectedProposalFingerprint` | the proposal is not approved: owner decision |
-| removals stated | your change-set summary | every removed or deleted requirement is named | add them to `publicationNotes` |
-
-##### Call shapes
-| Mode | Call | Notes |
-|---|---|---|
-| live (canonical) | `publish_baseline_from_working_scope`(projectId, name, version, description, publicationNotes) | NO `changeSetId` (the owner's "with change set X" goes in `publicationNotes` only; any `changeSetId` switches to proposal mode → "Immutable proposal not found"); `version` default `v<N+1>.0`; omit `isCurrent` (default true) and `cloneFromBaselineId` (default = current baseline) |
-| live twin | `publish_project_baseline_from_resolution`(same fields) | no `changeSetId`; use only when the canonical tool is absent |
-| proposal (`scopeProposal` present) | `publish_baseline_from_working_scope`(projectId, name, version, changeSetId, expectedProposalFingerprint, publicationNotes) | `changeSetId` and `expectedProposalFingerprint` always together; `version` required (≤100 chars, new); `isCurrent` true or omitted; atomic and replay-safe (`reused: true`) |
-| baselines exist but none is current | pass `cloneFromBaselineId` = the baseline the owner names | the default clones nothing |
-
-##### Closure (re-read after publishing)
-Run every closure row; never substitute another read. The report lists only the reads you made.
-| Check | Read with | Pass when |
-|---|---|---|
-| new current baseline | `get_project_scope_resolution_context` → `currentBaseline.id` | == the returned `baseline.id` (live) or `transition-<fingerprint>` (proposal) |
-| no pending delta | same call → `workingScope.addedCount`, `changedCount` | both 0 (live mode); proposal mode: report both values |
-| gate | same call → `publicationGate.shouldBlockPublication` | false |
-| change set (any `changeSetId` in play, or `matchedApprovedChangeSetId` not null before publishing) | `get_change_set`(projectId, changeSetId) | `requiresFormalReview` read BEFORE publishing was true → `status == "published"` AND `publicationBaselineId` == the new id; it was false → `status == "approved"` (unchanged) |
-| content | `list_requirements`(projectId, baselineId=<new id>) | the expected requirements are listed (ids are new copies) |
-| one current | `list_requirement_baselines` | exactly one item has `isCurrent == true` |
-
-#### Rules
-1. Never call `publish_change_set` before or after a normal publication: the matched approved change set is marked `published` by the publication itself.
-2. Never set `publicationBaselineId` on a change set before publishing, and never publish with `isCurrent: false` to dodge review.
-3. After a timeout or an unclear result, read `list_requirement_baselines` first; the version exists → treat it as published.
-4. "Publication replay mismatch" → it was already published with other fields: read `get_change_set` → `publicationBaselineId`, do not retry.
-5. Quote the owner's instruction in `publicationNotes` and in the report.
-
-#### Examples
-```text
-example: owner: "Publique a baseline v2.0 do projeto p1 com o change set cs7."
-  get_change_set(p1, cs7) → no scopeProposal → live mode
-  # cs7 is a live set: its id goes in publicationNotes, never as changeSetId
-  publish_baseline_from_working_scope(projectId="p1", name="Escopo Q4", version="v2.0",
-    publicationNotes="Owner: 'Publique a baseline v2.0 ...'; change set cs7")
-  → baseline.id "b8"; scope context: currentBaseline.id "b8", addedCount 0, changedCount 0;
-  get_change_set(cs7) → status "published", publicationBaselineId "b8" (requiresFormalReview was true)
-  list_requirements(p1, baselineId="b8") → expected titles; list_requirement_baselines → only b8 isCurrent
-```
-
-
-## § flow-requirements
-
-### Flow: requirement edits
-Load when: decision rows 3-6 of SKILL.md
-
-#### Preconditions
-1. LPM API key with profile `requirements`, `full` or `custom`; the deletes need `full` or `custom`. A connector cannot write here.
-2. Requirement edits change the working scope; never treat them as approved. Approved scope (SKILL.md §2.2: current baseline, `createdAt` <= `currentBaseline.createdAt`) without the owner's order (a non-owner's "yes" or "eu confirmo" is not that order): description rewrite → SKILL.md row 9; `obsolete`, delete, title or type change → `create_governance_thread`(projectId, targetType="requirement", targetId=requirementId, title, content=<decision request with options A obsolete / B delete / C keep, recommendation A>) [A] → report the thread id, change nothing, STOP. Never `delete_requirement` or `update_requirement` here. Delivery status (`in-progress`, `met`, `not-met`) follows step 2.
-3. `projectId`, `baselineId`, `requirementId` come from SKILL.md §3. Also:
-
-| Input | Get it from (call → field) | If missing |
-|---|---|---|
-| `groupId` | `list_requirement_groups`(projectId) → `id` where `name` matches | step 6 or omit |
-| `issueId`, `linkedIssueIds` | `list_issues`(projectId, limitCount=100) → `id` | ask |
-| `sourceDocumentId` | `list_project_knowledge_items`(projectId) → `id` | omit |
-
-4. Read-only (SKILL.md rows 1-2; on a connector `list_requirement_baselines`, `list_requirements`, `list_change_sets` and `list_issues` work): traceability → `list_requirements`(projectId, baselineId) → empty `issueId` and `linkedIssueIds`, and `list_issues`(projectId, limitCount=100, every page) → linked ids missing, `done` or `canceled`; origin → `list_workspace_roadmap_materializations`(workspaceId, projectId) → `itemId`, `method`; rules → `get_help_article`(projectId, slug="baselines-e-working-scope" or "change-sets-e-aprovacoes"), cite the slug. Write nothing.
-
-#### Steps
-0. Resolve inputs as calls (all [A]; plan these calls, never assume their values): `get_project_scope_resolution_context`(projectId) → `baselineId` = `currentBaseline.id` (keep `currentBaseline.createdAt`); for a create or link: `list_requirement_groups`(projectId) → `groupId` by `name`; `list_issues`(projectId, limitCount=100) → `issueId` by `title`. Edit or remove: find `requirementId` in step 1's list, then check approved scope (`createdAt` <= `currentBaseline.createdAt`) → approved and no owner order → precondition 2 (governance thread, STOP).
-1. Load `lpm-requirements-scope.refs.md` § requirement-fields. `list_requirements`(projectId, baselineId) → same `title` exists → ask "update it or add another?". Edit: keep `linkedIssueIds`, `linkedCycleIds`, `linkedMilestoneIds`.
-2. Status "met" (row 4): `list_requirements`(projectId, baselineId) → `linkedIssueIds` (includes the primary `issueId`), `linkedCycleIds`, `linkedMilestoneIds`. All three empty → STOP: "not met yet: no linked delivery". Else `list_issues`(projectId, limitCount=100, every page) → every `linkedIssueIds` id has `status == "done"`. Else STOP: "not met yet". Only the owner's words saying it is met override both.
-3. [C] Show the exact call, the intent (authoring, refinement, deprecation or cleanup) and "This changes the working scope; it is approved only when a baseline is published." Continue only on "yes".
-4. New → `create_requirement`(projectId, baselineId, title, description, type, status="pending", groupId, issueId, linkedIssueIds, sourceDocumentId) [C]; all 6 first fields are required. Keep the id after "ID: ".
-5. Edit → `update_requirement`(projectId, requirementId, <changed fields only>) [C]; links: the FULL list (kept + new), unlink the primary with issueId="". Remove (row 5) → the same call with status="obsolete" [C]; `delete_requirement`(projectId, requirementId) [C] only after the delete text below.
-6. Groups (row 3): `list_requirement_groups`(projectId) → same `name` exists → reuse its id; else `create_requirement_group`(projectId, name) [A] / `update_requirement_group` [A] / `delete_requirement_group`(projectId, groupId) [C] after the delete text below.
-7. Orphans (row 6, `requirementsAwaitingBaseline.count > 0`): `list_requirements_awaiting_baseline`(projectId, limitCount=100) → orphan text below → `reconcile_orphan_requirements_into_baseline`(projectId, baselineId) [C]. No baseline → SKILL.md row 11.
-8. Timeout on `create_requirement` or `create_requirement_group`: not idempotent; re-read the step 9 list tool before any retry.
-9. Verify: `list_requirements`(projectId, baselineId) → the item shows the sent values (deleted: absent); groups: `list_requirement_groups`(projectId) → the `id` has the `name` (absent after delete); orphans: `get_project_scope_resolution_context`(projectId) → `requirementsAwaitingBaseline.count == 0`.
-10. Report from `get_project_scope_resolution_context`: `workingScope.addedCount`, `workingScope.changedCount`, `publicationGate.materiality`. Removals and deletions never appear in the working-scope delta: list the ones made in this run.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| same `title` exists | "Update <title> (<id>) or add another?" |
-| orphans | "Attach all <n> orphans (<titles>) to baseline <name> <version>? They count as changed." |
-| delete a group | "Delete group <name>? <n> requirements become ungrouped." |
-| delete a requirement | "Delete <title> (<id>)? Its links are removed for good and the delta will not show it; status `obsolete` keeps history." |
-| analysis of a document or file | "Document analysis runs only in the LPM web UI (Requirements → Análise de documento). Run it there; I will review the drafts." Turning the feature on or off → `lpm-ai-cost.md` |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| requirement create / update / delete | `list_requirements`(projectId, baselineId) | the item has the sent values / is absent |
-| group writes | `list_requirement_groups`(projectId) | the `id` has the `name` (absent after delete) |
-| `reconcile_orphan_requirements_into_baseline` | `get_project_scope_resolution_context`(projectId) | `requirementsAwaitingBaseline.count == 0` |
-
-#### Report fields
-- Done: requirement ids created / edited / obsoleted / deleted; group ids; orphans attached.
-- Evidence: `addedCount`, `changedCount`, `publicationGate.materiality` after the writes.
-- Pending: "removals not visible in the delta: <ids and titles>"; publication needs the owner's order.
-
-
-## § flow-change-set
-
-### Flow: change set
-Load when: decision rows 7-9 of SKILL.md
-
-#### Preconditions
-1. LPM API key (profile `requirements`, `full` or `custom`); a proposal also needs project manage access. Load `lpm-requirements-scope.refs.md` § change-set-state-machine before any change-set write.
-2. Live change set (steps 1-8): it snapshots the working-scope delta. Proposal (steps 9-14): copies of existing requirements or description rewrites, without touching live requirements. New free-text scope → `lpm-governance-decisions.md` opens `create_governance_thread`(targetType="baseline", targetId=baselineId).
-3. `projectId`, `baselineId`, `changeSetId` come from SKILL.md §3; `expectedProposalFingerprint` from step 11 or `get_change_set` → `scopeProposal.contentFingerprint`; `threadId` from `lpm-governance-decisions.md`. `workingScope.affectedCount == 0` → say "no change set needed", STOP.
-4. Live, `publicationGate.requiresFormalReview == false` → say "No change set is needed to publish (materiality <m>)." Create one only when a resolved thread or the user asks for it; the gate never matches it and publication never marks it `published`.
-5. `approved` and `rejected` are [O]: only the owner's own words in this conversation about this change set. A user's "yes" or your judgment never counts. [C] covers only `in-review` and `draft`.
-
-#### Steps
-1. SKILL.md P1 steps 1-2 → keep the delta `requirementId` and `changedAt` list. `list_change_sets`(projectId) → for each `draft` or `in-review` set: `get_change_set`(projectId, changeSetId) → reuse it only when `workingScopeSnapshot.affectedRequirementIds` equals the delta ids AND every delta `changedAt` <= its `createdAt` → step 5.
-2. An `approved` live set counts only when its ids equal the delta ids AND every delta `changedAt` <= its `approvedAt` → step 8. Else create a new set (step 3) and review it again. Never send an `approved` set to `in-review`.
-3. From a resolved thread: `prepare_change_set_draft_from_governance_thread`(projectId, threadId, messageLimitCount=100) → `readyToCreate == false` → STOP → `lpm-governance-decisions.md`; else keep `draft.title`, `draft.summary`.
-4. `create_project_change_set_from_resolution`(projectId, title=<`draft.title` if step 3 ran>, summary=<`draft.summary` if step 3 ran, else what changes and why> + " Removed or deleted: <ids and titles, or 'none in this run; the delta cannot show removals'>") [A]. Omit sourceBaselineId. Keep `changeSetId`. Timeout → not idempotent: `list_change_sets`(projectId) before any retry. Created from a thread → hand `changeSetId` and `threadId` to `lpm-governance-decisions.md` to link the thread (decision with actionTargetType="change-set", actionTargetId=changeSetId).
-5. `get_change_set`(projectId, changeSetId) → keep `status`, `createdAt`, `reviewPolicy.requiresFormalReview`.
-6. `status == "draft"`: [C] "Send change set <title> to review?" → `update_project_change_set_status`(projectId, changeSetId, status="in-review") [C].
-7. [O] Owner's words in this conversation only: `update_project_change_set_status`(projectId, changeSetId, status="approved" or "rejected") [O]. `requiresFormalReview == true` → it must be `in-review` first. After approval change nothing in scope or in the linked work (requirements, links, linked issue estimates, cycles or milestones, project rate) until publication.
-8. Verify (live): `get_change_set` → `status` == the requested value. Only when `publicationGate.requiresFormalReview == true`: `get_project_scope_resolution_context` → `publicationGate.matchedApprovedChangeSetId == changeSetId`. When false: skip the match check; record the id in `publicationNotes` at publication.
-9. Proposal: `list_requirement_baselines`(projectId) → exactly one `isCurrent == true` → keep its `id`; 0 or 2+ → STOP, report it to the owner.
-10. Build `requirementProposal` from `list_requirements`(projectId, baselineId) data with see `lpm-requirements-scope.refs.md` § change-set-state-machine: `additions` (copies of existing requirements) OR `revisions` (exact current `title` and `beforeDescription`). Never mix.
-11. `create_change_set`(projectId, title, summary, sourceBaselineId=<step 9>, requirementProposal, dryRun=true) [A] → keep `draft.scopeProposal.contentFingerprint`.
-12. Show the dry run; on "yes" `create_change_set`(same arguments without dryRun, expectedProposalFingerprint=<step 11>) [A] → keep `id` as changeSetId (`reused: true` = it existed).
-13. [C] `update_change_set`(projectId, changeSetId, status="in-review", expectedProposalFingerprint) [C]. Later, owner's words only: the same call with status="approved" or "rejected" [O]. Send only these 4 keys.
-14. Verify (proposal): `get_change_set`(projectId, changeSetId) → `status` == the requested value, `scopeProposal.contentFingerprint` == the fingerprint.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| approving or rejecting without the owner's own words | "Owner: approve or reject change set <title> (<id>, materiality <m>, <n> requirements)?" STOP |
-| `readyToCreate == false` on a thread draft | hand the thread to `lpm-governance-decisions.md`, STOP |
-| approved, `requiresFormalReview == true`, yet `matchedApprovedChangeSetId == null` | scope or linked work changed after the snapshot: new change set (steps 1-8), review again |
-| asked to set `publicationBaselineId` or call `publish_change_set` now | refuse: both happen only after baseline publication (see `lpm-requirements-scope.refs.md` § flow-baseline) |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| create or status move | `get_change_set`(projectId, changeSetId) | `status` == the requested value |
-| owner approval (live, `requiresFormalReview == true`) | `get_project_scope_resolution_context`(projectId) | `publicationGate.matchedApprovedChangeSetId == changeSetId` |
-
-#### Report fields
-- Done: change set id, mode (live or proposal), `status`.
-- Evidence: `reviewPolicy.requiresFormalReview`, `publicationGate.materiality`, the owner's quote for approval or rejection.
-- Pending: "change set review — owner"; removals named in the summary.
-
-
-## § flow-baseline
-
-### Flow: baseline publication and records
-Load when: decision rows 10-11 of SKILL.md
-
-#### Preconditions
-1. Every step here is [O]: baseline publication is owner-only. Quote the owner's instruction from this conversation ordering this exact action; none → send the decision request (see `lpm-requirements-scope.refs.md` § authority-and-owner-decisions (#decision-request)) and STOP.
-2. LPM API key (profile `requirements`, `full` or `custom`; delete needs `full` or `custom`). `projectId`, `baselineId`, `changeSetId` come from SKILL.md §3; `expectedProposalFingerprint` from `get_change_set` → `scopeProposal.contentFingerprint`.
-3. Never use `isCurrent:false` (on any tool) to dodge review, never set `publicationBaselineId` before publishing, never call `publish_change_set` before baseline publication.
-
-#### Steps
-1. Publish (row 10): quote the owner's order. Load `lpm-requirements-scope.refs.md` § publication-checklist and run its pre-publication checks; a check fails → STOP with its fix. Write down now `publicationGate.requiresFormalReview` and `publicationGate.matchedApprovedChangeSetId` (both reset after publication; step 5b needs them).
-2. `shouldBlockPublication == true` → STOP → see `lpm-requirements-scope.refs.md` § flow-change-set first. `requiresFormalReview == false` → no change set is needed; never create one now.
-3. Mode (decide before the call): a `changeSetId` is in play → `get_change_set`(projectId, changeSetId) → `scopeProposal`: absent → LIVE; present → PROPOSAL. No change set in play → LIVE.
-   - LIVE: `publish_baseline_from_working_scope`(projectId, name, version, publicationNotes="<owner quote>; change set <changeSetId, or none needed (materiality <m>)>") [O]. NEVER pass `changeSetId`, even when the owner says "with change set <X>": the change set id goes ONLY inside `publicationNotes`. Any `changeSetId` switches the tool to proposal mode, which fails with "Immutable proposal not found".
-   - PROPOSAL: the same call plus `changeSetId` AND `expectedProposalFingerprint` = `scopeProposal.contentFingerprint`, always together, never one without the other.
-   - Both: omit `isCurrent`. `publish_project_baseline_from_resolution` [O] is the live-only twin (no `changeSetId`): use it only when the canonical tool is absent.
-4. Timeout or unclear result → `list_requirement_baselines`(projectId): the version exists → published; never retry blindly (each live call creates a baseline). Never call `publish_change_set` afterwards: publication marks the matched set `published`; an unmatched low-materiality set stays `approved` (its id is in `publicationNotes`).
-5. Verify (publish): run every sub-step; never substitute another read.
-   - 5a. `get_project_scope_resolution_context`(projectId) → `currentBaseline.id` == the new id, `publicationGate.shouldBlockPublication == false`, live mode `workingScope.addedCount == 0` and `changedCount == 0`.
-   - 5b. A `changeSetId` is in this request, or step 1 read `matchedApprovedChangeSetId` not null (then changeSetId = that id) → ALWAYS call `get_change_set`(projectId, changeSetId) after publishing → `requiresFormalReview` kept in step 1 was true: `status == "published"` and `publicationBaselineId` == the new id; it was false: `status` unchanged (normally `approved`), not published. `changeSets.latest` from the scope context and `list_requirement_baselines[].changeSetId` do NOT replace this read.
-   - 5c. `list_requirements`(projectId, baselineId=<new id>) → the expected requirements are listed (ids are new copies).
-   - 5d. `list_requirement_baselines`(projectId) → exactly one item has `isCurrent == true`, and it is the new id.
-6. First baseline (row 11, no baseline listed): `publish_baseline_from_working_scope`(projectId, name, version, publicationNotes="<owner quote>") [O]; omit isCurrent. The gate is off without a current baseline; orphans are attached as `unchanged`. Requirements added afterwards are `changed` and follow `lpm-requirements-scope.refs.md` § flow-change-set. Baselines exist but none is current → ask the owner which one to restore (step 7). Never `create_requirement_baseline` for this.
-7. Rename a baseline or restore an older one as current (row 11): `update_requirement_baseline`(projectId, baselineId, <changed fields only>) [O]. A current baseline exists and the owner wants new scope → step 1.
-8. Delete a baseline (row 11): `list_requirements`(projectId, baselineId) → count → delete text below → `delete_requirement_baseline`(projectId, baselineId) [O].
-9. Verify (records): `list_requirement_baselines`(projectId) → the `id` has the sent fields (absent after delete) and exactly one `isCurrent == true`.
-
-#### Stop and ask
-| Situation | Do / ask exactly |
-|---|---|
-| no owner order for this exact action | decision request (see `lpm-requirements-scope.refs.md` § authority-and-owner-decisions (#decision-request)), STOP |
-| delete a baseline | "Delete baseline <name> <version> with <n> requirements? They are hard-deleted, linked work loses its baseline, and if it is current the newest other baseline becomes current without the gate. It cannot be restored." |
-| "Reconcile unbaselined requirements before publication" | orphans first (see `lpm-requirements-scope.refs.md` § flow-requirements step 7), then step 3 |
-| `publish_change_set`, `isCurrent:false`, or `publicationBaselineId` set before publishing | `publish_change_set` only closes an approved change set against a baseline already published by other means; never call it before baseline publication. Refuse the other two: they dodge or break the gate |
-
-#### Verify
-| After | Re-read with | Pass when |
-|---|---|---|
-| publication | step 5 (5a-5d) = see `lpm-requirements-scope.refs.md` § publication-checklist Closure | every sub-step you ran passes; 5b runs whenever a change set is in play |
-| baseline create / update / delete | `list_requirement_baselines`(projectId) | the sent fields (absent after delete), exactly one `isCurrent == true` |
-| `publish_change_set` | `get_change_set`(projectId, changeSetId) | `status == "published"` |
-
-#### Report fields
-- Done: new baseline id, name, version; change set id and its `status` read in 5b (`published`, or `approved` when `requiresFormalReview` was false), or `none needed`.
-- Evidence: owner quote; 5a `currentBaseline.id`, `addedCount`, `changedCount`; 5b `get_change_set` → `status`, `publicationBaselineId`. List only reads you made; never write "all checks pass".
-- Pending: none, or the failed checklist item and who must act.
-- Next: one action for the user, e.g. "plan activities for req_21/req_22 (lpm-plan-work)" or "none"; not a status line.
-
-
-## § authority-and-owner-decisions
-
-### Authority and owner decisions
-Load when: a step is tagged [C] or [O], or the owner must decide
-Applies to: every skill    Source: process rules (Governance); catalog `authority-overrides.json` (rendered authority); cards `review_workspace_roadmap_change`, `apply_workspace_context_update`, `accept_roadmap_knowledge_artifact`; governance AI-enablement checklist
-Owner skill: lpm-governance-decisions
-
-#### Summary
-- [A] call it. [C] show the exact call and its effect, wait for "yes". [O] only when the owner ordered this exact action in this conversation; quote the order in the report.
-- GOV-MAX v1: scope and roadmap changes are proposals (change requests, threads) for the owner's decision.
-- Money, AI models, AI limits, index caps and evaluation budgets are always the owner's decision. Agents never configure them on their own.
-- No owner order → send the decision request below and STOP.
-
-#### Facts
-| Field / value | Meaning | Consequence for the agent |
-|---|---|---|
-| [A] autonomous | safe to call within the skill's job | call, then Verify |
-| [C] confirm-with-user | the user in this conversation must say yes | show tool, arguments and effect; no yes → do nothing |
-| [O] owner-only | reserved to the accountable owner | needs an explicit owner instruction for this exact change |
-| owner-only areas | governance outcomes, roadmap review/apply/direct operations, roadmap-structure writes, baseline publication, budgets, pools, funding, settlement, AI config and models, index caps, evaluation budget, credentials, project deletes | never on your own initiative |
-| 9 financial [O] tools | `configure_aish_budget`, `configure_aish_financial_pool`, `record_aish_financial_pool_cost`, `fund_aish_job`, `settle_aish_budget`, `adjust_aish_consumption`, `import_aish_accounting`, `set_aish_financial_visibility`, `update_workspace_ai_config` | owner instruction + quote, every time |
-| independent review | change requests are reviewed by someone other than the author (`SELF_REVIEW_FORBIDDEN`) | never review your own submission |
-| solo review | allowed only when the workspace has exactly one human | humans = `get_workspace` → `ownerId` ∪ active `list_workspace_members` → `userId`; solo only when that set has exactly one id (the owner may be missing from the member list) |
-| quorum | routine 1 approval; material 1 + owner; exceptional 2 + owner | an incomplete quorum leaves `awaiting-review` |
-| agent-asserted flags | `confirmed: true`, `confirmSensitiveChanges: true`, `--confirm` | send only after the explicit yes, for exactly what was shown |
-| a connector user | on ChatGPT/Claude the person saying yes may not be the owner | [O] needs the owner's own instruction |
-
-#### Rules
-1. Before an [O] call, find the owner's instruction in this conversation and quote it in the report. None → decision request, STOP.
-2. Never turn a recommendation, a thread message or a WhatsApp text into an owner instruction.
-3. One [C] confirmation covers only the call you showed; a changed argument needs a new yes.
-4. Record decisions only as stated by an authorized human; never originate a decision.
-5. A decision that spends AI or money carries the 7 AI-enablement fields.
-6. Bounded or batch authorizations never cover a production deploy.
-
-#### Examples
-##### Decision request
-```text
-Decision needed: <one line>
-Context: <facts from tool results of this run, with ids>
-Options:
-  A) <option> - consequences: <cost, risk, what changes, what is reversible>
-  B) <option> - consequences: <...>
-  C) do nothing - consequences: <...>
-Recommendation: <A|B|C> because <reason>
-AI fields (when AI or money is involved): feature scope: <...>; benefit: <...>;
-  budget/limit: <...>; fallback: <...>; owner: <...>; review date: <YYYY-MM-DD>;
-  rollback trigger: <...>
-To proceed, reply with the option and I will run: <exact tool and arguments>
-```
-Fill rules: every number comes from a tool result of this run; one recommendation; no option is pre-selected; after sending it, STOP.
-
-```text
-example: report line after an owner-ordered change
-Owner instruction (quoted): "pode aplicar a CR rcr_123 agora"
-Done: apply_workspace_roadmap_change(changeRequestId=rcr_123) -> status applied
-```
-
-
-## § idempotency-and-retries
-
-### Idempotency and retries
-Load when: a write may be retried, or a write timed out or is unclear
-Applies to: every write-heavy skill    Source: cards `idempotency` and `idempotencyKey` notes (counted at build time: 42 tools take a key, 71 writes are not idempotent); lpm `src/server/mcpBatch.ts`
-Owner skill: catalog
-
-#### Summary
-- Pass `idempotencyKey` whenever the tool accepts one. Same logical write → same key; new content → new key.
-- After a timeout: re-read the target first; retry only with the SAME key and the SAME payload.
-- A tool without a key: re-read before any retry, because a second call creates a second record.
-- Optimistic-concurrency fields (`expectedUpdatedAt`, `expectedGeneration`, hashes) come from a fresh read; a conflict means re-read, never force.
-- Some fields replace the whole stored value: read first and resend everything you keep.
-
-#### Facts
-| Tool or group | Key rule | Retry behavior |
-|---|---|---|
-| `create_comment` | optional, ≤500 chars, e.g. `progress-<issueId>-<yyyymmdd>-<n>` | same key + different text silently returns the ORIGINAL comment |
-| `upload_activity_attachment` | optional, 16–128 `[A-Za-z0-9_-]` | same key + same file → same id; different file → generic error |
-| `batch_issue_operations`, `batch_workspace_roadmap_changes` | required, 8–200 `[A-Za-z0-9._:-]` | replay returns the recorded summary and runs nothing, failed items included; retry failed items with a NEW key |
-| `submit_workspace_roadmap_change` | required, new per change | a reused key returns the OLD request |
-| `review_workspace_roadmap_change`, `revise_workspace_roadmap_change`, `withdraw_workspace_roadmap_change`, `comment_workspace_roadmap_change`, `update_workspace_roadmap_governance_policy` | required | same key replays the earlier result |
-| `commit_owner_roadmap_change`, `commit_roadmap_materialization`, `apply_workspace_roadmap_v2_migration` | 12–160 `[A-Za-z0-9._:-]`, e.g. `mat:<itemId>:<projectId>:<yyyymmdd>` | reuse the same key on every retry |
-| `create_aish_job` | ≤500 chars | same key + same payload → same job; different payload fails |
-| AISH sessions, coordinator leases, runner actions, legacy runner migrations | required, 8–240 chars | reuse only to retry the identical request; a new lease key renews the lease |
-| `refresh_repository_code_index` | stored only; dedupe is by commit | on a client timeout wait ~10 min, then call once |
-| `activate_repository_code_index` | `expectedGeneration` | re-sending after success fails with a generation conflict: verify with `get_repository_index_status` |
-
-| Not idempotent: re-read before any retry | Check with |
-|---|---|
-| `review_workspace_routing` | `list_operational_entries` (sourceWorkspaceIntakeEntryId) or `get_protocol_lineage` |
-| `create_governance_thread`, `reply_governance_thread` | `list_governance_threads`, `get_governance_thread_messages` |
-| `create_change_set` (live), `publish_baseline_from_working_scope`, `publish_project_baseline_from_resolution` | `list_change_sets`, `list_requirement_baselines` |
-| `create_webhook_subscription`, `test_webhook_subscription` | `list_webhook_subscriptions`, `list_webhook_deliveries` |
-| `create_project_specialist_assignment` | `list_project_specialist_assignments` |
-| `record_workspace_delivery_receipt`, `create_analytics_bridge_run` | `get_protocol_lineage`, `list_analytics_bridge_runs` |
-| `create_label`, `create_cycle`, `create_milestone`, `create_project`, `create_issue_link`, `create_activity_attachment` | the matching `list_*` tool |
-| `set_project_issue_blocker_context` (replaces the active one) | `get_issue` → `blockerContext` |
-
-| Full-replace field | Tool | Do |
-|---|---|---|
-| `routingProfile`, `governanceAssignments` | `update_project` | `get_project` first; send the full object |
-| `events` | `update_webhook_subscription` | resend the full list |
-| `allowedTools` (custom key) | `update_api_key` | omitting it EMPTIES the key |
-| whole AI config | `update_workspace_ai_config` | read, change one field, resend every field |
-| executive-context arrays | `apply_workspace_context_update` | arrays replace; `null` does not clear |
-| `labelIds` | `update_issue` | resend every label you keep |
-
-#### Rules
-1. Build keys from stable parts (task, target id, date, step); never random on a retry.
-2. One timeout → one re-read → at most one retry. Still unclear → report, do not loop.
-3. `actualHoursDelta` adds on every call: never retry it blindly.
-4. Never reuse a key for different content.
-
-#### Examples
-```text
-example: create_comment timed out
--> list_comments(projectId, issueId) -> no comment with that text -> retry with the SAME key
-example: batch_issue_operations -> 2 of 25 failed -> fix them -> new batch with only those 2 and a NEW key
-```
-
-
-## § enums
-
-### Enums (fixed values)
-Load when: you send or read a status, type, priority, role or other fixed value
-Applies to: lpm-deliver-activity, lpm-plan-work, lpm-unblock-work, lpm-roadmap, lpm-requirements-scope, lpm-aish-jobs, lpm-aish-delivery    Source: cards `inputs[].notes` and `returns` (catalog/cards); lpm `src/server/oauthToolPolicy.ts` (OAuth enums, lifecycle transitions), `server.ts` (`codeEvidence.status`)
-Owner skill: catalog
-
-#### Summary
-- Copy values exactly: with an API key many tools store an unknown value as is (no validation), so a typo corrupts data.
-- Activities have no `blocked` status: blockers are links or a blocker context.
-- `is-blocked-by` is stored reversed as `blocks`; activity links and roadmap/portfolio links use different vocabularies.
-- Roadmap lifecycle moves only along the transitions below; `closed` is final.
-
-#### Facts
-| Field | Values | Notes |
-|---|---|---|
-| issue `status` | `backlog`, `todo`, `in-progress`, `done`, `canceled` | no `blocked`; prefer `canceled` over delete |
-| issue / roadmap item `priority` | `none`, `low`, `medium`, `high`, `urgent` | |
-| cycle `status` | `upcoming`, `active`, `completed` | no "planned"; an `active` cycle past `endDate` is a stale-cycle signal |
-| milestone `status` | `open`, `closed` | |
-| issue link `type` | `blocks`, `is-blocked-by`, `duplicates`, `related-to` | `A blocks B` = source A, target B; `relates_to` is NOT an issue-link type |
-| portfolio link and roadmap dependency `type` | `blocks`, `depends_on`, `relates_to`, `enables_future_use`, `shared_capability` | roadmap dependency default `depends_on` |
-| governance thread `targetType` | `requirement`, `baseline`, `roadmap-item`, `roadmap-change-request` | never an activity (`issue` is rejected) |
-| thread `status` | `open`, `answered`, `decision-needed`, `resolved`, `closed` | `resolved`/`closed` record a decision [O] |
-| thread `outcomeType` | `clarification`, `create-activity`, `derive-requirement`, `propose-change-set`, `publication-note`, `no-action` | the 3 actionable ones lead to `prepare_*` drafts |
-| thread `actionTargetType` | `issue`, `requirement`, `change-set`, `baseline`, `roadmap-item`, `roadmap-change-request` | link-back after the draft is created |
-| change set `status` | `draft`, `in-review`, `approved`, `rejected`, `published` | `approved` is the owner's decision; material sets cannot skip review |
-| requirement `status` | `pending`, `met`, `not-met`, `in-progress`, `obsolete` | new scope = `pending`; prefer `obsolete` over delete |
-| requirement `type` | `functional`, `non-functional`, `interface`, `business`, `technical` | not validated server-side |
-| roadmap item `lifecycle` | `draft`, `imported`, `reviewed`, `approved`, `deferred`, `rejected`, `materialized`, `delivered`, `closed` | create only as `draft` (default) or `imported` |
-| lifecycle moves | draft/imported → reviewed, deferred, rejected; reviewed → approved, deferred, rejected; approved → deferred; deferred/rejected → reviewed; materialized → delivered; delivered → closed | `review_workspace_roadmap_item`; imported → approved takes two calls; `commit_roadmap_materialization` keeps `approved` (progress in `materializationSummary.state`), so `delivered` then fails: report it |
-| change request `status` | `draft`, `awaiting-review`, `changes-requested`, `approved`, `rejected`, `stale`, `applied`, `withdrawn`, `superseded` | `stale` = nothing applied; submit again |
-| change request `changeType` | `edit` (default), `prioritize`, `archive`, `restore`, `lifecycle`, `allocate`, `link`, `capability-link`, `create`, `materialize` | `create` and `materialize` are not usable as change requests (preview needs an existing itemId; apply writes nothing for them). New item → owner-ordered `create_workspace_roadmap_item` as a draft (`lpm-roadmap`) or an owner commit `create_item` (`lpm-roadmap-owner-ops`); later changes use `edit`, `prioritize`, `lifecycle`, `allocate`, `link` |
-| review `decision` | `approve`, `request-changes`, `reject` | [O]; never on your own submission |
-| roadmap governance `mode` | `off`, `shadow`, `enforce` | read from `get_workspace` → `roadmapGovernanceMode` |
-| AISH job `status` | `queued`, `leased`, `running`, `completed`, `failed`, `canceled` | |
-| operational entry `type` | `bug`, `improvement`, `incident`, `request` | |
-| operational entry `status` | `open`, `in_progress`, `resolved`, `archived` | `archived` is final |
-| workspace member `role` | `owner`, `admin`, `member`, `viewer` | least privilege: `member` or `viewer` |
-| team member `role` | `owner`, `admin`, `member` | |
-| notification `type` | `assignment`, `resolution`, `due-date`, `system`, `action_required`, `info`, `warning` | in-app only |
-| workspace `status` | `active`, `archived` | |
-| `codeEvidence.status` | `found`, `no_matches`, `no_relevant_matches`, `no_active_index`, `unavailable`, `not_requested` | see `advisor-semantics.md` |
-
-#### Rules
-1. Use only the values in this table; another value → ask the user.
-2. Send the value in the exact case and spelling shown.
-3. Never move a lifecycle outside the listed transitions; an error → report it, do not try other values.
-
-#### Examples
-```text
-example: "marca como bloqueada" -> no blocked status -> record a link or a blocker context (lpm-unblock-work)
-example: "A depende de B" (activities) -> create_issue_link(sourceIssueId=B, targetIssueId=A, type="blocks")
-```
-
-
 ## § connection-and-access
 
 ### Connection and access
@@ -737,6 +128,65 @@ example: "anexa o print na atividade Login quebrado"
 -> list_workspace_activities(workspaceId, projectId, limit=200)
 -> newest entry with targetType "issue" and targetId == issueId -> activityId
 example: two projects named "Portal" -> ask "Which project: Portal (PORT) or Portal (PTL2)?"
+```
+
+
+## § authority-and-owner-decisions
+
+### Authority and owner decisions
+Load when: a step is tagged [C] or [O], or the owner must decide
+Applies to: every skill    Source: process rules (Governance); catalog `authority-overrides.json` (rendered authority); cards `review_workspace_roadmap_change`, `apply_workspace_context_update`, `accept_roadmap_knowledge_artifact`; governance AI-enablement checklist
+Owner skill: lpm-governance-decisions
+
+#### Summary
+- [A] call it. [C] show the exact call and its effect, wait for "yes". [O] only when the owner ordered this exact action in this conversation; quote the order in the report.
+- GOV-MAX v1: scope and roadmap changes are proposals (change requests, threads) for the owner's decision.
+- Money, AI models, AI limits, index caps and evaluation budgets are always the owner's decision. Agents never configure them on their own.
+- No owner order → send the decision request below and STOP.
+
+#### Facts
+| Field / value | Meaning | Consequence for the agent |
+|---|---|---|
+| [A] autonomous | safe to call within the skill's job | call, then Verify |
+| [C] confirm-with-user | the user in this conversation must say yes | show tool, arguments and effect; no yes → do nothing |
+| [O] owner-only | reserved to the accountable owner | needs an explicit owner instruction for this exact change |
+| owner-only areas | governance outcomes, roadmap review/apply/direct operations, roadmap-structure writes, baseline publication, budgets, pools, funding, settlement, AI config and models, index caps, evaluation budget, credentials, project deletes | never on your own initiative |
+| 9 financial [O] tools | `configure_aish_budget`, `configure_aish_financial_pool`, `record_aish_financial_pool_cost`, `fund_aish_job`, `settle_aish_budget`, `adjust_aish_consumption`, `import_aish_accounting`, `set_aish_financial_visibility`, `update_workspace_ai_config` | owner instruction + quote, every time |
+| independent review | change requests are reviewed by someone other than the author (`SELF_REVIEW_FORBIDDEN`) | never review your own submission |
+| solo review | allowed only when the workspace has exactly one human | humans = `get_workspace` → `ownerId` ∪ active `list_workspace_members` → `userId`; solo only when that set has exactly one id (the owner may be missing from the member list) |
+| quorum | routine 1 approval; material 1 + owner; exceptional 2 + owner | an incomplete quorum leaves `awaiting-review` |
+| agent-asserted flags | `confirmed: true`, `confirmSensitiveChanges: true`, `--confirm` | send only after the explicit yes, for exactly what was shown |
+| a connector user | on ChatGPT/Claude the person saying yes may not be the owner | [O] needs the owner's own instruction |
+
+#### Rules
+1. Before an [O] call, find the owner's instruction in this conversation and quote it in the report. None → decision request, STOP.
+2. Never turn a recommendation, a thread message or a WhatsApp text into an owner instruction.
+3. One [C] confirmation covers only the call you showed; a changed argument needs a new yes.
+4. Record decisions only as stated by an authorized human; never originate a decision.
+5. A decision that spends AI or money carries the 7 AI-enablement fields.
+6. Bounded or batch authorizations never cover a production deploy.
+
+#### Examples
+##### Decision request
+```text
+Decision needed: <one line>
+Context: <facts from tool results of this run, with ids>
+Options:
+  A) <option> - consequences: <cost, risk, what changes, what is reversible>
+  B) <option> - consequences: <...>
+  C) do nothing - consequences: <...>
+Recommendation: <A|B|C> because <reason>
+AI fields (when AI or money is involved): feature scope: <...>; benefit: <...>;
+  budget/limit: <...>; fallback: <...>; owner: <...>; review date: <YYYY-MM-DD>;
+  rollback trigger: <...>
+To proceed, reply with the option and I will run: <exact tool and arguments>
+```
+Fill rules: every number comes from a tool result of this run; one recommendation; no option is pre-selected; after sending it, STOP.
+
+```text
+example: report line after an owner-ordered change
+Owner instruction (quoted): "pode aplicar a CR rcr_123 agora"
+Done: apply_workspace_roadmap_change(changeRequestId=rcr_123) -> status applied
 ```
 
 
