@@ -44,6 +44,7 @@ Do not use:
 | 10 | approve the release package | {{ref:flow-release-approve}} | O | no owner order → §6 |
 | 11 | claim, deploy, receipt of an approved release | {{ref:flow-release-deploy}} | C | "Release executor identity mismatch." |
 | 12 | repair a job; leftover jobs; job ≠ activity | {{ref:flow-repair}} | C | job or outcome not named |
+| 13 | replace a failed delivery session by an equivalent completed successor | {{ref:session-replacement}} | O | no explicit owner order or resolved decision naming both sessions |
 
 ## 5. Procedures
 ### P1 DoD audit and close — rows 5a, 5b

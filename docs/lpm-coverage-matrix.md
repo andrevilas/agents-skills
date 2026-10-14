@@ -7,19 +7,19 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 
 | Field | Value |
 |---|---|
-| lpmCommit | `3b4ae31c01d989c9cfc52e3e25b257a970c60fcc` |
-| toolCount | `384` |
+| lpmCommit | `30feffccd1a17cb57cd8f0ed9c2c10f65cdf54e7` |
+| toolCount | `385` |
 | cliCount | `152` |
-| namesHash | `sha256:cf246247b353134e18199bbb616395f1ed89abeb34f9923d2f81ada5fac3f262` |
-| schemaHash | `sha256:d2a4110e6be330b9b199ba784936bafadf3637696c61de4d690cfe9d7a7b6afe` |
+| namesHash | `sha256:2e816f39089ac885659ba58b42dcf69a37e88a22088f7a9c020525a5c7bdb6a2` |
+| schemaHash | `sha256:f74983bc24971c6274b89a1ef30b35020f4b976b783eab359067651f883cd95f` |
 | cliHash | `sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec` |
-| sourcesHash | `sha256:f43cf38c21d6181aab9963a0994314b402aa4573f66f56448de631fdba443d33` |
+| sourcesHash | `sha256:50c5f82b97308b51d8112dfe8113bdd4df33d29dc0baa7a7b40102a68ddbf443` |
 
 ## Totals
 
 | Tools | Owned | Pending | Unowned | Skills | OAuth-reachable |
 |---|---|---|---|---|---|
-| 384 | 384 | 0 | 0 | 23 | 76 |
+| 385 | 385 | 0 | 0 | 23 | 76 |
 
 ## Skills
 
@@ -27,7 +27,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 |---|---|---|---|---|---|---|---|---|
 | `lpm-access` | core | tools | 21 | 7/0/14 | 0 | KEY | 6 | — |
 | `lpm-ai-cost` | core | tools | 19 | 9/1/9 | 0 | KEY | 6 | — |
-| `lpm-aish-delivery` | core | tools | 20 | 13/6/1 | 0 | KEY | 9 | — |
+| `lpm-aish-delivery` | core | tools | 21 | 13/6/2 | 0 | KEY | 9 | — |
 | `lpm-aish-jobs` | core | tools | 28 | 15/9/4 | 0 | KEY | 3 | 10 |
 | `lpm-aish-runners` | core | tools | 12 | 5/7/0 | 0 | KEY | 5 | — |
 | `lpm-ask-advisor` | core | tools | 11 | 11/0/0 | 10 | OAuth mostly | 6 | 6 |
@@ -147,6 +147,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `refresh_repository_code_index` | `lpm-code-index` | C | KEY | — |
 | `register_aish_delivery_artifact` | `lpm-aish-delivery` | A | KEY | — |
 | `repair_aish_completed_job_lineage` | `lpm-aish-delivery` | C | KEY | — |
+| `replace_aish_delivery_session` | `lpm-aish-delivery` | O | KEY | — |
 | `request_aish_execution_checkpoint` | `lpm-aish-jobs` | A | KEY | — |
 | `requeue_aish_automation` | `lpm-aish-delivery` | C | KEY | — |
 | `resolve_aish_execution_checkpoint` | `lpm-aish-jobs` | O | KEY | — |

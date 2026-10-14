@@ -139,6 +139,34 @@ Gotchas:
 Pairs with: `register_aish_delivery_artifact`, `record_aish_delivery_finding`, `update_issue`
 CLI: `lpm aish command audit_aish_issue_delivery --file payload.json [--transport rest|mcp]`
 
+### `replace_aish_delivery_session` [O] · write · KEY · profiles: full, custom · sensitive: yes · idempotency: keyed by sourceSessionId
+Purpose: Record an immutable owner-approved substitution of a failed delivery session by an equivalent completed successor, preserving all history.
+Use when: The owner explicitly approved the exact source/successor pair and its resolved governance decision    Avoid when: Creating jobs, retrying, changing budgets or waiving requirements; No owner decision or incomplete successor evidence
+| Param | Req | Source (call → field) | Notes |
+|---|---|---|---|
+| decisionThreadId | yes | Owner-resolved governance clarification naming both sessions | Required; decision remains bound and revalidated |
+| dryRun | no | true for preview; false only after verified preview | Defaults true; preview does not mutate |
+| expectedFingerprint | no | fingerprint from the immediately preceding dry-run | Required for commit; never invent |
+| issueId | yes | get_issue -> id | Both sessions remain adopted |
+| projectId | yes | get_issue -> projectId | Same project |
+| reason | yes | Owner-approved reason | 16..3000 characters |
+| sourcePlanHash | yes | get_aish_execution_session(source) -> session.currentPlanHash | Must equal approvedPlanHash |
+| sourceSessionId | yes | Owner-approved pair and get_aish_execution_session -> session.id | Terminal failed/canceled |
+| successorPlanHash | yes | get_aish_execution_session(successor) -> session.currentPlanHash | Must equal approvedPlanHash |
+| successorSessionId | yes | Owner-approved pair and get_aish_execution_session -> session.id | Completed and independently passing technical DoD |
+Preconditions: Workspace owner credential and explicit owner order; Resolved owner clarification identifies both sessions; Same complete non-deployment plan criteria; no active job/checkpoint/coordinator lease
+Returns: {dryRun:true,fingerprint,replacement,failures:[]} preview; {dryRun:false,replacement,reused} commit; existing receipt on identical retry is not current DoD acceptance.
+Errors → fix:
+| When | Fix |
+|---|---|
+| Replacement requires the current dry-run fingerprint. | Read state and preview again; never guess a fingerprint. |
+| Replacement cannot validate delivery | Stop and report the failing criteria; do not erase sessions, loosen tests, or create jobs. |
+| Only the workspace owner may replace a delivery session. | Stop; request execution using the owner's existing authorized access, never broaden credentials. |
+Gotchas:
+- Preserves failed status, jobs and receipts; does not close the activity or waive independent human review.
+Pairs with: `get_aish_execution_session`, `audit_aish_issue_delivery`, `get_issue`
+CLI: `aish command replace_aish_delivery_session --file <payload.json> --transport rest --json`
+
 ### `record_aish_delivery_finding` [C] · write · KEY · profiles: full, custom · sensitive: yes · idempotency: naturally idempotent
 Purpose: Opens (action 'block') or resolves (action 'resolve') a technical finding that blocks closure of a factory-governed issue.
 Use when: action 'block': you verified a defect in delivered work (bug, missing or corrupt evidence, contract drift) that must prevent closure; action 'resolve': the defect was fixed and verified and the user agreed to clear it; use the same findingId    Avoid when: General discussion about the activity: use create_comment; Scope or roadmap decisions: governance threads / roadmap change requests; The issue is not factory-governed: use create_comment or update_issue

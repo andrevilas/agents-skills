@@ -7300,6 +7300,40 @@
       "descriptionSha": "sha256:ac47b80083a9cf51358aa94941bb4f0ab35b544f6504aabd07a3f1b3dbbdb531"
     },
     {
+      "name": "replace_aish_delivery_session",
+      "category": "administration",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "profiles": [
+        "full",
+        "custom"
+      ],
+      "required": [
+        "decisionThreadId",
+        "issueId",
+        "projectId",
+        "reason",
+        "sourcePlanHash",
+        "sourceSessionId",
+        "successorPlanHash",
+        "successorSessionId"
+      ],
+      "params": {
+        "decisionThreadId": "string",
+        "dryRun": "boolean",
+        "expectedFingerprint": "string",
+        "issueId": "string",
+        "projectId": "string",
+        "reason": "string",
+        "sourcePlanHash": "string",
+        "sourceSessionId": "string",
+        "successorPlanHash": "string",
+        "successorSessionId": "string"
+      },
+      "descriptionSha": "sha256:b72efbb1160cd1190b346bbe7bbc1803d7419449d5029ae080362468d8ebf616"
+    },
+    {
       "name": "reply_governance_thread",
       "category": "requirements",
       "accessLevel": "write",
@@ -9329,8 +9363,8 @@
     }
   ],
   "hashes": {
-    "namesHash": "sha256:cf246247b353134e18199bbb616395f1ed89abeb34f9923d2f81ada5fac3f262",
-    "schemaHash": "sha256:d2a4110e6be330b9b199ba784936bafadf3637696c61de4d690cfe9d7a7b6afe",
+    "namesHash": "sha256:2e816f39089ac885659ba58b42dcf69a37e88a22088f7a9c020525a5c7bdb6a2",
+    "schemaHash": "sha256:f74983bc24971c6274b89a1ef30b35020f4b976b783eab359067651f883cd95f",
     "cliHash": "sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec"
   }
 }

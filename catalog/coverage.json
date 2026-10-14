@@ -3,14 +3,14 @@
   "generatedBy": "agents-skills scripts/skills.mjs build",
   "source": {
     "repo": "andrevilas/agents-skills",
-    "sourcesHash": "sha256:f43cf38c21d6181aab9963a0994314b402aa4573f66f56448de631fdba443d33"
+    "sourcesHash": "sha256:50c5f82b97308b51d8112dfe8113bdd4df33d29dc0baa7a7b40102a68ddbf443"
   },
   "snapshot": {
-    "lpmCommit": "3b4ae31c01d989c9cfc52e3e25b257a970c60fcc",
-    "toolCount": 384,
+    "lpmCommit": "30feffccd1a17cb57cd8f0ed9c2c10f65cdf54e7",
+    "toolCount": 385,
     "cliCount": 152,
-    "namesHash": "sha256:cf246247b353134e18199bbb616395f1ed89abeb34f9923d2f81ada5fac3f262",
-    "schemaHash": "sha256:d2a4110e6be330b9b199ba784936bafadf3637696c61de4d690cfe9d7a7b6afe",
+    "namesHash": "sha256:2e816f39089ac885659ba58b42dcf69a37e88a22088f7a9c020525a5c7bdb6a2",
+    "schemaHash": "sha256:f74983bc24971c6274b89a1ef30b35020f4b976b783eab359067651f883cd95f",
     "cliHash": "sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec"
   },
   "policy": {
@@ -125,6 +125,7 @@
         "record_aish_delivery_finding",
         "register_aish_delivery_artifact",
         "repair_aish_completed_job_lineage",
+        "replace_aish_delivery_session",
         "requeue_aish_automation",
         "set_aish_completed_job_disposition",
         "tick_aish_automation",
@@ -7291,6 +7292,32 @@
         "dist/generic/lpm-aish-delivery.md"
       ]
     },
+    "replace_aish_delivery_session": {
+      "owner": "lpm-aish-delivery",
+      "usedBy": [],
+      "category": "administration",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "required": [
+        "decisionThreadId",
+        "issueId",
+        "projectId",
+        "reason",
+        "sourcePlanHash",
+        "sourceSessionId",
+        "successorPlanHash",
+        "successorSessionId"
+      ],
+      "cardAuthority": "owner-only",
+      "renderedAuthority": "O",
+      "renderedIn": [
+        "dist/antigravity/lpm-aish-delivery/SKILL.md",
+        "dist/claude-code/lpm-aish-delivery/SKILL.md",
+        "dist/codex/lpm-aish-delivery/SKILL.md",
+        "dist/generic/lpm-aish-delivery.md"
+      ]
+    },
     "reply_governance_thread": {
       "owner": "lpm-governance-decisions",
       "usedBy": [],
@@ -8911,8 +8938,8 @@
     }
   ],
   "totals": {
-    "tools": 384,
-    "owned": 384,
+    "tools": 385,
+    "owned": 385,
     "pending": 0,
     "unowned": 0,
     "skills": 23,

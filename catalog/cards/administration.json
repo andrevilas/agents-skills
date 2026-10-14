@@ -2,8 +2,13 @@
   {
     "name": "get_project_agent_recovery_inventory",
     "purpose": "Read sanitized, bounded pages of project agent runs or checkpoint pending-write format metadata without exposing context or authorizing recovery.",
-    "useWhen": ["Compatibility review before a checkpoint recovery release"],
-    "avoidWhen": ["Resuming, migrating, deleting or approving runs", "Global inventory including orphan checkpoints"],
+    "useWhen": [
+      "Compatibility review before a checkpoint recovery release"
+    ],
+    "avoidWhen": [
+      "Resuming, migrating, deleting or approving runs",
+      "Global inventory including orphan checkpoints"
+    ],
     "inputs": [
       {
         "param": "cursor",
@@ -30,25 +35,161 @@
         "notes": "Omit to page runs; supply to page that run's checkpoints."
       }
     ],
-    "preconditions": ["Existing API-key credential permits this tool", "Caller can manage the project; run and checkpoint scopes are checked"],
+    "preconditions": [
+      "Existing API-key credential permits this tool",
+      "Caller can manage the project; run and checkpoint scopes are checked"
+    ],
     "effect": "read",
     "authority": "autonomous",
     "idempotency": "naturally idempotent",
     "returns": "{projectId,workspaceId,runId,mode,readOnly:true,authorizesResume:false,coverage,snapshotConsistent:false,generatedAt,items,pageCount,hasMore,nextCursor}; items contain IDs, closed-enum classifications, timestamps and counts only.",
-    "pairsWith": ["list_projects"],
+    "pairsWith": [
+      "list_projects"
+    ],
     "errors": [
-      { "when": "Invalid recovery inventory arguments", "fix": "Use the original cursor for the same scope and integer limit 1..50; do not add mutation fields." },
-      { "when": "Recovery inventory scope mismatch or run unavailable", "fix": "Stop and report incomplete; do not bypass scope checks or query production storage directly." },
-      { "when": "You do not have permission to manage this project", "fix": "Stop and ask the owner to arrange the appropriate access; do not create credentials." }
+      {
+        "when": "Invalid recovery inventory arguments",
+        "fix": "Use the original cursor for the same scope and integer limit 1..50; do not add mutation fields."
+      },
+      {
+        "when": "Recovery inventory scope mismatch or run unavailable",
+        "fix": "Stop and report incomplete; do not bypass scope checks or query production storage directly."
+      },
+      {
+        "when": "You do not have permission to manage this project",
+        "fix": "Stop and ask the owner to arrange the appropriate access; do not create credentials."
+      }
     ],
     "oauthScope": null,
     "cli": null,
     "gotchas": [
-      { "text": "No raw context, prompts, task IDs, channels or pending-write values in the response", "verifiedFrom": "src/server/agentRecoveryInventory.ts:84-105" },
-      { "text": "Format-compatible-only is not safe-to-resume approval", "verifiedFrom": "src/server/agentRecoveryInventory.ts:101-107" },
-      { "text": "No orphan coverage or atomic snapshot; complete every applicable cursor or report incomplete", "verifiedFrom": "src/server/agentRecoveryInventory.ts:107-111" },
-      { "text": "Legacy/unattributed, invalid, missing or unknown version requires explicit review; partial records are not resumable", "verifiedFrom": "src/server/agentRecoveryInventory.ts:31-54" }
+      {
+        "text": "No raw context, prompts, task IDs, channels or pending-write values in the response",
+        "verifiedFrom": "src/server/agentRecoveryInventory.ts:84-105"
+      },
+      {
+        "text": "Format-compatible-only is not safe-to-resume approval",
+        "verifiedFrom": "src/server/agentRecoveryInventory.ts:101-107"
+      },
+      {
+        "text": "No orphan coverage or atomic snapshot; complete every applicable cursor or report incomplete",
+        "verifiedFrom": "src/server/agentRecoveryInventory.ts:107-111"
+      },
+      {
+        "text": "Legacy/unattributed, invalid, missing or unknown version requires explicit review; partial records are not resumable",
+        "verifiedFrom": "src/server/agentRecoveryInventory.ts:31-54"
+      }
     ],
     "verifiedFrom": "server.ts:getProjectAgentRecoveryInventoryCommand; src/server/agentRecoveryInventory.ts"
+  },
+  {
+    "name": "replace_aish_delivery_session",
+    "purpose": "Record an immutable owner-approved substitution of a failed delivery session by an equivalent completed successor, preserving all history.",
+    "useWhen": [
+      "The owner explicitly approved the exact source/successor pair and its resolved governance decision"
+    ],
+    "avoidWhen": [
+      "Creating jobs, retrying, changing budgets or waiving requirements",
+      "No owner decision or incomplete successor evidence"
+    ],
+    "inputs": [
+      {
+        "param": "decisionThreadId",
+        "required": true,
+        "source": "Owner-resolved governance clarification naming both sessions",
+        "notes": "Required; decision remains bound and revalidated"
+      },
+      {
+        "param": "dryRun",
+        "required": false,
+        "source": "true for preview; false only after verified preview",
+        "notes": "Defaults true; preview does not mutate"
+      },
+      {
+        "param": "expectedFingerprint",
+        "required": false,
+        "source": "fingerprint from the immediately preceding dry-run",
+        "notes": "Required for commit; never invent"
+      },
+      {
+        "param": "issueId",
+        "required": true,
+        "source": "get_issue -> id",
+        "notes": "Both sessions remain adopted"
+      },
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "get_issue -> projectId",
+        "notes": "Same project"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "Owner-approved reason",
+        "notes": "16..3000 characters"
+      },
+      {
+        "param": "sourcePlanHash",
+        "required": true,
+        "source": "get_aish_execution_session(source) -> session.currentPlanHash",
+        "notes": "Must equal approvedPlanHash"
+      },
+      {
+        "param": "sourceSessionId",
+        "required": true,
+        "source": "Owner-approved pair and get_aish_execution_session -> session.id",
+        "notes": "Terminal failed/canceled"
+      },
+      {
+        "param": "successorPlanHash",
+        "required": true,
+        "source": "get_aish_execution_session(successor) -> session.currentPlanHash",
+        "notes": "Must equal approvedPlanHash"
+      },
+      {
+        "param": "successorSessionId",
+        "required": true,
+        "source": "Owner-approved pair and get_aish_execution_session -> session.id",
+        "notes": "Completed and independently passing technical DoD"
+      }
+    ],
+    "preconditions": [
+      "Workspace owner credential and explicit owner order",
+      "Resolved owner clarification identifies both sessions",
+      "Same complete non-deployment plan criteria; no active job/checkpoint/coordinator lease"
+    ],
+    "effect": "write",
+    "authority": "owner-only",
+    "idempotency": "keyed by sourceSessionId",
+    "returns": "{dryRun:true,fingerprint,replacement,failures:[]} preview; {dryRun:false,replacement,reused} commit; existing receipt on identical retry is not current DoD acceptance.",
+    "pairsWith": [
+      "get_aish_execution_session",
+      "audit_aish_issue_delivery",
+      "get_issue"
+    ],
+    "errors": [
+      {
+        "when": "Replacement requires the current dry-run fingerprint.",
+        "fix": "Read state and preview again; never guess a fingerprint."
+      },
+      {
+        "when": "Replacement cannot validate delivery",
+        "fix": "Stop and report the failing criteria; do not erase sessions, loosen tests, or create jobs."
+      },
+      {
+        "when": "Only the workspace owner may replace a delivery session.",
+        "fix": "Stop; request execution using the owner's existing authorized access, never broaden credentials."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "aish command replace_aish_delivery_session --file <payload.json> --transport rest --json",
+    "gotchas": [
+      {
+        "text": "Preserves failed status, jobs and receipts; does not close the activity or waive independent human review.",
+        "verifiedFrom": "src/server/aishDeliveryStore.ts:194-247"
+      }
+    ],
+    "verifiedFrom": "server.ts:replaceAishDeliverySessionCommand; src/server/aishDeliveryStore.ts:replaceDeliverySession; src/server/aishDeliveryReplacement.ts"
   }
 ]
