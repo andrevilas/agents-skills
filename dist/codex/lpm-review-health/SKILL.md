@@ -10,9 +10,9 @@ metadata:
 # Review project or portfolio health (read-only)
 > Done when: A report exists where every number comes from a tool result of this run and every finding names the skill that fixes it.
 
-Access: on a connector rows 1,8 work; rows 2,3 work only in part (their KEY tools are not on connectors); rows 4-7 need an LPM API key (profile read-only).
+Access: on a connector rows 1,8 work; rows 2,3 work only in part (their KEY tools are not on connectors); rows 0,4-7 need an LPM API key (profile read-only).
 
-Authority: [A] 10 · [C] 0 · [O] 0. Read-only: this skill owns no write tool (validator-enforced).
+Authority: [A] 11 · [C] 0 · [O] 0. Read-only: this skill owns no write tool (validator-enforced).
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.
@@ -59,6 +59,7 @@ Do not use:
 ## 4. Decision table (first match wins)
 | # | If the user wants / you see | Do | Auth | Stop if |
 |---|---|---|---|---|
+| 0 | one bounded page of agent recovery inventory (read [recovery-inventory](references/recovery-inventory.md) for pagination and interpretation) | CALL `get_project_agent_recovery_inventory` {"projectId":"<input:projectId>","limit":25} | A | missing tool or manage access: stop; no alternate credentials or direct database reads |
 | 1 | a review of one project on a ChatGPT/Claude connector | playbook [flow-connector](references/flow-connector.md) | A | — |
 | 2 | health, status, risks or weekly review of one project or cycle; burndown, velocity, trend | playbook [flow-project](references/flow-project.md) | A | archived → "not reviewed" |
 | 3 | portfolio, "what needs my attention", weekly review of a workspace | playbook [flow-portfolio](references/flow-portfolio.md) | A | too large → user picks ≤ 5 |
@@ -105,8 +106,9 @@ Next: <the ASK or STOP text that ended the run> | <owner skill + its first actio
 | "You do not have access to this owner surface" | no project governance role: risks and decisions "not read"; ask the project owner for a role |
 
 ## 10. Tools and references
-Tool contracts: [tools](references/tools.md) (10 owned, 15 borrowed). Open for parameter or permission details.
+Tool contracts: [tools](references/tools.md) (11 owned, 15 borrowed). Open for parameter or permission details.
 Load a reference only when its condition holds:
+- `references/recovery-inventory.md` — read-only compatibility inventory of project agent runs and checkpoints before a recovery release
 - `references/health-thresholds.md` — background for maintainers: how LPM computes each health status (the playbooks already hold every rule they need)
 - `references/connection-and-access.md` — a tool is missing or denied (-32003), or you set up or check a connection
 - `references/ids-and-sources.md` — a step needs an ID, hash or version you lack

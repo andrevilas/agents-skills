@@ -3,6 +3,21 @@
 
 Load a section only when the skill tells you to.
 
+## § recovery-inventory
+
+### Recovery compatibility inventory (read-only)
+
+Use `get_project_agent_recovery_inventory` with an existing API-key connection and project **manage** access. An API-key read-only profile permits the tool but does not grant project management. OAuth is not enabled for this tool. Do not mint/reuse a human token or read the production database to bypass denial.
+
+1. Call `{ "projectId": "<resolved project ID>", "limit": 25 }`. Omit `runId` to page runs. Save each returned run ID, status and scope status; follow `nextCursor` unchanged until `hasMore=false`, subject to the agreed read budget.
+2. For each in-scope run, call `{ "projectId": "<same ID>", "runId": "<returned run ID>", "limit": 25 }`. Follow that run's cursor separately. Maximum limit is 50. Never reuse a cursor across projects, workspaces, modes or runs.
+3. Report page/read counts, observed timestamps, run statuses and checkpoint classifications; keep raw prompts, context, task IDs, channels and values out of evidence. The tool never returns those fields.
+4. `legacy-unattributed`, `missing`, `invalid`, `unknown-version`, incomplete scope or `explicit-review-required` needs explicit treatment before recovery. `partial-not-resumable` is not a graph checkpoint; approval records are `not-applicable`. `format-compatible-only` verifies only the pending-writes shape, not graph validity, current authority or side-effect safety.
+5. `authorizesResume=false` always. Do not resume, migrate, rewrite, delete or approve anything under this review. Route an implementation defect to `lpm-deliver-activity`; release gates remain with `lpm-release-product` (LPM maintainers only).
+
+Coverage is project runs and checkpoints linked to those runs, not orphan checkpoints. Pagination is not an atomic snapshot; concurrent changes require a fresh review or a separately authorized quiescence window. If a page is skipped, a read budget is exhausted, or scope validation fails, report **incomplete**, not "safe to deploy". Exhausting cursors only proves that bounded traversal completed at the observed times; it does not accept parity or archive AISH.
+
+
 ## § health-thresholds
 
 ### Health thresholds and payloads
@@ -44,7 +59,7 @@ Owner skill: lpm-start
 
 #### Summary
 - Endpoint: `https://lpm.rocks/mcp` (Streamable HTTP). Never use a `*.run.app` URL.
-- API key (header `x-api-key`): the 383-tool catalog filtered by the key's profile. ChatGPT/Claude connector (OAuth): 76 tools in 5 scopes.
+- API key (header `x-api-key`): the 384-tool catalog filtered by the key's profile. ChatGPT/Claude connector (OAuth): 76 tools in 5 scopes.
 - Tool missing or denied → `get_mcp_connection_info` → give the user `howToEnable` as written → STOP.
 - ChatGPT disconnect/connect neither re-runs OAuth nor refreshes the tool list: remove the connector, reinstall it, tick the box.
 - Sensitive admin tools (111) exist only in `full` and `custom` API keys.
@@ -58,10 +73,10 @@ Owner skill: lpm-start
 | OAuth `mcp:advisor` (9) | default scope "Análise e respostas sobre roadmap" | Advisor answers and code search |
 | OAuth `portfolio:manage` (6) | opt-in box "Gestão de atividades dos projetos" under "Permissões adicionais (opcional)" on the page "Autorizar uma conexão"; the box shows after logging in to LPM there | `create_issue`, `update_issue`, `create_comment`, `batch_issue_operations`, thread create/reply |
 | a scope missing on an old connector | the grant and tool list were fixed at install time | remove + reinstall the connector; reconnecting is not enough |
-| API-key profile `read-only` (142) | read tools minus sensitive ones; also the default when a key has no profile | no writes |
+| API-key profile `read-only` (143) | read tools minus sensitive ones; also the default when a key has no profile | no writes |
 | `portfolio` (156), `planning` (134), `requirements` (146) | category presets, sensitive tools excluded | mixed flows need `custom` |
 | `roadmap-owner-advisor` (36), `roadmap-owner-operator` (37) | profiles of scoped `lpm_mcp_` owner-agent credentials only; LPM rejects them on an API key | operator adds `commit_owner_roadmap_change`; never tell a user to create an API key with them |
-| `full` (383), `custom` (explicit `allowedTools`) | the only profiles with sensitive admin tools | ask the key owner (`lpm-access`); never widen your own key |
+| `full` (384), `custom` (explicit `allowedTools`) | the only profiles with sensitive admin tools | ask the key owner (`lpm-access`); never widen your own key |
 | `get_mcp_connection_info` (OAuth) | `scopes`, `workspaceAccess` single/all, `availableToolCount`, `unavailableToolGroups[{scope, title, optional, tools, howToEnable}]` | `howToEnable` is Portuguese text for the end user |
 | `get_mcp_connection_info` (API key) | `credential: "api_key"`, `allowedToolCount`, `howToChange` | describes only YOUR connection, never another user's |
 | `lpm_mcp_…` owner-agent credential | cannot call `get_mcp_connection_info` | run `lpm mcp status` (endpoint + tool count) |

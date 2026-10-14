@@ -35,6 +35,7 @@
     { "when": "historical health trends (daily exports)", "skill": "lpm-integrations" }
   ],
   "owns": [
+    "get_project_agent_recovery_inventory",
     "get_project_analytics",
     "get_project_owner_surface",
     "get_project_read_model",
@@ -66,6 +67,7 @@
   "cli": [],
   "sharedRefs": [],
   "references": [
+    { "file": "references/recovery-inventory.md", "loadWhen": "read-only compatibility inventory of project agent runs and checkpoints before a recovery release" },
     { "file": "references/flow-project.md", "loadWhen": "playbook project: health, status, risks or weekly review of one project or cycle, with an LPM API key" },
     { "file": "references/flow-connector.md", "loadWhen": "playbook connector: review of one project on a ChatGPT/Claude connector, or when playbook project hit -32003" },
     { "file": "references/flow-portfolio.md", "loadWhen": "playbook portfolio: portfolio or workspace review, \"what needs my attention\", or a weekly review of a whole workspace" },

@@ -34,6 +34,7 @@ Do not use:
 ## 4. Decision table (first match wins)
 | # | If the user wants / you see | Do | Auth | Stop if |
 |---|---|---|---|---|
+| 0 | one bounded page of agent recovery inventory (read {{ref:recovery-inventory}} for pagination and interpretation) | CALL {{tool:get_project_agent_recovery_inventory}} {"projectId":"<input:projectId>","limit":25} | A | missing tool or manage access: stop; no alternate credentials or direct database reads |
 | 1 | a review of one project on a ChatGPT/Claude connector | playbook {{ref:flow-connector}} | A | — |
 | 2 | health, status, risks or weekly review of one project or cycle; burndown, velocity, trend | playbook {{ref:flow-project}} | A | archived → "not reviewed" |
 | 3 | portfolio, "what needs my attention", weekly review of a workspace | playbook {{ref:flow-portfolio}} | A | too large → user picks ≤ 5 |

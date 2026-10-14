@@ -77,7 +77,7 @@ Owner skill: lpm-start
 
 #### Summary
 - Endpoint: `https://lpm.rocks/mcp` (Streamable HTTP). Never use a `*.run.app` URL.
-- API key (header `x-api-key`): the 383-tool catalog filtered by the key's profile. ChatGPT/Claude connector (OAuth): 76 tools in 5 scopes.
+- API key (header `x-api-key`): the 384-tool catalog filtered by the key's profile. ChatGPT/Claude connector (OAuth): 76 tools in 5 scopes.
 - Tool missing or denied → `get_mcp_connection_info` → give the user `howToEnable` as written → STOP.
 - ChatGPT disconnect/connect neither re-runs OAuth nor refreshes the tool list: remove the connector, reinstall it, tick the box.
 - Sensitive admin tools (111) exist only in `full` and `custom` API keys.
@@ -91,10 +91,10 @@ Owner skill: lpm-start
 | OAuth `mcp:advisor` (9) | default scope "Análise e respostas sobre roadmap" | Advisor answers and code search |
 | OAuth `portfolio:manage` (6) | opt-in box "Gestão de atividades dos projetos" under "Permissões adicionais (opcional)" on the page "Autorizar uma conexão"; the box shows after logging in to LPM there | `create_issue`, `update_issue`, `create_comment`, `batch_issue_operations`, thread create/reply |
 | a scope missing on an old connector | the grant and tool list were fixed at install time | remove + reinstall the connector; reconnecting is not enough |
-| API-key profile `read-only` (142) | read tools minus sensitive ones; also the default when a key has no profile | no writes |
+| API-key profile `read-only` (143) | read tools minus sensitive ones; also the default when a key has no profile | no writes |
 | `portfolio` (156), `planning` (134), `requirements` (146) | category presets, sensitive tools excluded | mixed flows need `custom` |
 | `roadmap-owner-advisor` (36), `roadmap-owner-operator` (37) | profiles of scoped `lpm_mcp_` owner-agent credentials only; LPM rejects them on an API key | operator adds `commit_owner_roadmap_change`; never tell a user to create an API key with them |
-| `full` (383), `custom` (explicit `allowedTools`) | the only profiles with sensitive admin tools | ask the key owner (`lpm-access`); never widen your own key |
+| `full` (384), `custom` (explicit `allowedTools`) | the only profiles with sensitive admin tools | ask the key owner (`lpm-access`); never widen your own key |
 | `get_mcp_connection_info` (OAuth) | `scopes`, `workspaceAccess` single/all, `availableToolCount`, `unavailableToolGroups[{scope, title, optional, tools, howToEnable}]` | `howToEnable` is Portuguese text for the end user |
 | `get_mcp_connection_info` (API key) | `credential: "api_key"`, `allowedToolCount`, `howToChange` | describes only YOUR connection, never another user's |
 | `lpm_mcp_…` owner-agent credential | cannot call `get_mcp_connection_info` | run `lpm mcp status` (endpoint + tool count) |

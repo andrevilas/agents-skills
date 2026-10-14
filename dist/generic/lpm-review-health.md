@@ -4,9 +4,9 @@ Skill: `lpm-review-health` (core, v2.0.0) · Access: mixed
 Use when: a read-only health, status, risk or integrity review of an LPM project or portfolio is asked (saúde, revisão semanal, 'what needs my attention'). Names the fixing skill per finding; never edits. Not for fixes (use lpm-plan-work) or unowned capabilities (use lpm-executive-context).
 > Done when: A report exists where every number comes from a tool result of this run and every finding names the skill that fixes it.
 
-Access: on a connector rows 1,8 work; rows 2,3 work only in part (their KEY tools are not on connectors); rows 4-7 need an LPM API key (profile read-only).
+Access: on a connector rows 1,8 work; rows 2,3 work only in part (their KEY tools are not on connectors); rows 0,4-7 need an LPM API key (profile read-only).
 
-Authority: [A] 10 · [C] 0 · [O] 0. Read-only: this skill owns no write tool (validator-enforced).
+Authority: [A] 11 · [C] 0 · [O] 0. Read-only: this skill owns no write tool (validator-enforced).
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.
@@ -53,6 +53,7 @@ Do not use:
 ## 4. Decision table (first match wins)
 | # | If the user wants / you see | Do | Auth | Stop if |
 |---|---|---|---|---|
+| 0 | one bounded page of agent recovery inventory (read `lpm-review-health.refs.md` § recovery-inventory for pagination and interpretation) | CALL `get_project_agent_recovery_inventory` {"projectId":"<input:projectId>","limit":25} | A | missing tool or manage access: stop; no alternate credentials or direct database reads |
 | 1 | a review of one project on a ChatGPT/Claude connector | playbook `lpm-review-health.flows.md` § flow-connector | A | — |
 | 2 | health, status, risks or weekly review of one project or cycle; burndown, velocity, trend | playbook `lpm-review-health.flows.md` § flow-project | A | archived → "not reviewed" |
 | 3 | portfolio, "what needs my attention", weekly review of a workspace | playbook `lpm-review-health.flows.md` § flow-portfolio | A | too large → user picks ≤ 5 |
@@ -99,8 +100,9 @@ Next: <the ASK or STOP text that ended the run> | <owner skill + its first actio
 | "You do not have access to this owner surface" | no project governance role: risks and decisions "not read"; ask the project owner for a role |
 
 ## 10. Tools and references
-Tool contracts: `lpm-review-health.tools.md` (10 owned, 15 borrowed). Open for parameter or permission details.
+Tool contracts: `lpm-review-health.tools.md` (11 owned, 15 borrowed). Open for parameter or permission details.
 Load a reference only when its condition holds:
+- `lpm-review-health.refs.md` § recovery-inventory — read-only compatibility inventory of project agent runs and checkpoints before a recovery release
 - `lpm-review-health.refs.md` § health-thresholds — background for maintainers: how LPM computes each health status (the playbooks already hold every rule they need)
 - `lpm-review-health.refs.md` § connection-and-access — a tool is missing or denied (-32003), or you set up or check a connection
 - `lpm-review-health.refs.md` § ids-and-sources — a step needs an ID, hash or version you lack
