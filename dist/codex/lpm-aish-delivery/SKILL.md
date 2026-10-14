@@ -12,7 +12,7 @@ metadata:
 
 Access: on a connector only `get_issue` works; everything else needs an LPM API key (profile full or custom).
 
-Authority: [A] 13 · [C] 6 · [O] 1. Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; release approval is [O] (managing human only).
+Authority: [A] 13 · [C] 6 · [O] 2. Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; release approval is [O] (managing human only).
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.
@@ -67,6 +67,7 @@ Do not use:
 | 10 | approve the release package | [flow-release-approve](references/flow-release-approve.md) | O | no owner order → §6 |
 | 11 | claim, deploy, receipt of an approved release | [flow-release-deploy](references/flow-release-deploy.md) | C | "Release executor identity mismatch." |
 | 12 | repair a job; leftover jobs; job ≠ activity | [flow-repair](references/flow-repair.md) | C | job or outcome not named |
+| 13 | replace a failed delivery session by an equivalent completed successor | [session-replacement](references/session-replacement.md) | O | no explicit owner order or resolved decision naming both sessions |
 
 ## 5. Procedures
 ### P1 DoD audit and close — rows 5a, 5b
@@ -114,9 +115,10 @@ Next: <one action>
 | `record_aish_delivery_finding`: Technical finding needs a stable id and explicit reason. | findingId 8-160 chars [a-zA-Z0-9_-] and reason 8-3,000 chars. |
 
 ## 10. Tools and references
-Tool contracts: [tools](references/tools.md) (20 owned, 9 borrowed). Open for parameter or permission details.
-`list_aish_delivery_artifacts`, `read_aish_delivery_artifact`, `register_aish_delivery_artifact`, `upload_aish_delivery_artifact`, `audit_aish_issue_delivery`, `record_aish_delivery_finding`, `create_aish_release`, `get_aish_release`, `approve_aish_release`, `claim_aish_release`, `complete_aish_release`, `get_aish_execution_report`, `collect_aish_execution_pack`, `get_aish_execution_pack`, `export_aish_execution_pack`, `tick_aish_automation`, `get_aish_automation_delivery`, `requeue_aish_automation`, `set_aish_completed_job_disposition`, `repair_aish_completed_job_lineage`, `get_aish_job`, `list_aish_jobs`, `get_aish_execution_session`, `update_issue`, `list_workspace_activities`, `upload_activity_attachment`, `list_activity_attachments`, `get_project_analytics`, `get_issue`
+Tool contracts: [tools](references/tools.md) (21 owned, 9 borrowed). Open for parameter or permission details.
+`list_aish_delivery_artifacts`, `read_aish_delivery_artifact`, `register_aish_delivery_artifact`, `upload_aish_delivery_artifact`, `audit_aish_issue_delivery`, `replace_aish_delivery_session`, `record_aish_delivery_finding`, `create_aish_release`, `get_aish_release`, `approve_aish_release`, `claim_aish_release`, `complete_aish_release`, `get_aish_execution_report`, `collect_aish_execution_pack`, `get_aish_execution_pack`, `export_aish_execution_pack`, `tick_aish_automation`, `get_aish_automation_delivery`, `requeue_aish_automation`, `set_aish_completed_job_disposition`, `repair_aish_completed_job_lineage`, `get_aish_job`, `list_aish_jobs`, `get_aish_execution_session`, `update_issue`, `list_workspace_activities`, `upload_activity_attachment`, `list_activity_attachments`, `get_project_analytics`, `get_issue`
 Load a reference only when its condition holds:
+- `references/session-replacement.md` — the owner explicitly approves replacing a failed session with an equivalent completed successor
 - `references/flow-evidence.md` — playbook evidence: register a screenshot, video, test report or runner-published file as a delivery artifact of an AISH job
 - `references/flow-release.md` — running rows 9–11
 - `references/flow-repair.md` — running row 12

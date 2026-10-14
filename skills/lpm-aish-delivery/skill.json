@@ -150,6 +150,7 @@
     "register_aish_delivery_artifact",
     "upload_aish_delivery_artifact",
     "audit_aish_issue_delivery",
+    "replace_aish_delivery_session",
     "record_aish_delivery_finding",
     "create_aish_release",
     "get_aish_release",
@@ -214,6 +215,10 @@
     }
   ],
   "references": [
+    {
+      "file": "references/session-replacement.md",
+      "loadWhen": "the owner explicitly approves replacing a failed session with an equivalent completed successor"
+    },
     {
       "file": "references/flow-evidence.md",
       "loadWhen": "playbook evidence: register a screenshot, video, test report or runner-published file as a delivery artifact of an AISH job"
