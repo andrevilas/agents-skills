@@ -5,6 +5,30 @@ Cards for every tool this skill names. Rendered authority: [A] call · [C] confi
 
 ## Owned
 
+### `get_project_agent_recovery_inventory` [A] · read · KEY · profiles: full, read-only, custom · sensitive: no · idempotency: naturally idempotent
+Purpose: Read sanitized, bounded pages of project agent runs or checkpoint pending-write format metadata without exposing context or authorizing recovery.
+Use when: Compatibility review before a checkpoint recovery release    Avoid when: Resuming, migrating, deleting or approving runs; Global inventory including orphan checkpoints
+| Param | Req | Source (call → field) | Notes |
+|---|---|---|---|
+| cursor | no | Previous page nextCursor from the same project, workspace, mode and run | Opaque; omit for the first page. Maximum 3072 characters. |
+| limit | no | Read budget | Integer 1..50, default 25; at most limit+1 rows plus one parent run in checkpoint mode. |
+| projectId | yes | list_projects -> id | Requires project manage access, even though the tool is read-only. |
+| runId | no | items[].id from this tool in runs mode | Omit to page runs; supply to page that run's checkpoints. |
+Preconditions: Existing API-key credential permits this tool; Caller can manage the project; run and checkpoint scopes are checked
+Returns: {projectId,workspaceId,runId,mode,readOnly:true,authorizesResume:false,coverage,snapshotConsistent:false,generatedAt,items,pageCount,hasMore,nextCursor}; items contain IDs, closed-enum classifications, timestamps and counts only.
+Errors → fix:
+| When | Fix |
+|---|---|
+| Invalid recovery inventory arguments | Use the original cursor for the same scope and integer limit 1..50; do not add mutation fields. |
+| Recovery inventory scope mismatch or run unavailable | Stop and report incomplete; do not bypass scope checks or query production storage directly. |
+| You do not have permission to manage this project | Stop and ask the owner to arrange the appropriate access; do not create credentials. |
+Gotchas:
+- No raw context, prompts, task IDs, channels or pending-write values in the response
+- Format-compatible-only is not safe-to-resume approval
+- No orphan coverage or atomic snapshot; complete every applicable cursor or report incomplete
+- Legacy/unattributed, invalid, missing or unknown version requires explicit review; partial records are not resumable
+Pairs with: `list_projects`
+
 ### `get_project_analytics` [A] · read · KEY · profiles: full, read-only, portfolio, planning, requirements, roadmap-owner-advisor, roadmap-owner-operator, custom · sensitive: no · idempotency: naturally idempotent
 Purpose: Returns delivery-health metrics for one project: 30-day throughput, lead/cycle/blocked times, open blocked issues with what blocks them, completion rate, health status and data-integrity signals.
 Use when: User asks how a project is performing, its delivery health, throughput or lead time; You need the currently blocked issues of a project together with the issues that block them (projects[0].blockedIssues); You need data-integrity signals (orphan AISH jobs, stale active cycles, invalid statuses)    Avoid when: You need metrics for one cycle: cycleId is ignored; use get_cycle and list_issues for that cycle instead; You need the executive view with risks, finance and decisions: use get_project_owner_surface; You need intake/operational-entry metrics: use get_operational_analytics; You need dependency chains: use get_project_dependency_summary

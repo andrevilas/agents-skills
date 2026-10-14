@@ -7,19 +7,19 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 
 | Field | Value |
 |---|---|
-| lpmCommit | `5615224e1bb6a7f929818907ad879b642628a4ff` |
-| toolCount | `383` |
+| lpmCommit | `3b4ae31c01d989c9cfc52e3e25b257a970c60fcc` |
+| toolCount | `384` |
 | cliCount | `152` |
-| namesHash | `sha256:d5793cef8f7d359bfcaf40621b3c7b59f54f7e9d6c3412860146e6424c2e63c1` |
-| schemaHash | `sha256:c92e9c32f39d014d0191b062055140351bdfe6bf3d7a2e3602e8dbf524255de3` |
+| namesHash | `sha256:cf246247b353134e18199bbb616395f1ed89abeb34f9923d2f81ada5fac3f262` |
+| schemaHash | `sha256:d2a4110e6be330b9b199ba784936bafadf3637696c61de4d690cfe9d7a7b6afe` |
 | cliHash | `sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec` |
-| sourcesHash | `sha256:39f7104597875f0980b99875c2333419ce7cbf592e96f0b21caf508bc5bfd5fe` |
+| sourcesHash | `sha256:f43cf38c21d6181aab9963a0994314b402aa4573f66f56448de631fdba443d33` |
 
 ## Totals
 
 | Tools | Owned | Pending | Unowned | Skills | OAuth-reachable |
 |---|---|---|---|---|---|
-| 383 | 383 | 0 | 0 | 23 | 76 |
+| 384 | 384 | 0 | 0 | 23 | 76 |
 
 ## Skills
 
@@ -42,7 +42,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `lpm-plan-work` | core | tools | 31 | 17/14/0 | 7 | mixed | 10 | 10 |
 | `lpm-release-product` | internal | process | 0 | 0/0/0 | 0 | process skill | 8 | — |
 | `lpm-requirements-scope` | core | tools | 25 | 12/7/6 | 3 | mostly KEY | 9 | 10 |
-| `lpm-review-health` | core | tools | 10 | 10/0/0 | 4 | mixed | 15 | 4 |
+| `lpm-review-health` | core | tools | 11 | 11/0/0 | 4 | mixed | 15 | 4 |
 | `lpm-roadmap` | core | tools | 31 | 19/3/9 | 21 | OAuth mostly | 4 | 10 |
 | `lpm-roadmap-owner-ops` | core | tools | 27 | 6/0/21 | 1 | mostly KEY | 10 | 10 |
 | `lpm-start` | core | tools | 8 | 8/0/0 | 6 | OAuth mostly | 4 | 6 |
@@ -107,6 +107,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `get_aish_runner_management_overview` | `lpm-aish-runners` | A | KEY | — |
 | `get_aish_usage_report` | `lpm-ai-cost` | A | KEY | `lpm-aish-runners` |
 | `get_copilot_conversation` | `lpm-aish-jobs` | A | KEY | — |
+| `get_project_agent_recovery_inventory` | `lpm-review-health` | A | KEY | — |
 | `get_project_specialist_governance_summary` | `lpm-access` | A | KEY | — |
 | `get_skills_context` | `lpm-knowledge` | A | KEY | `lpm-deliver-activity` |
 | `import_aish_accounting` | `lpm-ai-cost` | O | KEY | — |

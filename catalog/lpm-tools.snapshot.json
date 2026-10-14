@@ -3811,6 +3811,28 @@
       "descriptionSha": "sha256:e6712b6fce183aa5bd921363a8279ee29647a257a79449c7cde1059257cd2d30"
     },
     {
+      "name": "get_project_agent_recovery_inventory",
+      "category": "administration",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": null,
+      "profiles": [
+        "full",
+        "read-only",
+        "custom"
+      ],
+      "required": [
+        "projectId"
+      ],
+      "params": {
+        "cursor": "string",
+        "limit": "integer",
+        "projectId": "string",
+        "runId": "string"
+      },
+      "descriptionSha": "sha256:9c62b51612e6a62e7ba3fa0686dcd1e55f47530b923b84686d210c35589907cd"
+    },
+    {
       "name": "get_project_analytics",
       "category": "portfolio",
       "accessLevel": "read",
@@ -9307,8 +9329,8 @@
     }
   ],
   "hashes": {
-    "namesHash": "sha256:d5793cef8f7d359bfcaf40621b3c7b59f54f7e9d6c3412860146e6424c2e63c1",
-    "schemaHash": "sha256:c92e9c32f39d014d0191b062055140351bdfe6bf3d7a2e3602e8dbf524255de3",
+    "namesHash": "sha256:cf246247b353134e18199bbb616395f1ed89abeb34f9923d2f81ada5fac3f262",
+    "schemaHash": "sha256:d2a4110e6be330b9b199ba784936bafadf3637696c61de4d690cfe9d7a7b6afe",
     "cliHash": "sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec"
   }
 }

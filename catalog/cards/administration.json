@@ -1,0 +1,54 @@
+[
+  {
+    "name": "get_project_agent_recovery_inventory",
+    "purpose": "Read sanitized, bounded pages of project agent runs or checkpoint pending-write format metadata without exposing context or authorizing recovery.",
+    "useWhen": ["Compatibility review before a checkpoint recovery release"],
+    "avoidWhen": ["Resuming, migrating, deleting or approving runs", "Global inventory including orphan checkpoints"],
+    "inputs": [
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "Previous page nextCursor from the same project, workspace, mode and run",
+        "notes": "Opaque; omit for the first page. Maximum 3072 characters."
+      },
+      {
+        "param": "limit",
+        "required": false,
+        "source": "Read budget",
+        "notes": "Integer 1..50, default 25; at most limit+1 rows plus one parent run in checkpoint mode."
+      },
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "list_projects -> id",
+        "notes": "Requires project manage access, even though the tool is read-only."
+      },
+      {
+        "param": "runId",
+        "required": false,
+        "source": "items[].id from this tool in runs mode",
+        "notes": "Omit to page runs; supply to page that run's checkpoints."
+      }
+    ],
+    "preconditions": ["Existing API-key credential permits this tool", "Caller can manage the project; run and checkpoint scopes are checked"],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "{projectId,workspaceId,runId,mode,readOnly:true,authorizesResume:false,coverage,snapshotConsistent:false,generatedAt,items,pageCount,hasMore,nextCursor}; items contain IDs, closed-enum classifications, timestamps and counts only.",
+    "pairsWith": ["list_projects"],
+    "errors": [
+      { "when": "Invalid recovery inventory arguments", "fix": "Use the original cursor for the same scope and integer limit 1..50; do not add mutation fields." },
+      { "when": "Recovery inventory scope mismatch or run unavailable", "fix": "Stop and report incomplete; do not bypass scope checks or query production storage directly." },
+      { "when": "You do not have permission to manage this project", "fix": "Stop and ask the owner to arrange the appropriate access; do not create credentials." }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      { "text": "No raw context, prompts, task IDs, channels or pending-write values in the response", "verifiedFrom": "src/server/agentRecoveryInventory.ts:84-105" },
+      { "text": "Format-compatible-only is not safe-to-resume approval", "verifiedFrom": "src/server/agentRecoveryInventory.ts:101-107" },
+      { "text": "No orphan coverage or atomic snapshot; complete every applicable cursor or report incomplete", "verifiedFrom": "src/server/agentRecoveryInventory.ts:107-111" },
+      { "text": "Legacy/unattributed, invalid, missing or unknown version requires explicit review; partial records are not resumable", "verifiedFrom": "src/server/agentRecoveryInventory.ts:31-54" }
+    ],
+    "verifiedFrom": "server.ts:getProjectAgentRecoveryInventoryCommand; src/server/agentRecoveryInventory.ts"
+  }
+]
