@@ -222,6 +222,8 @@ How to run this playbook:
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
 - VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
 
+Default resolution requires a reviewer distinct from the finding author. Never change identity to evade that check. For an explicitly owner-authorized resolution of the owner's own finding, return to the skill decision table and use its owner-authorized SOLO procedure instead; do not infer this exception from a permission error.
+
 ### You need
 | Input | Where it comes from | If missing |
 |---|---|---|

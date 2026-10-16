@@ -18,6 +18,7 @@ Do not use:
 
 ## 2. Preconditions
 1. Owned tools need a project manager's LPM API key (`full`/`custom`); agent credentials are refused by packs, automation and release approval.
+2. Finding resolution normally requires a different authenticated author/reviewer. The explicit owner-authorized SOLO exception needs the existing owner's credential and bound decision/report/validation; follow {{ref:owner-solo-finding}}. It is not independent review.
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -34,6 +35,7 @@ Do not use:
 | 1 | status or explanation only (closure question → 5a) | §3 reads | A | never write |
 | 2 | rows 3–5b: `workflowBinding` null or "Factory delivery governance is missing" | {{skill:lpm-deliver-activity}} | — | always |
 | 3 | add a screenshot, video, test report, runner file | {{ref:flow-evidence}} | A | visual, job not `completed` |
+| 3b | owner explicitly requests the SOLO exception for their own fixed finding | {{ref:owner-solo-finding}} | O | missing concrete owner decision or native evidence |
 | 4 | block closure on a verified defect; clear a fixed one | {{ref:flow-finding}} | C | finding you did not open → ask first |
 | 5a | "can I close it?", "posso fechar?" with no 5b word | {{ref:flow-close}} with order="question"; evidence gaps → Pending | A | gap → "not yet" + Pending |
 | 5b | "close it", "feche", "conclua", "marque como concluída" (even with a question) | {{ref:flow-close}} with order="close"; the user's words are the order | A | `blocked` or active job |

@@ -6,7 +6,7 @@ Use when: AISH job work must be proven, closed or released (evidência, encerrar
 
 Access: on a connector only `get_issue` works; everything else needs an LPM API key (profile full or custom).
 
-Authority: [A] 13 · [C] 6 · [O] 2. Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; release approval is [O] (managing human only).
+Authority: [A] 13 · [C] 6 · [O] 2. Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; owner-authorized SOLO finding resolution and release approval are [O] (managing human only).
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.
@@ -35,6 +35,7 @@ Do not use:
 
 ## 2. Preconditions
 1. Owned tools need a project manager's LPM API key (`full`/`custom`); agent credentials are refused by packs, automation and release approval.
+2. Finding resolution normally requires a different authenticated author/reviewer. The explicit owner-authorized SOLO exception needs the existing owner's credential and bound decision/report/validation; follow `lpm-aish-delivery.refs.md` § owner-solo-finding. It is not independent review.
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -51,6 +52,7 @@ Do not use:
 | 1 | status or explanation only (closure question → 5a) | §3 reads | A | never write |
 | 2 | rows 3–5b: `workflowBinding` null or "Factory delivery governance is missing" | `lpm-deliver-activity.md` | — | always |
 | 3 | add a screenshot, video, test report, runner file | `lpm-aish-delivery.flows.md` § flow-evidence | A | visual, job not `completed` |
+| 3b | owner explicitly requests the SOLO exception for their own fixed finding | see `lpm-aish-delivery.refs.md` § owner-solo-finding | O | missing concrete owner decision or native evidence |
 | 4 | block closure on a verified defect; clear a fixed one | `lpm-aish-delivery.flows.md` § flow-finding | C | finding you did not open → ask first |
 | 5a | "can I close it?", "posso fechar?" with no 5b word | `lpm-aish-delivery.flows.md` § flow-close with order="question"; evidence gaps → Pending | A | gap → "not yet" + Pending |
 | 5b | "close it", "feche", "conclua", "marque como concluída" (even with a question) | `lpm-aish-delivery.flows.md` § flow-close with order="close"; the user's words are the order | A | `blocked` or active job |
@@ -129,8 +131,9 @@ Load a reference only when its condition holds:
 - `lpm-aish-delivery.flows.md` § flow-release-create — playbook release-create: create the sealed release package of a deploy-gated AISH plan node; it never deploys
 - `lpm-aish-delivery.flows.md` § flow-release-deploy — playbook release-deploy: deploy an approved AISH release once and record its receipt
 - `lpm-aish-delivery.flows.md` § flow-release-smoke — playbook release-smoke: run the authenticated smoke of a succeeded AISH release, record it as pipeline evidence and attach it to the activity
+- `lpm-aish-delivery.refs.md` § owner-solo-finding — the owner explicitly authorizes resolving their own finding using a concrete SOLO decision and native evidence
 - `lpm-aish-delivery.refs.md` § evidence-and-closure — before attaching evidence or closing
-- `lpm-aish-delivery.refs.md` § authority-and-owner-decisions — before approving a release
+- `lpm-aish-delivery.refs.md` § authority-and-owner-decisions — before approving a release or recording owner-authorized SOLO finding resolution
 - `lpm-aish-delivery.refs.md` § idempotency-and-retries — after a timeout, before a retry
 - `lpm-aish-delivery.refs.md` § enums — a status value is unclear
 - `lpm-aish-delivery.refs.md` § connection-and-access — a tool is missing or denied (-32003), or you set up or check a connection
