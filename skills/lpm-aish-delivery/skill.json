@@ -7,7 +7,7 @@
   "invocation": "implicit",
   "description": "Use when AISH job work must be proven, closed or released (evidência, encerrar): delivery artifacts, DoD audit, findings, execution packs, release packages (pacote de release: create, approve, claim, deploy, complete), requeue, disposition, lineage. Not for creating jobs (use lpm-aish-jobs).",
   "doneWhen": "The DoD audit passed right before closure, evidence is preserved (artifacts/pack attached to the activity), and any release has a completion receipt plus authenticated smoke evidence.",
-  "authorityCeiling": "Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; release approval is [O] (managing human only).",
+  "authorityCeiling": "Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; owner-authorized SOLO finding resolution and release approval are [O] (managing human only).",
   "jobs": [
     "register the Playwright screenshot and video as delivery artifacts of AISH job <jobId>",
     "rode a auditoria de Definition of Done da atividade <issueId> e diga o que falta",
@@ -200,7 +200,7 @@
     },
     {
       "name": "authority-and-owner-decisions",
-      "loadWhen": "before approving a release",
+      "loadWhen": "before approving a release or recording owner-authorized SOLO finding resolution",
       "inlineSummary": false
     },
     {
@@ -282,6 +282,10 @@
     {
       "file": "references/flow-release-smoke.md",
       "loadWhen": "playbook release-smoke: run the authenticated smoke of a succeeded AISH release, record it as pipeline evidence and attach it to the activity"
+    },
+    {
+      "file": "references/owner-solo-finding.md",
+      "loadWhen": "the owner explicitly authorizes resolving their own finding using a concrete SOLO decision and native evidence"
     }
   ],
   "behaviorContracts": [

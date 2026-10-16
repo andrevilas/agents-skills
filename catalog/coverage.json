@@ -3,10 +3,10 @@
   "generatedBy": "agents-skills scripts/skills.mjs build",
   "source": {
     "repo": "andrevilas/agents-skills",
-    "sourcesHash": "sha256:50c5f82b97308b51d8112dfe8113bdd4df33d29dc0baa7a7b40102a68ddbf443"
+    "sourcesHash": "sha256:44b4591e52e4fbfa986ec0fcbd1bfbe8c3d5f28e2bdedece4d6e8d44cfad41e5"
   },
   "snapshot": {
-    "lpmCommit": "30feffccd1a17cb57cd8f0ed9c2c10f65cdf54e7",
+    "lpmCommit": "43ebdbea9fa72d7dcdce4ed11fbac0763a7875a4",
     "toolCount": 385,
     "cliCount": 152,
     "namesHash": "sha256:2e816f39089ac885659ba58b42dcf69a37e88a22088f7a9c020525a5c7bdb6a2",

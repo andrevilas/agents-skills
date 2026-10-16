@@ -7024,9 +7024,10 @@
         "findingId": "string",
         "issueId": "string",
         "projectId": "string",
-        "reason": "string"
+        "reason": "string",
+        "soloReview": "object"
       },
-      "descriptionSha": "sha256:eaf1b8a39567ac69f0aff0ef3713caaa51307ab5ed615e8f7ca77e41923bf678"
+      "descriptionSha": "sha256:3c61e79521dcfbeb46535299aa28263b60f7a2aae33f11ef4bcde981efbd9583"
     },
     {
       "name": "record_aish_execution_trace",

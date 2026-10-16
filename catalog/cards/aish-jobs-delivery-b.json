@@ -1240,17 +1240,26 @@
         "required": true,
         "source": "agent/user",
         "notes": "8-3,000 chars: the defect (block) or how it was fixed and verified (resolve)"
+      },
+      {
+        "param": "soloReview",
+        "required": false,
+        "source": "explicit owner decision and verified immutable report/native validation receipts; finding fingerprint from block or identical block replay",
+        "notes": "resolve only: exact 7-field object binding the decision thread, finding fingerprint, commit, review artifact id and SHA-256, validation job and current receipt. Use the schema and synthetic request example in owner-solo-finding. Omit for default distinct-reviewer path. Owner-only; agent credentials refused."
       }
     ],
     "preconditions": [
       "Caller manages the project",
       "Issue has factory governance",
-      "resolve: a finding with that findingId exists"
+      "resolve: a finding with that findingId exists",
+      "Default resolve: known finding author differs from authenticated caller",
+      "SOLO: authenticated workspace owner (project owner only without workspace), own finding, unchanged resolved owner clarification, immutable review document and completed native test-validation at exact commit; explicit same-project cross-issue bindings only",
+      "SOLO producer: exact native current approved plan/node/run coherent with manifest and artifact; all named source evidence participates in final snapshot comparison. An executing session is allowed for its completed producer job."
     ],
     "effect": "write",
     "authority": "confirm-with-user",
     "idempotency": "naturally idempotent",
-    "returns": "{id (internal finding document id), reused}. Any change resets the issue's audit; run audit_aish_issue_delivery again.",
+    "returns": "{id (internal finding document id), reused; block also returns findingFingerprint; SOLO resolve returns eventId and mode:owner-authorized-solo}. A changed finding invalidates the issue audit; identical replay preserves history. Resolution success does not imply audit/closure/release success.",
     "pairsWith": [
       "read_aish_delivery_artifact",
       "audit_aish_issue_delivery"
@@ -1275,6 +1284,14 @@
       {
         "when": "Technical finding already has a different resolution.",
         "fix": "It is already resolved; nothing to do."
+      },
+      {
+        "when": "Technical finding resolution requires a reviewer distinct from its author.",
+        "fix": "Use an actual distinct reviewer. Only on explicit owner authorization use the documented SOLO branch; never forge an identity."
+      },
+      {
+        "when": "Solo review authority or provenance changed; retry with current records.",
+        "fix": "Re-read the exact records and reconcile the owner decision and proofs. Preserve prior evidence; never remove a binding to force acceptance."
       }
     ],
     "oauthScope": null,
@@ -1289,8 +1306,12 @@
         "verifiedFrom": "src/server/aishDeliveryStore.ts:174-177"
       },
       {
-        "text": "The server does not restrict who resolves: never resolve someone else's finding without the user's confirmation.",
-        "verifiedFrom": "src/server/aishDeliveryStore.ts:178-183"
+        "text": "Default resolution requires a reviewer distinct from its author. SOLO is an explicit owner-only exception bound to one finding, commit, decision, review and validation; it never asserts independent human review.",
+        "verifiedFrom": "src/server/aishSoloFindingReview.ts:195-248"
+      },
+      {
+        "text": "The generic authority of this tool is confirm-with-user; its optional SOLO branch additionally requires the owner's explicit order and the structured owner decision. A failed aggregate audit remains pending even when the finding resolution succeeded.",
+        "verifiedFrom": "docs/aish-owner-solo-finding-review.md:5-32"
       }
     ],
     "verifiedFrom": "recordAishDeliveryFindingCommand -> recordDeliveryFinding (src/server/aishDeliveryStore.ts)"

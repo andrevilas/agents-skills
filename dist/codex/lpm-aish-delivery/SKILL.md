@@ -12,7 +12,7 @@ metadata:
 
 Access: on a connector only `get_issue` works; everything else needs an LPM API key (profile full or custom).
 
-Authority: [A] 13 · [C] 6 · [O] 2. Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; release approval is [O] (managing human only).
+Authority: [A] 13 · [C] 6 · [O] 2. Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; owner-authorized SOLO finding resolution and release approval are [O] (managing human only).
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.
@@ -41,6 +41,7 @@ Do not use:
 
 ## 2. Preconditions
 1. Owned tools need a project manager's LPM API key (`full`/`custom`); agent credentials are refused by packs, automation and release approval.
+2. Finding resolution normally requires a different authenticated author/reviewer. The explicit owner-authorized SOLO exception needs the existing owner's credential and bound decision/report/validation; follow [owner-solo-finding](references/owner-solo-finding.md). It is not independent review.
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -57,6 +58,7 @@ Do not use:
 | 1 | status or explanation only (closure question → 5a) | §3 reads | A | never write |
 | 2 | rows 3–5b: `workflowBinding` null or "Factory delivery governance is missing" | `lpm-deliver-activity` | — | always |
 | 3 | add a screenshot, video, test report, runner file | [flow-evidence](references/flow-evidence.md) | A | visual, job not `completed` |
+| 3b | owner explicitly requests the SOLO exception for their own fixed finding | [owner-solo-finding](references/owner-solo-finding.md) | O | missing concrete owner decision or native evidence |
 | 4 | block closure on a verified defect; clear a fixed one | [flow-finding](references/flow-finding.md) | C | finding you did not open → ask first |
 | 5a | "can I close it?", "posso fechar?" with no 5b word | [flow-close](references/flow-close.md) with order="question"; evidence gaps → Pending | A | gap → "not yet" + Pending |
 | 5b | "close it", "feche", "conclua", "marque como concluída" (even with a question) | [flow-close](references/flow-close.md) with order="close"; the user's words are the order | A | `blocked` or active job |
@@ -135,8 +137,9 @@ Load a reference only when its condition holds:
 - `references/flow-release-create.md` — playbook release-create: create the sealed release package of a deploy-gated AISH plan node; it never deploys
 - `references/flow-release-deploy.md` — playbook release-deploy: deploy an approved AISH release once and record its receipt
 - `references/flow-release-smoke.md` — playbook release-smoke: run the authenticated smoke of a succeeded AISH release, record it as pipeline evidence and attach it to the activity
+- `references/owner-solo-finding.md` — the owner explicitly authorizes resolving their own finding using a concrete SOLO decision and native evidence
 - `references/evidence-and-closure.md` — before attaching evidence or closing
-- `references/authority-and-owner-decisions.md` — before approving a release
+- `references/authority-and-owner-decisions.md` — before approving a release or recording owner-authorized SOLO finding resolution
 - `references/idempotency-and-retries.md` — after a timeout, before a retry
 - `references/enums.md` — a status value is unclear
 - `references/connection-and-access.md` — a tool is missing or denied (-32003), or you set up or check a connection

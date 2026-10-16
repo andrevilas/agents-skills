@@ -177,8 +177,9 @@ Use when: action 'block': you verified a defect in delivered work (bug, missing 
 | findingId | yes | agent-generated stable id (for resolve: the id used when blocking) | 8-160 chars [a-zA-Z0-9_-], e.g. 'missing-video-evidence-01' |
 | action | yes | constant | enum block\|resolve |
 | reason | yes | agent/user | 8-3,000 chars: the defect (block) or how it was fixed and verified (resolve) |
-Preconditions: Caller manages the project; Issue has factory governance; resolve: a finding with that findingId exists
-Returns: {id (internal finding document id), reused}. Any change resets the issue's audit; run audit_aish_issue_delivery again.
+| soloReview | no | explicit owner decision and verified immutable report/native validation receipts; finding fingerprint from block or identical block replay | resolve only: exact 7-field object binding the decision thread, finding fingerprint, commit, review artifact id and SHA-256, validation job and current receipt. Use the schema and synthetic request example in owner-solo-finding. Omit for default distinct-reviewer path. Owner-only; agent credentials refused. |
+Preconditions: Caller manages the project; Issue has factory governance; resolve: a finding with that findingId exists; Default resolve: known finding author differs from authenticated caller; SOLO: authenticated workspace owner (project owner only without workspace), own finding, unchanged resolved owner clarification, immutable review document and completed native test-validation at exact commit; explicit same-project cross-issue bindings only; SOLO producer: exact native current approved plan/node/run coherent with manifest and artifact; all named source evidence participates in final snapshot comparison. An executing session is allowed for its completed producer job.
+Returns: {id (internal finding document id), reused; block also returns findingFingerprint; SOLO resolve returns eventId and mode:owner-authorized-solo}. A changed finding invalidates the issue audit; identical replay preserves history. Resolution success does not imply audit/closure/release success.
 Errors → fix:
 | When | Fix |
 |---|---|
@@ -187,10 +188,13 @@ Errors → fix:
 | Technical finding not found. | Resolve with the exact findingId used when blocking. |
 | Technical finding id conflicts. | The id was already used (other reason/author, or already resolved); choose a new findingId. |
 | Technical finding already has a different resolution. | It is already resolved; nothing to do. |
+| Technical finding resolution requires a reviewer distinct from its author. | Use an actual distinct reviewer. Only on explicit owner authorization use the documented SOLO branch; never forge an identity. |
+| Solo review authority or provenance changed; retry with current records. | Re-read the exact records and reconcile the owner decision and proofs. Preserve prior evidence; never remove a binding to force acceptance. |
 Gotchas:
 - No tool lists findings with their ids: open findings only appear as 'An unresolved technical finding blocks closure.' in audit_aish_issue_delivery, so keep your findingIds in a comment or notes.
 - A resolved finding cannot be reopened with the same id; block again with a new findingId.
-- The server does not restrict who resolves: never resolve someone else's finding without the user's confirmation.
+- Default resolution requires a reviewer distinct from its author. SOLO is an explicit owner-only exception bound to one finding, commit, decision, review and validation; it never asserts independent human review.
+- The generic authority of this tool is confirm-with-user; its optional SOLO branch additionally requires the owner's explicit order and the structured owner decision. A failed aggregate audit remains pending even when the finding resolution succeeded.
 Pairs with: `read_aish_delivery_artifact`, `audit_aish_issue_delivery`
 CLI: `lpm aish command record_aish_delivery_finding --file payload.json [--transport rest|mcp]`
 

@@ -2,6 +2,8 @@
 Use when: block the closure of an AISH factory activity on a verified defect, or resolve a fixed one
 {{partial:playbook-rules}}
 
+Default resolution requires a reviewer distinct from the finding author. Never change identity to evade that check. For an explicitly owner-authorized resolution of the owner's own finding, return to the skill decision table and use its owner-authorized SOLO procedure instead; do not infer this exception from a permission error.
+
 ## You need
 | Input | Where it comes from | If missing |
 |---|---|---|

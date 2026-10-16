@@ -7,13 +7,13 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 
 | Field | Value |
 |---|---|
-| lpmCommit | `30feffccd1a17cb57cd8f0ed9c2c10f65cdf54e7` |
+| lpmCommit | `43ebdbea9fa72d7dcdce4ed11fbac0763a7875a4` |
 | toolCount | `385` |
 | cliCount | `152` |
 | namesHash | `sha256:2e816f39089ac885659ba58b42dcf69a37e88a22088f7a9c020525a5c7bdb6a2` |
 | schemaHash | `sha256:f74983bc24971c6274b89a1ef30b35020f4b976b783eab359067651f883cd95f` |
 | cliHash | `sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec` |
-| sourcesHash | `sha256:50c5f82b97308b51d8112dfe8113bdd4df33d29dc0baa7a7b40102a68ddbf443` |
+| sourcesHash | `sha256:44b4591e52e4fbfa986ec0fcbd1bfbe8c3d5f28e2bdedece4d6e8d44cfad41e5` |
 
 ## Totals
 
