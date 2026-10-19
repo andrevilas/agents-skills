@@ -10,6 +10,7 @@ Use when:
 - "cria um job AISH", "create an AISH job for <issueId>"
 - "aprova o job AISH <jobId>" (owner), "AISH cockpit"
 - "pausa a sessão de execução", "anexa este áudio ao job", "Copilot"
+- "exporta o conteúdo da sessão", "retenção do conteúdo da sessão AISH"
 Do not use:
 | If the request is about | Use |
 |---|---|
@@ -20,7 +21,7 @@ Do not use:
 | WhatsApp intake | {{skill:lpm-intake-triage}} |
 
 ## 2. Preconditions
-1. Run one §4 row. CALL row: make that one call, reply with §8. Playbook row: open its file, do its steps in order, reply with its Answer block only.
+1. For session content operations, follow {{ref:session-content}} and report with §8. Otherwise run one §4 row. CALL row: make that one call, reply with §8. Playbook row: open its file, do its steps in order, reply with its Answer block only.
 2. LPM API key. [O] needs the owner's own key and order, never an agent credential. CLI: `lpm aish …`, add `--budget-contract aish-budget/1` to execute or transcribe.
 3. "Aprova e roda" = approve only: approval never funds, leases or runs.
 
@@ -71,6 +72,7 @@ Do not use:
 | job write | {{tool:get_aish_job}} | queued; approved: `runnerMayExecute` true (`expectedManifestHash` sent) |
 | session write | {{tool:get_aish_execution_session}} | status, hashes as expected |
 | intake write | {{tool:list_aish_intake}} | the id is listed |
+| content write / policy / deletion | {{tool:get_aish_session_content}} | selected record or policy matches; deleted bodies are null with tombstone versions |
 
 ## 8. Report (copy and fill)
 A playbook's Answer block is this report, filled in; send it alone.

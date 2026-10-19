@@ -3,14 +3,14 @@
   "generatedBy": "agents-skills scripts/skills.mjs build",
   "source": {
     "repo": "andrevilas/agents-skills",
-    "sourcesHash": "sha256:44b4591e52e4fbfa986ec0fcbd1bfbe8c3d5f28e2bdedece4d6e8d44cfad41e5"
+    "sourcesHash": "sha256:46ab62da488339c88ec3c1ed906a4d7b221cc98e387933db539df2182dd231ba"
   },
   "snapshot": {
-    "lpmCommit": "43ebdbea9fa72d7dcdce4ed11fbac0763a7875a4",
-    "toolCount": 385,
+    "lpmCommit": "48930f89b6c686037b56549edec9a9d046312cda",
+    "toolCount": 387,
     "cliCount": 152,
-    "namesHash": "sha256:2e816f39089ac885659ba58b42dcf69a37e88a22088f7a9c020525a5c7bdb6a2",
-    "schemaHash": "sha256:f74983bc24971c6274b89a1ef30b35020f4b976b783eab359067651f883cd95f",
+    "namesHash": "sha256:ae3fc365d392c0e85653dba9c9e3f22ed683c632a754bba3eb3b93b3c390da6e",
+    "schemaHash": "sha256:db4bd5be26a65e384da22ffb5b0d29235b74dcaa1b1e99339dfd757e6e08cb83",
     "cliHash": "sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec"
   },
   "policy": {
@@ -170,11 +170,13 @@
         "get_aish_execution_readiness",
         "get_aish_execution_session",
         "get_aish_job",
+        "get_aish_session_content",
         "get_copilot_conversation",
         "list_aish_execution_sessions",
         "list_aish_intake",
         "list_aish_jobs",
         "list_copilot_conversations",
+        "manage_aish_session_content",
         "pause_aish_execution_session",
         "propose_copilot_action",
         "put_aish_execution_plan",
@@ -3777,6 +3779,26 @@
         "dist/generic/lpm-aish-runners.md"
       ]
     },
+    "get_aish_session_content": {
+      "owner": "lpm-aish-jobs",
+      "usedBy": [],
+      "category": "administration",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": null,
+      "required": [
+        "action",
+        "sessionId"
+      ],
+      "cardAuthority": "autonomous",
+      "renderedAuthority": "A",
+      "renderedIn": [
+        "dist/antigravity/lpm-aish-jobs/SKILL.md",
+        "dist/claude-code/lpm-aish-jobs/SKILL.md",
+        "dist/codex/lpm-aish-jobs/SKILL.md",
+        "dist/generic/lpm-aish-jobs.md"
+      ]
+    },
     "get_aish_usage_report": {
       "owner": "lpm-ai-cost",
       "usedBy": [
@@ -6478,6 +6500,21 @@
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
+    "manage_aish_session_content": {
+      "owner": "lpm-aish-jobs",
+      "usedBy": [],
+      "category": "administration",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "required": [
+        "action",
+        "sessionId"
+      ],
+      "cardAuthority": "confirm-with-user",
+      "renderedAuthority": "C",
+      "renderedIn": []
+    },
     "mark_notification_read": {
       "owner": "lpm-start",
       "usedBy": [],
@@ -8938,8 +8975,8 @@
     }
   ],
   "totals": {
-    "tools": 385,
-    "owned": 385,
+    "tools": 387,
+    "owned": 387,
     "pending": 0,
     "unowned": 0,
     "skills": 23,

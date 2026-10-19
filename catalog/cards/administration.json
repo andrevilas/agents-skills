@@ -1,5 +1,72 @@
 [
   {
+    "name": "get_aish_session_content",
+    "purpose": "Read bounded redacted session content pages or export a selection.",
+    "useWhen": [
+      "Inspect or export selected session content"
+    ],
+    "avoidWhen": [
+      "Deleting audit events, plans, jobs or sessions",
+      "Treating redacted exports as raw backups"
+    ],
+    "inputs": [
+      {
+        "param": "action",
+        "required": true,
+        "source": "User-requested operation",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "cursor",
+        "required": false,
+        "source": "Previous list -> nextCursor",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "limitCount",
+        "required": false,
+        "source": "Page size 1..50 (default 20)",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "recordIds",
+        "required": false,
+        "source": "Explicit list -> records[].id selection, 1..100",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "sessionId",
+        "required": true,
+        "source": "User or get_aish_execution_session -> session.id",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      }
+    ],
+    "preconditions": [
+      "Current workspace read access"
+    ],
+    "effect": "read",
+    "authority": "autonomous",
+    "idempotency": "naturally idempotent",
+    "returns": "list: {scope,sessionVersion,sessionStatus,owner,policy,records,nextCursor,redacted}; export: {records,exportDigest,policy,scope,redacted}",
+    "pairsWith": [
+      "manage_aish_session_content"
+    ],
+    "errors": [
+      {
+        "when": "access denied",
+        "fix": "Stop; do not broaden credentials."
+      },
+      {
+        "when": "changed; review again",
+        "fix": "Re-read and preview the authorized selection again; never invent a digest."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "aish command get_aish_session_content --file <payload.json> --transport rest --json",
+    "gotchas": [],
+    "verifiedFrom": "src/server/aishSessionContentInterface.ts; src/server/aishSessionContentStore.ts"
+  },
+  {
     "name": "get_project_agent_recovery_inventory",
     "purpose": "Read sanitized, bounded pages of project agent runs or checkpoint pending-write format metadata without exposing context or authorizing recovery.",
     "useWhen": [
@@ -81,6 +148,109 @@
       }
     ],
     "verifiedFrom": "server.ts:getProjectAgentRecoveryInventoryCommand; src/server/agentRecoveryInventory.ts"
+  },
+  {
+    "name": "manage_aish_session_content",
+    "purpose": "Write conversation or apply owner-authorized retention and selected body deletion.",
+    "useWhen": [
+      "Authorized conversation write or explicit owner retention/deletion order"
+    ],
+    "avoidWhen": [
+      "Deleting audit events, plans, jobs or sessions",
+      "Treating redacted exports as raw backups"
+    ],
+    "inputs": [
+      {
+        "param": "action",
+        "required": true,
+        "source": "User-requested operation",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "commandId",
+        "required": false,
+        "source": "Stable operation identifier, unchanged on retry",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "confirmed",
+        "required": false,
+        "source": "true only for exact owner-authorized policy or deletion",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "expectedPreviewDigest",
+        "required": false,
+        "source": "Fresh preview-delete -> previewDigest",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "expectedVersion",
+        "required": false,
+        "source": "list -> policy.version, or 0 if absent",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "hold",
+        "required": false,
+        "source": "Owner's explicit decision",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "reason",
+        "required": false,
+        "source": "Owner's justification, 16..1000 characters",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "recordIds",
+        "required": false,
+        "source": "Explicit list -> records[].id selection, 1..100",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "retainUntil",
+        "required": false,
+        "source": "Owner's ISO date or null (retain indefinitely)",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "sessionId",
+        "required": true,
+        "source": "User or get_aish_execution_session -> session.id",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      },
+      {
+        "param": "text",
+        "required": false,
+        "source": "Authorized text, 1..1000 characters, no secrets",
+        "notes": "Only fields belonging to the chosen action are accepted; see session-content procedure."
+      }
+    ],
+    "preconditions": [
+      "Current workspace manage access; policy/preview/delete also require the actual owner's personal credential"
+    ],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "keyed by commandId",
+    "returns": "write: {content,reused}; set-policy: {decision,reused}; preview-delete: {previewDigest,recordIds,count}; delete: {receipt,reused}, keyed by expectedPreviewDigest instead of commandId",
+    "pairsWith": [
+      "get_aish_session_content"
+    ],
+    "errors": [
+      {
+        "when": "access denied",
+        "fix": "Stop; do not broaden credentials."
+      },
+      {
+        "when": "changed; review again",
+        "fix": "Re-read and preview the authorized selection again; never invent a digest."
+      }
+    ],
+    "oauthScope": null,
+    "cli": "aish command manage_aish_session_content --file <payload.json> --transport rest --json",
+    "gotchas": [],
+    "verifiedFrom": "src/server/aishSessionContentInterface.ts; src/server/aishSessionContentStore.ts"
   },
   {
     "name": "replace_aish_delivery_session",
