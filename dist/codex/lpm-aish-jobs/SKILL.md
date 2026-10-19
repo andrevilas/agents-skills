@@ -12,7 +12,7 @@ metadata:
 
 Access: on a connector only `get_issue`, `list_project_repository_links` work; everything else needs an LPM API key (profile full or custom).
 
-Authority: [A] 15 · [C] 9 · [O] 4. Job and plan approval, checkpoint and Copilot decisions are [O]; funding is owner-only (lpm-ai-cost).
+Authority: [A] 16 · [C] 10 · [O] 4. Job and plan approval, checkpoint, Copilot and session retention/deletion decisions are [O]; content writes are [C]; funding is owner-only (lpm-ai-cost).
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.
@@ -33,6 +33,7 @@ Use when:
 - "cria um job AISH", "create an AISH job for <issueId>"
 - "aprova o job AISH <jobId>" (owner), "AISH cockpit"
 - "pausa a sessão de execução", "anexa este áudio ao job", "Copilot"
+- "exporta o conteúdo da sessão", "retenção do conteúdo da sessão AISH"
 Do not use:
 | If the request is about | Use |
 |---|---|
@@ -45,7 +46,7 @@ Do not use:
 | approve — a roadmap change request | `lpm-roadmap` |
 
 ## 2. Preconditions
-1. Run one §4 row. CALL row: make that one call, reply with §8. Playbook row: open its file, do its steps in order, reply with its Answer block only.
+1. For session content operations, follow [session-content](references/session-content.md) and report with §8. Otherwise run one §4 row. CALL row: make that one call, reply with §8. Playbook row: open its file, do its steps in order, reply with its Answer block only.
 2. LPM API key. [O] needs the owner's own key and order, never an agent credential. CLI: `lpm aish …`, add `--budget-contract aish-budget/1` to execute or transcribe.
 3. "Aprova e roda" = approve only: approval never funds, leases or runs.
 
@@ -96,6 +97,7 @@ Do not use:
 | job write | `get_aish_job` | queued; approved: `runnerMayExecute` true (`expectedManifestHash` sent) |
 | session write | `get_aish_execution_session` | status, hashes as expected |
 | intake write | `list_aish_intake` | the id is listed |
+| content write / policy / deletion | `get_aish_session_content` | selected record or policy matches; deleted bodies are null with tombstone versions |
 
 ## 8. Report (copy and fill)
 A playbook's Answer block is this report, filled in; send it alone.
@@ -113,8 +115,9 @@ Next: <the ASK or STOP text that ended the run> | <one action>
 | "fencing token is stale", "lease is not active" | rerun the playbook (it renews the lease) |
 
 ## 10. Tools and references
-Tool contracts: [tools](references/tools.md) (28 owned, 3 borrowed). Open for parameter or permission details.
+Tool contracts: [tools](references/tools.md) (30 owned, 3 borrowed). Open for parameter or permission details.
 Load a reference only when its condition holds:
+- `references/session-content.md` — read, export, write, retain or delete execution-session conversation content
 - `references/aish-operating-model.md` — background: AISH roles, job fields, recipes, limits
 - `references/aish-cli.md` — using the `lpm aish` CLI
 - `references/connection-and-access.md` — a tool is missing or denied (-32003), or you set up or check a connection

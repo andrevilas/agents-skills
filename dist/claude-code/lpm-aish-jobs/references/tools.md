@@ -194,6 +194,52 @@ Gotchas:
 Pairs with: `list_aish_execution_sessions`, `acquire_aish_coordinator_lease`, `pause_aish_execution_session`, `resume_aish_execution_session`, `dispatch_aish_execution_plan`
 CLI: `lpm aish cockpit get --session <sessionId> [--after-sequence <n>] --json`
 
+### `get_aish_session_content` [A] · read · KEY · profiles: full, read-only, custom · sensitive: no · idempotency: naturally idempotent
+Purpose: Read bounded redacted session content pages or export a selection.
+Use when: Inspect or export selected session content    Avoid when: Deleting audit events, plans, jobs or sessions; Treating redacted exports as raw backups
+| Param | Req | Source (call → field) | Notes |
+|---|---|---|---|
+| action | yes | User-requested operation | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| cursor | no | Previous list -> nextCursor | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| limitCount | no | Page size 1..50 (default 20) | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| recordIds | no | Explicit list -> records[].id selection, 1..100 | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| sessionId | yes | User or get_aish_execution_session -> session.id | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+Preconditions: Current workspace read access
+Returns: list: {scope,sessionVersion,sessionStatus,owner,policy,records,nextCursor,redacted}; export: {records,exportDigest,policy,scope,redacted}
+Errors → fix:
+| When | Fix |
+|---|---|
+| access denied | Stop; do not broaden credentials. |
+| changed; review again | Re-read and preview the authorized selection again; never invent a digest. |
+Pairs with: `manage_aish_session_content`
+CLI: `aish command get_aish_session_content --file <payload.json> --transport rest --json`
+
+### `manage_aish_session_content` [C] · write · KEY · profiles: full, custom · sensitive: yes · idempotency: keyed by commandId
+Purpose: Write conversation or apply owner-authorized retention and selected body deletion.
+Use when: Authorized conversation write or explicit owner retention/deletion order    Avoid when: Deleting audit events, plans, jobs or sessions; Treating redacted exports as raw backups
+| Param | Req | Source (call → field) | Notes |
+|---|---|---|---|
+| action | yes | User-requested operation | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| commandId | no | Stable operation identifier, unchanged on retry | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| confirmed | no | true only for exact owner-authorized policy or deletion | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| expectedPreviewDigest | no | Fresh preview-delete -> previewDigest | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| expectedVersion | no | list -> policy.version, or 0 if absent | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| hold | no | Owner's explicit decision | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| reason | no | Owner's justification, 16..1000 characters | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| recordIds | no | Explicit list -> records[].id selection, 1..100 | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| retainUntil | no | Owner's ISO date or null (retain indefinitely) | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| sessionId | yes | User or get_aish_execution_session -> session.id | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+| text | no | Authorized text, 1..1000 characters, no secrets | Only fields belonging to the chosen action are accepted; see session-content procedure. |
+Preconditions: Current workspace manage access; policy/preview/delete also require the actual owner's personal credential
+Returns: write: {content,reused}; set-policy: {decision,reused}; preview-delete: {previewDigest,recordIds,count}; delete: {receipt,reused}, keyed by expectedPreviewDigest instead of commandId
+Errors → fix:
+| When | Fix |
+|---|---|
+| access denied | Stop; do not broaden credentials. |
+| changed; review again | Re-read and preview the authorized selection again; never invent a digest. |
+Pairs with: `get_aish_session_content`
+CLI: `aish command manage_aish_session_content --file <payload.json> --transport rest --json`
+
 ### `append_aish_execution_session_command` [C] · write · KEY · profiles: full, custom · sensitive: yes · idempotency: keyed by commandId
 Purpose: Appends an ordered, idempotent event to an AISH execution session and optionally moves its status (for example draft -> ready -> awaiting-approval, back to draft, or canceled).
 Use when: Moving a session with a plan from draft to ready, then from ready to awaiting-approval so a manager can approve the plan hash; Recording a structured note such as a clarification answer on the session timeline; Canceling a session for good, after the user asked for it; Returning a session to draft to change its plan    Avoid when: Approving the plan: use approve_aish_execution_plan (status approved is rejected here); Starting or continuing execution: use dispatch_aish_execution_plan or resume_aish_execution_session (status executing is rejected here); Pausing: use pause_aish_execution_session; Asking a human to decide on a conflict or checkpoint: use request_aish_execution_checkpoint; Publishing a plan: use put_aish_execution_plan

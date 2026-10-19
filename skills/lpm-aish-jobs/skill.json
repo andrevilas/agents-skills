@@ -7,7 +7,7 @@
   "invocation": "implicit",
   "description": "Use when work must run on AISH runners: create or approve AISH jobs, add intake reference files or transcripts, run a cockpit execution session (sessão de execução: plan, dispatch, pause, checkpoint). Not for job evidence (use lpm-aish-delivery) or commit-tracked work (use lpm-deliver-activity).",
   "doneWhen": "A re-read shows the job or session in the requested state; an approved job stays `status` queued with `executionGate.runnerMayExecute` true until a runner leases it.",
-  "authorityCeiling": "Job and plan approval, checkpoint and Copilot decisions are [O]; funding is owner-only (lpm-ai-cost).",
+  "authorityCeiling": "Job and plan approval, checkpoint, Copilot and session retention/deletion decisions are [O]; content writes are [C]; funding is owner-only (lpm-ai-cost).",
   "jobs": [
     "create an AISH analysis job for activity <issueId>",
     "cria um job AISH de teste para a atividade <id> no repositório <repo>",
@@ -52,6 +52,8 @@
     "create_aish_execution_session",
     "list_aish_execution_sessions",
     "get_aish_execution_session",
+    "get_aish_session_content",
+    "manage_aish_session_content",
     "append_aish_execution_session_command",
     "acquire_aish_coordinator_lease",
     "put_aish_execution_plan",
@@ -102,6 +104,7 @@
   ],
   "sharedRefs": [],
   "references": [
+    { "file": "references/session-content.md", "loadWhen": "read, export, write, retain or delete execution-session conversation content" },
     { "file": "references/flow-create-job.md", "loadWhen": "playbook create-job: create one AISH job for an activity (gate closed)" },
     { "file": "references/flow-approve-job.md", "loadWhen": "playbook approve-job: approve one funded AISH job on the owner's order" },
     { "file": "references/flow-cockpit-plan.md", "loadWhen": "playbook cockpit-plan: plan a multi-step objective in the AISH cockpit" },
