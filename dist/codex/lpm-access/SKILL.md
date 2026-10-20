@@ -42,8 +42,9 @@ Do not use:
 | a webhook secret | `lpm-integrations` |
 
 ## 2. Preconditions
-1. Connector or `lpm_mcp_` credential → say "Credential tools need an LPM API key (full or custom profile)." → STOP.
-2. API-key rows: the caller's own keys only. Rows 6–8: P1 step 3.
+1. Run one §4 row. CALL row: make that one call, reply with §8. Playbook row: open its file, do its steps in order, reply with its Answer block only.
+2. Connector or `lpm_mcp_` credential → say "Credential tools need an LPM API key (full or custom profile)." → STOP.
+3. API-key rows: the caller's own keys only. Rows 6–8: owner gate step 3.
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -58,22 +59,22 @@ Do not use:
 |---|---|---|---|---|
 | 1 | a write without the owner's order for this exact action | decision request ([authority-and-owner-decisions](references/authority-and-owner-decisions.md#decision-request)) | — | always |
 | 2 | list or review access, or which profile a key needs | [flow-access-review](references/flow-access-review.md); profile: smallest preset ([api-key-profiles](references/api-key-profiles.md)) | A | never write; `roadmap-owner-*` → row 6 |
-| 3 | create an API key | P1, then P2 steps 1–2 and 7 | O | `full` without a named job → ask "Which job needs full?" |
-| 4 | change, revoke, reactivate or delete a key | P1, then P2 steps 3–4, 6 and 7 | O | delete while revoke is enough → ask "Revoke (reversible) instead?" |
-| 5 | rotate an API key | P1, then P2 steps 5 and 7 | O | swap not confirmed → stop before the revoke; delete in the order → ask "Revoke (reversible) instead?" |
+| 3 | create an API key | owner gate (§5), then API-key create (§5 steps 1–2 and 7) | O | `full` without a named job → ask "Which job needs full?" |
+| 4 | change, revoke, reactivate or delete a key | owner gate (§5), then API-key change (§5 steps 3–4, 6 and 7) | O | delete while revoke is enough → ask "Revoke (reversible) instead?" |
+| 5 | rotate an API key | owner gate (§5), then API-key rotate (§5 steps 5 and 7) | O | swap not confirmed → stop before the revoke; delete in the order → ask "Revoke (reversible) instead?" |
 | 6 | agent principal or `lpm_mcp_` credential: create, edit, archive, rotate, suspend, reactivate, revoke | [flow-agent-identities](references/flow-agent-identities.md) | O | the flow's Stop table |
-| 7 | add or revoke a specialist agent on a project | [flow-agent-identities](references/flow-agent-identities.md); P1 without step 3 | O | flow step 7 fails → STOP |
+| 7 | add or revoke a specialist agent on a project | [flow-agent-identities](references/flow-agent-identities.md); owner gate (§5) without step 3 | O | flow step 7 fails → STOP |
 | 8 | AI provider key or workspace GitHub token: set, replace, remove | [flow-workspace-secrets](references/flow-workspace-secrets.md) | O | the flow's Stop table |
 | 9 | "show me the key / secret again" | re-list masked values only (`keyPreview`, `maskedKey`, GitHub token `status`) | A | the secret is never returned → rotate (row 5 or 6) |
 
 ## 5. Procedures
-### P1 Gate — rows 3–8
+### Owner gate — rows 3–8
 1. Quote the owner's order for this exact action; none → §6 row 1.
 2. Rows 3–5: `list_api_keys`(): -32003 → STOP: "This key cannot call list_api_keys; add it to the key's allowedTools or use a full key." No -32003 → step 4; rows 3–5 never call `list_workspaces`.
 3. Rows 6, 8: `list_workspaces`() → row `workspaceId` → `access.canManage` `false` → STOP: "Only a workspace owner or admin can change workspace credentials; ask the owner." Row 7: skip; the server checks.
 4. Show the exact call (secrets as `<from $ENV_NAME>`) and its §6 question; continue only on "yes".
-### P2 API keys — rows 3–5 ([api-key-profiles](references/api-key-profiles.md)); no call takes `idempotencyKey`: never send one
-1. Create: same `name` in the P1 step 2 list → add "A key named <name> exists (<keyPreview>); create another?" to the P1 step 4 question; yes → `create_api_key`(name, accessProfile=<smallest preset>, allowedTools=<custom only, exact list>) [O] → keep `ID`. Timeout → `list_api_keys`; a new row with that name → never call again; ask "Revoke <name> (<keyPreview>) and create a new key?" (secret lost).
+### API-key operations — rows 3–5 ([api-key-profiles](references/api-key-profiles.md)); no call takes `idempotencyKey`: never send one
+1. Create: same `name` in the owner gate step 2 list → add "A key named <name> exists (<keyPreview>); create another?" to the gate step 4 question; yes → `create_api_key`(name, accessProfile=<smallest preset>, allowedTools=<custom only, exact list>) [O] → keep `ID`. Timeout → `list_api_keys`; a new row with that name → never call again; ask "Revoke <name> (<keyPreview>) and create a new key?" (secret lost).
 2. Hand the secret over once, alone: "Save this key now; LPM will not show it again."
 3. `update_api_key`(keyId, changed fields) [O]; `status` only for a revoke or reactivate order, else omit it; resulting profile `custom` → send the FULL `allowedTools`, even for a status change.
 4. Delete (explicit order only): `delete_api_key`(keyId) [O]; irreversible.
@@ -96,7 +97,7 @@ Do not use:
 ## 7. Verify
 | After | Re-read with | Pass when |
 |---|---|---|
-| any API key write | `list_api_keys` | P2 step 7 |
+| any API key write | `list_api_keys` | API-key verify (§5 step 7) |
 | principal, credential, assignment or secret write | the flow's Verify table | every row passes |
 
 ## 8. Report (copy and fill)
