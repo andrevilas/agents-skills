@@ -1,5 +1,72 @@
 [
   {
+    "name": "cancel_aish_automation",
+    "purpose": "Cancel one unfulfilled automation delivery, preserving attempts, history and the underlying job.",
+    "useWhen": ["The user authorizes cancellation of a specific queued or dead-lettered automation delivery"],
+    "avoidWhen": ["Canceling a job or disabling a schedule", "Undoing a succeeded effect or reviving a canceled delivery"],
+    "inputs": [
+      {
+        "param": "commandId",
+        "required": true,
+        "source": "Generate once for this authorized decision; reuse unchanged after an uncertain response",
+        "notes": "string"
+      },
+      {
+        "param": "deliveryId",
+        "required": true,
+        "source": "tick_aish_automation -> delivery.id or user",
+        "notes": "string"
+      },
+      {
+        "param": "expectedGeneration",
+        "required": true,
+        "source": "get_aish_automation_delivery -> delivery.generation",
+        "notes": "integer"
+      },
+      {
+        "param": "expectedTotalAttempts",
+        "required": true,
+        "source": "get_aish_automation_delivery -> delivery.totalAttempts",
+        "notes": "integer"
+      },
+      {
+        "param": "jobId",
+        "required": true,
+        "source": "get_aish_job -> id",
+        "notes": "string"
+      },
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "get_aish_job -> projectId",
+        "notes": "string"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "User-authorized reason",
+        "notes": "Trimmed, 10-500 characters; never include secrets"
+      }
+    ],
+    "preconditions": ["Scoped managing user API key, not an agent principal", "Read the delivery and current generation/totalAttempts before the decision"],
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "idempotency": "keyed by commandId",
+    "returns": "{delivery, reused}; delivery.status is canceled; nextAttemptAt is null",
+    "pairsWith": ["get_aish_automation_delivery"],
+    "errors": [
+      {"when":"Automation delivery changed; reread before cancellation.","fix":"Reread and stop to review the changed decision; do not automatically rebase or retry."},
+      {"when":"Cancellation replay conflicts.","fix":"Stop. Do not mint a new key to bypass a conflicting decision."},
+      {"when":"Only an unfulfilled automation delivery can be canceled.","fix":"Read the terminal state; succeeded and canceled deliveries cannot be canceled by a new decision."}
+    ],
+    "oauthScope": null,
+    "cli": "lpm aish command cancel_aish_automation --file <payload.json> [--transport mcp]",
+    "gotchas": [
+      {"text":"Future slots and manual commands are separate deliveries. Cancellation does not disable their schedule, cancel a job, refund money or undo an effect. The command binds the payload and actor; retry the identical decision only.","verifiedFrom":"src/server/aishAutomationStore.ts:70"}
+    ],
+    "verifiedFrom": "aishAutomationCommand; cancelAutomation; automationCancelSchema; verify-abs028-automations.ts"
+  },
+  {
     "name": "get_aish_session_content",
     "purpose": "Read bounded redacted session content pages or export a selection.",
     "useWhen": [

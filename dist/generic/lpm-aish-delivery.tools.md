@@ -530,6 +530,31 @@ Gotchas:
 Pairs with: `get_aish_automation_delivery`, `tick_aish_automation`
 CLI: `lpm aish command requeue_aish_automation --file <payload.json> [--transport mcp]`
 
+### `cancel_aish_automation` [C] · write · KEY · profiles: full, custom · sensitive: yes · idempotency: keyed by commandId
+Purpose: Cancel one unfulfilled automation delivery, preserving attempts, history and the underlying job.
+Use when: The user authorizes cancellation of a specific queued or dead-lettered automation delivery    Avoid when: Canceling a job or disabling a schedule; Undoing a succeeded effect or reviving a canceled delivery
+| Param | Req | Source (call → field) | Notes |
+|---|---|---|---|
+| commandId | yes | Generate once for this authorized decision; reuse unchanged after an uncertain response | string |
+| deliveryId | yes | tick_aish_automation -> delivery.id or user | string |
+| expectedGeneration | yes | get_aish_automation_delivery -> delivery.generation | integer |
+| expectedTotalAttempts | yes | get_aish_automation_delivery -> delivery.totalAttempts | integer |
+| jobId | yes | get_aish_job -> id | string |
+| projectId | yes | get_aish_job -> projectId | string |
+| reason | yes | User-authorized reason | Trimmed, 10-500 characters; never include secrets |
+Preconditions: Scoped managing user API key, not an agent principal; Read the delivery and current generation/totalAttempts before the decision
+Returns: {delivery, reused}; delivery.status is canceled; nextAttemptAt is null
+Errors → fix:
+| When | Fix |
+|---|---|
+| Automation delivery changed; reread before cancellation. | Reread and stop to review the changed decision; do not automatically rebase or retry. |
+| Cancellation replay conflicts. | Stop. Do not mint a new key to bypass a conflicting decision. |
+| Only an unfulfilled automation delivery can be canceled. | Read the terminal state; succeeded and canceled deliveries cannot be canceled by a new decision. |
+Gotchas:
+- Future slots and manual commands are separate deliveries. Cancellation does not disable their schedule, cancel a job, refund money or undo an effect. The command binds the payload and actor; retry the identical decision only.
+Pairs with: `get_aish_automation_delivery`
+CLI: `lpm aish command cancel_aish_automation --file <payload.json> [--transport mcp]`
+
 ### `set_aish_completed_job_disposition` [C] · destructive · KEY · profiles: full, custom · sensitive: yes · idempotency: naturally idempotent
 Purpose: Permanently classify a completed AISH job as partial, superseded or invalidated, adding an audit evidence note, without changing its linked LPM activity.
 Use when: A completed AISH job delivered only part of the requested work (outcome=partial); A completed job's result was replaced by a newer job (outcome=superseded); A completed job's result must no longer be trusted (outcome=invalidated); The user stated the outcome and the reason to record    Avoid when: Job is failed or canceled: no MCP tool; use CLI 'lpm aish jobs resolve' (failure resolution) or 'lpm aish jobs close' (administrative closure); The job's linked activity was deleted/missing: use repair_aish_completed_job_lineage (a disposition cannot hide a missing issue); Job is still queued/leased/running: wait and check with get_aish_job; You only want to read the job: get_aish_job

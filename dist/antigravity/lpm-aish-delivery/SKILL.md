@@ -8,7 +8,7 @@ description: "Use when AISH job work must be proven, closed or released (evidên
 
 Access: on a connector only `get_issue` works; everything else needs an LPM API key (profile full or custom).
 
-Authority: [A] 13 · [C] 6 · [O] 2. Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; owner-authorized SOLO finding resolution and release approval are [O] (managing human only).
+Authority: [A] 13 · [C] 7 · [O] 2. Artifacts, audits and packs are [A]; findings, release create/claim, requeue and repairs are [C]; owner-authorized SOLO finding resolution and release approval are [O] (managing human only).
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.
@@ -59,6 +59,7 @@ Do not use:
 | 5a | "can I close it?", "posso fechar?" with no 5b word | [flow-close](references/flow-close.md) with order="question"; evidence gaps → Pending | A | gap → "not yet" + Pending |
 | 5b | "close it", "feche", "conclua", "marque como concluída" (even with a question) | [flow-close](references/flow-close.md) with order="close"; the user's words are the order | A | `blocked` or active job |
 | 6 | preserve or attach the execution report | [flow-pack](references/flow-pack.md) | A | `canCollect == false` |
+| 6b | cancel one automation delivery | [automation-cancel](references/automation-cancel.md) | C | succeeded, changed or ambiguous target |
 | 7 | refresh the release-readiness brief | [flow-automation](references/flow-automation.md) | A | — |
 | 8 | automation delivery `dead-lettered` | [flow-automation](references/flow-automation.md) | C | `pack-integrity`, `source-scope`, `source-limit` |
 | 9 | create a release package | [flow-release-create](references/flow-release-create.md) | C | not funded → `lpm-ai-cost` |
@@ -113,9 +114,10 @@ Next: <one action>
 | `record_aish_delivery_finding`: Technical finding needs a stable id and explicit reason. | findingId 8-160 chars [a-zA-Z0-9_-] and reason 8-3,000 chars. |
 
 ## 10. Tools and references
-Tool contracts: [tools](references/tools.md) (21 owned, 9 borrowed). Open for parameter or permission details.
-`list_aish_delivery_artifacts`, `read_aish_delivery_artifact`, `register_aish_delivery_artifact`, `upload_aish_delivery_artifact`, `audit_aish_issue_delivery`, `replace_aish_delivery_session`, `record_aish_delivery_finding`, `create_aish_release`, `get_aish_release`, `approve_aish_release`, `claim_aish_release`, `complete_aish_release`, `get_aish_execution_report`, `collect_aish_execution_pack`, `get_aish_execution_pack`, `export_aish_execution_pack`, `tick_aish_automation`, `get_aish_automation_delivery`, `requeue_aish_automation`, `set_aish_completed_job_disposition`, `repair_aish_completed_job_lineage`, `get_aish_job`, `list_aish_jobs`, `get_aish_execution_session`, `update_issue`, `list_workspace_activities`, `upload_activity_attachment`, `list_activity_attachments`, `get_project_analytics`, `get_issue`
+Tool contracts: [tools](references/tools.md) (22 owned, 9 borrowed). Open for parameter or permission details.
+`list_aish_delivery_artifacts`, `read_aish_delivery_artifact`, `register_aish_delivery_artifact`, `upload_aish_delivery_artifact`, `audit_aish_issue_delivery`, `replace_aish_delivery_session`, `record_aish_delivery_finding`, `create_aish_release`, `get_aish_release`, `approve_aish_release`, `claim_aish_release`, `complete_aish_release`, `get_aish_execution_report`, `collect_aish_execution_pack`, `get_aish_execution_pack`, `export_aish_execution_pack`, `tick_aish_automation`, `get_aish_automation_delivery`, `requeue_aish_automation`, `cancel_aish_automation`, `set_aish_completed_job_disposition`, `repair_aish_completed_job_lineage`, `get_aish_job`, `list_aish_jobs`, `get_aish_execution_session`, `update_issue`, `list_workspace_activities`, `upload_activity_attachment`, `list_activity_attachments`, `get_project_analytics`, `get_issue`
 Load a reference only when its condition holds:
+- `references/automation-cancel.md` — canceling one queued or dead-lettered automation delivery, not its schedule or job
 - `references/session-replacement.md` — the owner explicitly approves replacing a failed session with an equivalent completed successor
 - `references/flow-evidence.md` — playbook evidence: register a screenshot, video, test report or runner-published file as a delivery artifact of an AISH job
 - `references/flow-release.md` — running rows 9–11

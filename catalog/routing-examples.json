@@ -11,6 +11,22 @@
   },
   "entries": [
     {
+      "id": "automation-cancellation/en",
+      "kind": "positive",
+      "lang": "en",
+      "prompt": "cancel this queued automation delivery, not its job",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
+      "id": "automation-cancellation/pt",
+      "kind": "positive",
+      "lang": "pt-BR",
+      "prompt": "cancele esta entrega de automacao sem desativar o agendamento",
+      "expected": "lpm-aish-delivery",
+      "decidedBy": 7
+    },
+    {
       "id": "collision/c01",
       "kind": "collision",
       "lang": [

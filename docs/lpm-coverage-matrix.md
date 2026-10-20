@@ -7,19 +7,19 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 
 | Field | Value |
 |---|---|
-| lpmCommit | `48930f89b6c686037b56549edec9a9d046312cda` |
-| toolCount | `387` |
+| lpmCommit | `50d4d42014d4010b4acdc8335b26e986e9b85295` |
+| toolCount | `388` |
 | cliCount | `152` |
-| namesHash | `sha256:ae3fc365d392c0e85653dba9c9e3f22ed683c632a754bba3eb3b93b3c390da6e` |
-| schemaHash | `sha256:db4bd5be26a65e384da22ffb5b0d29235b74dcaa1b1e99339dfd757e6e08cb83` |
+| namesHash | `sha256:e9fc6af798d73df72ed0038b121c7951e86e21452977b29850924eeeddb0663d` |
+| schemaHash | `sha256:aab1d1d1dc40b5418d97bc090728875524741d6ebf46f18b905cc81e4d041010` |
 | cliHash | `sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec` |
-| sourcesHash | `sha256:46ab62da488339c88ec3c1ed906a4d7b221cc98e387933db539df2182dd231ba` |
+| sourcesHash | `sha256:778e4ff1550ec219c656602ce58cb256d397e0b67ba2ad68bf2bbaeadf39b0c5` |
 
 ## Totals
 
 | Tools | Owned | Pending | Unowned | Skills | OAuth-reachable |
 |---|---|---|---|---|---|
-| 387 | 387 | 0 | 0 | 23 | 76 |
+| 388 | 388 | 0 | 0 | 23 | 76 |
 
 ## Skills
 
@@ -27,7 +27,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 |---|---|---|---|---|---|---|---|---|
 | `lpm-access` | core | tools | 21 | 7/0/14 | 0 | KEY | 6 | — |
 | `lpm-ai-cost` | core | tools | 19 | 9/1/9 | 0 | KEY | 6 | — |
-| `lpm-aish-delivery` | core | tools | 21 | 13/6/2 | 0 | KEY | 9 | — |
+| `lpm-aish-delivery` | core | tools | 22 | 13/7/2 | 0 | KEY | 9 | — |
 | `lpm-aish-jobs` | core | tools | 30 | 16/10/4 | 0 | KEY | 3 | 10 |
 | `lpm-aish-runners` | core | tools | 12 | 5/7/0 | 0 | KEY | 5 | — |
 | `lpm-ask-advisor` | core | tools | 11 | 11/0/0 | 10 | OAuth mostly | 6 | 6 |
@@ -66,6 +66,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `approve_aish_job_execution` | `lpm-aish-jobs` | O | KEY | — |
 | `approve_aish_release` | `lpm-aish-delivery` | O | KEY | — |
 | `audit_aish_issue_delivery` | `lpm-aish-delivery` | A | KEY | — |
+| `cancel_aish_automation` | `lpm-aish-delivery` | C | KEY | — |
 | `claim_aish_intake_transcription` | `lpm-aish-runners` | C | KEY | — |
 | `claim_aish_release` | `lpm-aish-delivery` | C | KEY | — |
 | `collect_aish_execution_pack` | `lpm-aish-delivery` | A | KEY | — |

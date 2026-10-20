@@ -164,6 +164,7 @@
     "tick_aish_automation",
     "get_aish_automation_delivery",
     "requeue_aish_automation",
+    "cancel_aish_automation",
     "set_aish_completed_job_disposition",
     "repair_aish_completed_job_lineage"
   ],
@@ -215,6 +216,10 @@
     }
   ],
   "references": [
+    {
+      "file": "references/automation-cancel.md",
+      "loadWhen": "canceling one queued or dead-lettered automation delivery, not its schedule or job"
+    },
     {
       "file": "references/session-replacement.md",
       "loadWhen": "the owner explicitly approves replacing a failed session with an equivalent completed successor"

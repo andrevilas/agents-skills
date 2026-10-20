@@ -40,6 +40,7 @@ Do not use:
 | 5a | "can I close it?", "posso fechar?" with no 5b word | {{ref:flow-close}} with order="question"; evidence gaps → Pending | A | gap → "not yet" + Pending |
 | 5b | "close it", "feche", "conclua", "marque como concluída" (even with a question) | {{ref:flow-close}} with order="close"; the user's words are the order | A | `blocked` or active job |
 | 6 | preserve or attach the execution report | {{ref:flow-pack}} | A | `canCollect == false` |
+| 6b | cancel one automation delivery | {{ref:automation-cancel}} | C | succeeded, changed or ambiguous target |
 | 7 | refresh the release-readiness brief | {{ref:flow-automation}} | A | — |
 | 8 | automation delivery `dead-lettered` | {{ref:flow-automation}} | C | `pack-integrity`, `source-scope`, `source-limit` |
 | 9 | create a release package | {{ref:flow-release-create}} | C | not funded → {{skill:lpm-ai-cost}} |
