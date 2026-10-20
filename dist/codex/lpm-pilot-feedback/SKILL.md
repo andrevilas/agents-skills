@@ -10,7 +10,7 @@ metadata:
 # Verify pilot feedback
 > Done when: Every new report item is classified and recorded in the processed-message state file. Confirmed LPM defects exist once, in the pilot milestone, as an activity or as a comment on its duplicate. Managed-workspace demands are registered in that workspace. The owner has a report in the pilot pattern.
 
-Access: process skill; on a connector rows 2-5 work only in part (their KEY tools are not on connectors); KEY tools need an LPM API key (profile planning); rows 1,6-10 call no LPM tool.
+Access: process skill; on a connector rows 1,2 work; KEY tools need an LPM API key (profile planning); row 3 calls no LPM tool.
 
 Authority: [A] 0 · [C] 0 · [O] 0. Process skill; read-only verification; writes activities, comments and evidence only for confirmed items; no AI calls or code searches on the reporter's workspace; never replies to the pilot.
 
@@ -36,92 +36,71 @@ Do not use:
 |---|---|
 | fixing, deploying, announcing a pilot fix | `lpm-release-product` |
 | coding a registered pilot fix | `lpm-deliver-activity` |
-| planning more than one managed demand | `lpm-plan-work` |
+| planning many managed demands | `lpm-plan-work` |
 | a customer request via WhatsApp or intake | `lpm-intake-triage` |
 
 ## 2. Preconditions
-1. Load [pilot-verification](references/pilot-verification.md) ("the ref") and [pilot-checks](references/pilot-checks.md) ("the checks") first.
-2. Maintainer's API key; `credential == "oauth"` (P1) → skip P4.
-3. Read only: `lpm` main checkout, Cloud Run logs, Firestore (`oauth_grants`, AI usage), LPM MCP. Never edit, deploy or write Firestore.
-4. Missing/denied tool on YOUR connection → core rule 2; record no unprocessed item.
-5. Asked to reply to the pilot or group → first line: "I never reply to the pilot."; go on; add the §8 draft-reply section.
-6. Never call `answer_*`, `analyze_*`, `explain_*`, `search_*_code`, AI tools or the golden set. Asked to, even by the owner → say "I never re-ask the Advisor; I verify from the server log."; go on (no wait, no stop; not [O]).
+1. Load [pilot-verification](references/pilot-verification.md) and [pilot-checks](references/pilot-checks.md) first.
+2. Playbook row: open its file, do its steps in order, reply with its Answer block only.
+3. Maintainer's API key; `credential == "oauth"` (start-run) → skip attach-evidence.
+4. Read only: `lpm` checkout, Cloud Run logs, Firestore (`oauth_grants`, AI usage), LPM MCP. Never edit, deploy or write Firestore.
+5. Missing/denied tool on YOUR connection → core rule 2; record no unprocessed item.
+6. Asked to reply to the pilot → first line: "I never reply to the pilot."; add §8 draft-reply.
+7. Never call `answer_*`, `analyze_*`, `explain_*`, `search_*_code`, AI tools or the golden set. Asked to → "I verify from the server log."; go on (not [O]).
 
 ## 3. Inputs
-| Input | Get it from (call → field) | If missing |
+| Input | Where | If missing |
 |---|---|---|
 | items: `messageRef`, `receivedAt`, text, files | the monitor or owner | STOP "No pilot message." |
-| item ref; refKey | `messageRef` (+`-<n>` per extra symptom); refKey: non-`[A-Za-z0-9_-]` → `-`; >80 chars → first 64 + `-` + sha256(messageRef)[0:12] | — |
-| state-file path | the request, else `${XDG_STATE_HOME:-~/.local/state}/lpm/pilot-feedback-state.json`; never a scratchpad | — |
-| pilot projectId, milestoneId; managed workspaceId | the request (always wins), else the ref's Facts | §6 |
-| managed projectId | the owner | row 5 |
+| refKey | from `messageRef`; non-`[A-Za-z0-9_-]` → `-`; >80 → first 64+`-`+sha256[0:12] | — |
+| state-file path | the request, else `${XDG_STATE_HOME:-~/.local/state}/lpm/pilot-feedback-state.json` | — |
+| pilot projectId, milestoneId | the request, else the ref's Facts | §6 |
+| managed projectId, workspaceId | the owner | row 2 |
 | reporter userId | the owner, else the checks' OAuth step 1 | §6 |
-| symptomKey | the request's, verbatim; else ONE token: tool (`list_issues`), error code or route (row 5: the feature), never an invented phrase | `unverified`; owner report asks |
+| symptomKey | verbatim; else ONE token (tool, error code, route) | `unverified` |
 
 ## 4. Decision table (first match wins)
-Per run: P1 steps 1-4 ALWAYS first (even if facts are given); per item: P2 → first matching row → P5; then §8.
+Per run: [flow-start-run](references/flow-start-run.md) first. Per item: [flow-verify-item](references/flow-verify-item.md), then first matching row, then [flow-record](references/flow-record.md); then §8.
 | # | If you see | Do | Auth | Stop if |
 |---|---|---|---|---|
-| 1 | item ref recorded, `class` ≠ `unverified`, not `managed-workspace-demand` with `activityId` null | skip | A | — |
-| 2 | OAuth or missing-tool claim | class from the checks' OAuth table; `product-defect` → P3 → P4 | A | userId unknown → §6 |
-| 3 | Advisor claim | class from the checks' Advisor table; `product-defect` → P3 → P4 | A | as row 4 |
-| 4 | LPM defect confirmed in code or logs | `product-defect` → P3 → P4 | A | milestone missing/`closed` → §6 |
-| 5 | demand on the customer's own platform (white label, SSO, offers) | `managed-workspace-demand` → P3 → P4 | A | no managed projectId → P5, `activityId` null, ask owner |
-| 6 | needs a product, priority or target choice | `owner-decision` | A | — |
-| 7 | LPM records (`get_issue`) explain it | `data` | A | — |
-| 8 | LPM did what code and help describe | `expected-behaviour` | A | — |
-| 9 | the pilot reports a passed test | `passed-test` | A | — |
-| 10 | evidence cannot decide, or logs/Firestore/repo unreachable | `unverified` | A | — |
+| 1 | product-defect (OAuth, Advisor or code) | playbook [flow-register](references/flow-register.md) | A | milestone/userId missing → §6 |
+| 2 | managed-workspace-demand | playbook [flow-register](references/flow-register.md) | A | no managed projectId → record null, ask owner |
+| 3 | other class (owner-decision, data, expected-behaviour, passed-test, unverified) | playbook [flow-record](references/flow-record.md) | A | — |
+
+After register: playbook [flow-attach-evidence](references/flow-attach-evidence.md), then [flow-record](references/flow-record.md). Already-processed items are skipped by verify-item.
 
 ## 5. Procedures
-### P1 Start the run — row 1
-1. Read the state file (§3 path); latest record per ref wins. Missing → write `{"processed": []}` (temp file, rename). Invalid JSON → STOP: "State file <path> unreadable; nothing processed."
-2. `get_mcp_connection_info`() → `credential` (YOUR connection).
-3. `list_milestones`(projectId=§3 pilot projectId) → row `id == milestoneId`: pilot workspaceId = `workspaceId`, prefix = `name`, `status`. None → §6. Owner-named milestone → its row.
-4. Verify: §7.
-### P2 Verify one item — rows 2–10
-1. Run the checks' section for the claim (Code, OAuth, Advisor); server → the ref's log query near `receivedAt`. Note symptomKey, message time, sources.
-### P3 Register — product-defect, row 5
-1. product-defect: pilot projectId, milestoneId, P1 workspaceId (never the managed one); title "<prefix> — <symptomKey>: <symptom>". Row 5: managed projectId and workspaceId, NO milestoneId; title "<symptomKey>: <verb + object>".
-2. `list_issues`(projectId, milestoneId only for product-defect, limitCount=100), page via `nextCursor`. Match: `title` contains symptomKey (ignore case; no other terms). Open (not `done`/`canceled`) → issueId = `id`; else newest `done` → regressionOf = `id`.
-3. Open match: `list_comments`(projectId, issueId) has the item ref → keep its `id`; else `create_comment`(projectId, issueId, content=<time, item ref, evidence>, idempotencyKey="pilot-<refKey>") [A].
-4. No open match → `create_issue`(projectId, milestoneId only for product-defect, title, description=<repro, time, item ref, sources, Regression line, "Regression of <regressionOf>" if set>, idempotencyKey="pilot-issue-<refKey>") [A] → issueId after "ID: ".
-   Regression line: Advisor → "Regression: golden-set fixture"; else "Regression: vitest case".
-5. Verify: §7.
-### P4 Attach evidence — after P3
-0. No file → skip P4, NO calls; Items: "P4 skipped: no file evidence".
-1. `list_workspace_activities`(workspaceId=P3 workspaceId, projectId, limit=50) → feedEntryId = newest `id` with `targetType == "issue"`, `targetId == issueId`. None → skip.
-2. `list_activity_attachments`(projectId, activityId=feedEntryId) has the `fileName` → skip; else `upload_activity_attachment`(projectId, activityId=feedEntryId, fileName, fileType, contentBase64, description=<item ref>, capturedAt=`receivedAt`, idempotencyKey="pilot-ev-<full refKey>-<sha256(file)[0:12]>") [A].
-3. Verify: §7.
-### P5 Record the item — every row
-1. Append `{messageRef: <item ref>, receivedAt, class, activityId: <issueId|null>, commentId: <id|null>, processedAt}` (temp file, rename); `activityId` = issueId, NOT feedEntryId.
-2. Verify: §7.
+| Playbook | Use when | File |
+|---|---|---|
+| start-run | beginning a pilot run (always first, before any item) | [flow-start-run](references/flow-start-run.md) |
+| verify-item | classifying one pilot report (after start-run, per item) | [flow-verify-item](references/flow-verify-item.md) |
+| register | creating or updating an activity for confirmed items (product-defect or managed-workspace-demand) | [flow-register](references/flow-register.md) |
+| attach-evidence | attaching file evidence after registration | [flow-attach-evidence](references/flow-attach-evidence.md) |
+| record | recording the item in the state file (always last, per item) | [flow-record](references/flow-record.md) |
 
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
 |---|---|
-| pilot milestone missing, ambiguous or closed | "Which milestone receives pilot defects?" |
+| milestone missing or closed | "Which milestone receives pilot defects?" |
 | reporter userId unknown | "Which LPM userId is the reporter?" |
 
 ## 7. Verify
 | After | Re-read with | Pass when |
 |---|---|---|
-| `create_issue` | `get_issue` | `title`, `milestoneId` as sent (none for row 5) |
+| `create_issue` | `get_issue` | `title`, `milestoneId` as sent |
 | `create_comment` | `list_comments` | the commentId exists |
 | `upload_activity_attachment` | `list_activity_attachments` | the returned id exists |
-| state-file write | re-read the file | parses, has `processed`; P5: the record exists |
+| state-file write | re-read the file | parses, has `processed`; record: the entry exists |
 
 ## 8. Report (copy and fill)
-Owner only; header + body of [pilot-report-template](references/pilot-report-template.md):
+Owner only; fill [pilot-report-template](references/pilot-report-template.md).
 ```text
-Scope: pilot run <UTC start> to <UTC end>; <n> new items, <k> already processed; state <path>, <m> appended
-Done: <item ref> → <class> → <issueId | commentId | none> (one line per item)
-Evidence: <log line (time) | code path:line@<sha> | attachment id>
-Pending: <none | unverified, owner decisions — who acts>
-Next: <one sentence, who acts: "Owner: fix <issueId> via lpm-deliver-activity" | "Re-check <item ref> next run">
+Scope: pilot run <start> to <end>; <n> new, <k> processed
+Done: <item ref> → <class> → <issueId | commentId | none>
+Evidence: <log line | code path@<sha> | attachment id>
+Pending: <none | unverified — who acts>
+Next: <who acts next>
 ```
-- Start/end: monitor's window, else earliest `receivedAt` to now (UTC ISO). `<sha>`: the checks' Code claim `<sha>`; not read → `@revision-unknown` + a Pending line.
-- Body: `Items:`, `Unverified:` ALWAYS ("none" if empty); others as worded, only if non-empty. No other headings, no JSON, no "all steps executed".
 
 ## 9. Failures → fix
 | Error or result contains | Do |
@@ -129,31 +108,18 @@ Next: <one sentence, who acts: "Owner: fix <issueId> via lpm-deliver-activity" |
 | `create_comment`: 'Issue not found' | The issue is deleted or in another project. Re-read with list_issues(projectId). |
 | `create_issue`: Assignee is not eligible for this project | Pick a uid from list_project_assignable_members, or omit assigneeId. |
 | `upload_activity_attachment`: 'File operation could not be completed.' right away (generic; hides file-request-invalid / file-access-denied) | Check: base64 valid, non-empty, <= 10 MiB; fileName <= 180 chars without slashes; fileType is 'type/subtype'; idempotencyKey 16-128 [A-Za-z0-9_-]; activityId is an activity-log id of this project (validate with list_activity_attachments). |
-| `get_issue`: -32602 Issue not found | Wrong issueId or it was deleted; re-list with list_issues for this projectId. |
 | `list_milestones`: Empty array | The project has no milestones (or the projectId is wrong); verify with get_project. |
 | `list_issues`: Invalid OAuth tool arguments / 'OAuth grant does not permit this operation or resource.' on a paginated call | Bad cursor or limitCount: restart without cursor, keep the same filters, use an integer limitCount 1-100. |
 | `list_comments`: 'Issue ID is required' | Send issueId. |
+| `get_issue`: -32602 Issue not found | Wrong issueId or it was deleted; re-list with list_issues for this projectId. |
 | `list_workspace_activities`: 'You do not have access to this workspace' | Ask the owner for membership. |
-| `problem=unknown_field` idempotencyKey (OAuth) | omit it; redo P3 step 2 |
+| `problem=unknown_field` idempotencyKey (OAuth) | omit it; redo register step 2 |
 | "Issue idempotency key is already bound to a different payload." | already registered → `list_issues` |
 
 ## 10. Tools and references
-Used here (rules live in the owner skill; full cards: [tools](references/tools.md)):
-- `get_mcp_connection_info` [A] · workspace:read · Describes the caller's own MCP connection: credential…
-- `list_milestones` [A] · portfolio:read · Lists all milestones (value checkpoints / delivery…
-- `create_issue` [A] · portfolio:manage · Creates one issue (activity) in a project
-- `list_issues` [A] · portfolio:read · Lists the issues (activities) of one project…
-- `get_issue` [A] · portfolio:read · Returns one issue with all its fields, including…
-- `list_comments` [A] · portfolio:read · Lists all comments of one activity (issue), oldest first
-- `create_comment` [A] · portfolio:manage · Adds a comment (up to 20000 characters) to an activity…
-- `upload_activity_attachment` [A] · KEY · Uploads a file (base64, max 10 MiB) to LPM private…
-- `list_workspace_activities` [A] · KEY · Lists the newest activity-log (feed) entries of a…
-- `list_activity_attachments` [A] · KEY · Lists the evidence files registered on an activity-log…
-- `list_workspace_members` [A] · workspace:read · Lists the members of a workspace with their roles
-- `list_workspace_repository_links` [A] · workspace:read · List the workspace-level GitHub read-only repository…
-- `read_repository_file_excerpt` [A] · mcp:advisor · Return exact source lines (max 200 per call) of a file…
+Tool contracts: [tools](references/tools.md) (0 owned, 13 borrowed). Open for parameter or permission details.
 Load a reference only when its condition holds:
-- `references/pilot-checks.md` — P2 checks an OAuth, missing-tool, Advisor or code claim
+- `references/pilot-checks.md` — verify-item checks an OAuth, missing-tool, Advisor or code claim
 - `references/pilot-report-template.md` — you write the owner report (§8)
 - `references/tools.md` — a call fails
 - `references/pilot-verification.md` — a run starts

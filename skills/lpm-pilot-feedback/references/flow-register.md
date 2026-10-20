@@ -1,0 +1,52 @@
+# Playbook: register
+Use when: creating or updating an activity for confirmed items (product-defect or managed-workspace-demand)
+{{partial:playbook-rules}}
+
+## You need
+| Input | Where it comes from | If missing |
+|---|---|---|
+| class | verify-item's saved class | STOP. Say: "Run verify-item first." |
+| pilotProjectId | start-run input | STOP. Say: "Run start-run first." |
+| milestoneId | start-run input (product-defect only) | STOP for product-defect. Say: "Which milestone?" |
+| pilotWorkspaceId | start-run's saved value | STOP. Say: "Run start-run first." |
+| managedProjectId | the owner (managed-workspace-demand only) | SAVE: activityId = null; commentId = null; go to Answer. |
+| managedWorkspaceId | the request or the owner (managed-workspace-demand only) | SAVE: activityId = null; commentId = null; go to Answer. |
+| prefix | start-run's saved milestone name | STOP. Say: "Run start-run first." |
+| symptomKey | verify-item's saved symptomKey | `unverified` |
+| symptom | short description, at most 80 chars | the item text truncated |
+| messageRef | the item ref | STOP. Say: "No item ref." |
+| refKey | verify-item's saved refKey | STOP. Say: "Run verify-item first." |
+| receivedAt | the item's receivedAt | STOP. Say: "When was this received?" |
+| sources | verify-item's saved sources | "none" |
+
+## Steps
+Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>."
+1. IF <input:class> == product-defect → SAVE: projectId = <input:pilotProjectId>; workspaceId = <input:pilotWorkspaceId>; useMilestone = <input:milestoneId>; title = "<input:prefix> -- <input:symptomKey>: <input:symptom>"; go to step 3.
+2. SAVE: projectId = <input:managedProjectId>; workspaceId = <input:managedWorkspaceId>; useMilestone = null; title = "<input:symptomKey>: verb + object from <input:symptom>"
+3. CALL {{tool:list_issues}} {"projectId":"<saved:projectId>","milestoneId":"<saved:useMilestone>","limitCount":100} [A]
+   Page via nextCursor until done. Match: title contains <input:symptomKey> (ignore case; no other terms).
+   IF an open match (not done/canceled) → SAVE: issueId = that item's id; go to step 4.
+   IF no open match → SAVE: regressionOf = newest done match's id or null; go to step 6.
+4. CALL {{tool:list_comments}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>"} [A]
+   IF any comment content contains <input:messageRef> → SAVE: commentId = that comment's id; activityId = <saved:issueId>; go to Answer.
+5. CALL {{tool:create_comment}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>","content":"<input:receivedAt> <input:messageRef>: <input:sources>","idempotencyKey":"pilot-<input:refKey>"} [A]
+   SAVE: commentId = the id in "Comment created with ID: <id>"
+   VERIFY: CALL {{tool:list_comments}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>"} [A]
+   IF the call returns an error or <saved:commentId> is missing → STOP. Say: "Comment not found after create."
+   SAVE: activityId = <saved:issueId>; go to Answer.
+6. SAVE: regressionLine = "Regression: golden-set fixture" if Advisor claim, else "Regression: vitest case"; regressionNote = "Regression of <saved:regressionOf>" if set, else ""
+7. CALL {{tool:create_issue}} {"projectId":"<saved:projectId>","milestoneId":"<saved:useMilestone>","title":"<saved:title>","description":"Repro: <input:receivedAt> <input:messageRef>\nSources: <input:sources>\n<saved:regressionLine>\n<saved:regressionNote>"} [A]
+   SAVE: issueId = the id after "ID: "; commentId = null
+   VERIFY: CALL {{tool:get_issue}} {"projectId":"<saved:projectId>","issueId":"<saved:issueId>"} [A]
+   IF the call returns an error or result.title != <saved:title> → STOP. Say: "Issue does not match."
+   SAVE: activityId = <saved:issueId>
+
+## Answer (reply with exactly this block, filled in; write nothing before or after it)
+```text
+Scope: <saved:projectId>/<saved:issueId>
+Done: <registered <saved:issueId> <saved:title> | comment <saved:commentId> on <saved:issueId> | no managed project>
+Evidence: <input:sources>
+Pending: <none | no managed projectId, ask owner>
+Next: <continue to playbook attach-evidence if files exist, then playbook record>
+```
+Never claim an issueId or commentId that a VERIFY did not confirm.

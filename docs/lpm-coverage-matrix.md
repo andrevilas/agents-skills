@@ -7,19 +7,19 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 
 | Field | Value |
 |---|---|
-| lpmCommit | `5615224e1bb6a7f929818907ad879b642628a4ff` |
-| toolCount | `383` |
+| lpmCommit | `48930f89b6c686037b56549edec9a9d046312cda` |
+| toolCount | `387` |
 | cliCount | `152` |
-| namesHash | `sha256:d5793cef8f7d359bfcaf40621b3c7b59f54f7e9d6c3412860146e6424c2e63c1` |
-| schemaHash | `sha256:c92e9c32f39d014d0191b062055140351bdfe6bf3d7a2e3602e8dbf524255de3` |
+| namesHash | `sha256:ae3fc365d392c0e85653dba9c9e3f22ed683c632a754bba3eb3b93b3c390da6e` |
+| schemaHash | `sha256:db4bd5be26a65e384da22ffb5b0d29235b74dcaa1b1e99339dfd757e6e08cb83` |
 | cliHash | `sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec` |
-| sourcesHash | `sha256:05514d8fa3a8d763c23222af1f3fd0a4918a438b251a5c5f6c9bc17b73c7cbad` |
+| sourcesHash | `sha256:74eb261b8391093386a30994708b5d6276f9888d4dd2520c078e9e81cfcb371e` |
 
 ## Totals
 
 | Tools | Owned | Pending | Unowned | Skills | OAuth-reachable |
 |---|---|---|---|---|---|
-| 383 | 383 | 0 | 0 | 23 | 76 |
+| 387 | 387 | 0 | 0 | 23 | 76 |
 
 ## Skills
 
@@ -27,8 +27,8 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 |---|---|---|---|---|---|---|---|---|
 | `lpm-access` | core | tools | 21 | 7/0/14 | 0 | KEY | 6 | — |
 | `lpm-ai-cost` | core | tools | 19 | 9/1/9 | 0 | KEY | 6 | — |
-| `lpm-aish-delivery` | core | tools | 20 | 13/6/1 | 0 | KEY | 9 | — |
-| `lpm-aish-jobs` | core | tools | 28 | 15/9/4 | 0 | KEY | 3 | 10 |
+| `lpm-aish-delivery` | core | tools | 21 | 13/6/2 | 0 | KEY | 9 | — |
+| `lpm-aish-jobs` | core | tools | 30 | 16/10/4 | 0 | KEY | 3 | 10 |
 | `lpm-aish-runners` | core | tools | 12 | 5/7/0 | 0 | KEY | 5 | — |
 | `lpm-ask-advisor` | core | tools | 11 | 11/0/0 | 10 | OAuth mostly | 6 | 6 |
 | `lpm-code-index` | core | tools | 18 | 8/10/0 | 2 | mostly KEY | 4 | 9 |
@@ -38,11 +38,11 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `lpm-intake-triage` | core | tools | 16 | 9/7/0 | 0 | KEY | 9 | 9 |
 | `lpm-integrations` | core | tools | 12 | 5/4/3 | 2 | mixed | 4 | — |
 | `lpm-knowledge` | core | tools | 18 | 11/7/0 | 3 | mixed | 7 | — |
-| `lpm-pilot-feedback` | internal | process | 0 | 0/0/0 | 0 | process skill | 13 | — |
+| `lpm-pilot-feedback` | internal | process | 0 | 0/0/0 | 0 | process skill | 13 | 5 |
 | `lpm-plan-work` | core | tools | 31 | 17/14/0 | 7 | mixed | 10 | 10 |
 | `lpm-release-product` | internal | process | 0 | 0/0/0 | 0 | process skill | 8 | — |
 | `lpm-requirements-scope` | core | tools | 25 | 12/7/6 | 3 | mostly KEY | 9 | 10 |
-| `lpm-review-health` | core | tools | 10 | 10/0/0 | 4 | mixed | 15 | 4 |
+| `lpm-review-health` | core | tools | 11 | 11/0/0 | 4 | mixed | 15 | 4 |
 | `lpm-roadmap` | core | tools | 31 | 19/3/9 | 21 | OAuth mostly | 4 | 10 |
 | `lpm-roadmap-owner-ops` | core | tools | 27 | 6/0/21 | 1 | mostly KEY | 10 | 10 |
 | `lpm-start` | core | tools | 8 | 8/0/0 | 6 | OAuth mostly | 4 | 6 |
@@ -105,8 +105,10 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `get_aish_job` | `lpm-aish-jobs` | A | KEY | `lpm-ai-cost`, `lpm-aish-delivery`, `lpm-aish-runners` |
 | `get_aish_release` | `lpm-aish-delivery` | A | KEY | — |
 | `get_aish_runner_management_overview` | `lpm-aish-runners` | A | KEY | — |
+| `get_aish_session_content` | `lpm-aish-jobs` | A | KEY | — |
 | `get_aish_usage_report` | `lpm-ai-cost` | A | KEY | `lpm-aish-runners` |
 | `get_copilot_conversation` | `lpm-aish-jobs` | A | KEY | — |
+| `get_project_agent_recovery_inventory` | `lpm-review-health` | A | KEY | — |
 | `get_project_specialist_governance_summary` | `lpm-access` | A | KEY | — |
 | `get_skills_context` | `lpm-knowledge` | A | KEY | `lpm-deliver-activity` |
 | `import_aish_accounting` | `lpm-ai-cost` | O | KEY | — |
@@ -126,6 +128,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `list_webhook_subscriptions` | `lpm-integrations` | A | KEY | — |
 | `list_workspace_agent_principals` | `lpm-access` | A | KEY | — |
 | `list_workspace_mcp_agent_credentials` | `lpm-access` | A | KEY | — |
+| `manage_aish_session_content` | `lpm-aish-jobs` | C | KEY | — |
 | `mark_notification_read` | `lpm-start` | A | KEY | — |
 | `pause_aish_execution_session` | `lpm-aish-jobs` | C | KEY | — |
 | `preview_aish_legacy_runner_migration` | `lpm-aish-runners` | A | KEY | — |
@@ -146,6 +149,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `refresh_repository_code_index` | `lpm-code-index` | C | KEY | — |
 | `register_aish_delivery_artifact` | `lpm-aish-delivery` | A | KEY | — |
 | `repair_aish_completed_job_lineage` | `lpm-aish-delivery` | C | KEY | — |
+| `replace_aish_delivery_session` | `lpm-aish-delivery` | O | KEY | — |
 | `request_aish_execution_checkpoint` | `lpm-aish-jobs` | A | KEY | — |
 | `requeue_aish_automation` | `lpm-aish-delivery` | C | KEY | — |
 | `resolve_aish_execution_checkpoint` | `lpm-aish-jobs` | O | KEY | — |

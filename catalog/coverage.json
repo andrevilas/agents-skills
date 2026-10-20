@@ -3,14 +3,14 @@
   "generatedBy": "agents-skills scripts/skills.mjs build",
   "source": {
     "repo": "andrevilas/agents-skills",
-    "sourcesHash": "sha256:05514d8fa3a8d763c23222af1f3fd0a4918a438b251a5c5f6c9bc17b73c7cbad"
+    "sourcesHash": "sha256:74eb261b8391093386a30994708b5d6276f9888d4dd2520c078e9e81cfcb371e"
   },
   "snapshot": {
-    "lpmCommit": "5615224e1bb6a7f929818907ad879b642628a4ff",
-    "toolCount": 383,
+    "lpmCommit": "48930f89b6c686037b56549edec9a9d046312cda",
+    "toolCount": 387,
     "cliCount": 152,
-    "namesHash": "sha256:d5793cef8f7d359bfcaf40621b3c7b59f54f7e9d6c3412860146e6424c2e63c1",
-    "schemaHash": "sha256:c92e9c32f39d014d0191b062055140351bdfe6bf3d7a2e3602e8dbf524255de3",
+    "namesHash": "sha256:ae3fc365d392c0e85653dba9c9e3f22ed683c632a754bba3eb3b93b3c390da6e",
+    "schemaHash": "sha256:db4bd5be26a65e384da22ffb5b0d29235b74dcaa1b1e99339dfd757e6e08cb83",
     "cliHash": "sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec"
   },
   "policy": {
@@ -125,6 +125,7 @@
         "record_aish_delivery_finding",
         "register_aish_delivery_artifact",
         "repair_aish_completed_job_lineage",
+        "replace_aish_delivery_session",
         "requeue_aish_automation",
         "set_aish_completed_job_disposition",
         "tick_aish_automation",
@@ -169,11 +170,13 @@
         "get_aish_execution_readiness",
         "get_aish_execution_session",
         "get_aish_job",
+        "get_aish_session_content",
         "get_copilot_conversation",
         "list_aish_execution_sessions",
         "list_aish_intake",
         "list_aish_jobs",
         "list_copilot_conversations",
+        "manage_aish_session_content",
         "pause_aish_execution_session",
         "propose_copilot_action",
         "put_aish_execution_plan",
@@ -625,7 +628,13 @@
         "antigravity": "dist/antigravity/lpm-pilot-feedback/SKILL.md",
         "generic": "dist/generic/lpm-pilot-feedback.md"
       },
-      "playbooks": []
+      "playbooks": [
+        "start-run",
+        "verify-item",
+        "register",
+        "attach-evidence",
+        "record"
+      ]
     },
     {
       "id": "lpm-plan-work",
@@ -788,6 +797,7 @@
       "pack": "core",
       "kind": "tools",
       "owns": [
+        "get_project_agent_recovery_inventory",
         "get_project_analytics",
         "get_project_owner_surface",
         "get_project_read_model",
@@ -3775,6 +3785,26 @@
         "dist/generic/lpm-aish-runners.md"
       ]
     },
+    "get_aish_session_content": {
+      "owner": "lpm-aish-jobs",
+      "usedBy": [],
+      "category": "administration",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": null,
+      "required": [
+        "action",
+        "sessionId"
+      ],
+      "cardAuthority": "autonomous",
+      "renderedAuthority": "A",
+      "renderedIn": [
+        "dist/antigravity/lpm-aish-jobs/SKILL.md",
+        "dist/claude-code/lpm-aish-jobs/SKILL.md",
+        "dist/codex/lpm-aish-jobs/SKILL.md",
+        "dist/generic/lpm-aish-jobs.md"
+      ]
+    },
     "get_aish_usage_report": {
       "owner": "lpm-ai-cost",
       "usedBy": [
@@ -4229,6 +4259,25 @@
         "dist/generic/lpm-governance-decisions.md",
         "dist/generic/lpm-pilot-feedback.md",
         "dist/generic/lpm-workspace-admin.md"
+      ]
+    },
+    "get_project_agent_recovery_inventory": {
+      "owner": "lpm-review-health",
+      "usedBy": [],
+      "category": "administration",
+      "accessLevel": "read",
+      "sensitive": false,
+      "oauthScope": null,
+      "required": [
+        "projectId"
+      ],
+      "cardAuthority": "autonomous",
+      "renderedAuthority": "A",
+      "renderedIn": [
+        "dist/antigravity/lpm-review-health/SKILL.md",
+        "dist/claude-code/lpm-review-health/SKILL.md",
+        "dist/codex/lpm-review-health/SKILL.md",
+        "dist/generic/lpm-review-health.md"
       ]
     },
     "get_project_analytics": {
@@ -5692,7 +5741,6 @@
         "dist/generic/lpm-access.md",
         "dist/generic/lpm-aish-runners.md",
         "dist/generic/lpm-integrations.md",
-        "dist/generic/lpm-pilot-feedback.md",
         "dist/generic/lpm-release-product.md",
         "dist/generic/lpm-review-health.md",
         "dist/generic/lpm-workspace-admin.md"
@@ -6201,19 +6249,15 @@
       "renderedIn": [
         "dist/antigravity/lpm-access/SKILL.md",
         "dist/antigravity/lpm-integrations/SKILL.md",
-        "dist/antigravity/lpm-pilot-feedback/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
         "dist/claude-code/lpm-access/SKILL.md",
         "dist/claude-code/lpm-integrations/SKILL.md",
-        "dist/claude-code/lpm-pilot-feedback/SKILL.md",
         "dist/claude-code/lpm-workspace-admin/SKILL.md",
         "dist/codex/lpm-access/SKILL.md",
         "dist/codex/lpm-integrations/SKILL.md",
-        "dist/codex/lpm-pilot-feedback/SKILL.md",
         "dist/codex/lpm-workspace-admin/SKILL.md",
         "dist/generic/lpm-access.md",
         "dist/generic/lpm-integrations.md",
-        "dist/generic/lpm-pilot-feedback.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
     },
@@ -6279,13 +6323,9 @@
       "renderedAuthority": "A",
       "renderedIn": [
         "dist/antigravity/lpm-code-index/SKILL.md",
-        "dist/antigravity/lpm-pilot-feedback/SKILL.md",
         "dist/claude-code/lpm-code-index/SKILL.md",
-        "dist/claude-code/lpm-pilot-feedback/SKILL.md",
         "dist/codex/lpm-code-index/SKILL.md",
-        "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/generic/lpm-code-index.md",
-        "dist/generic/lpm-pilot-feedback.md"
+        "dist/generic/lpm-code-index.md"
       ]
     },
     "list_workspace_roadmap_allocations": {
@@ -6451,11 +6491,25 @@
         "dist/generic/lpm-ai-cost.md",
         "dist/generic/lpm-intake-triage.md",
         "dist/generic/lpm-integrations.md",
-        "dist/generic/lpm-pilot-feedback.md",
         "dist/generic/lpm-release-product.md",
         "dist/generic/lpm-review-health.md",
         "dist/generic/lpm-workspace-admin.md"
       ]
+    },
+    "manage_aish_session_content": {
+      "owner": "lpm-aish-jobs",
+      "usedBy": [],
+      "category": "administration",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "required": [
+        "action",
+        "sessionId"
+      ],
+      "cardAuthority": "confirm-with-user",
+      "renderedAuthority": "C",
+      "renderedIn": []
     },
     "mark_notification_read": {
       "owner": "lpm-start",
@@ -6933,12 +6987,7 @@
       ],
       "cardAuthority": "autonomous",
       "renderedAuthority": "A",
-      "renderedIn": [
-        "dist/antigravity/lpm-pilot-feedback/SKILL.md",
-        "dist/claude-code/lpm-pilot-feedback/SKILL.md",
-        "dist/codex/lpm-pilot-feedback/SKILL.md",
-        "dist/generic/lpm-pilot-feedback.md"
-      ]
+      "renderedIn": []
     },
     "recommend_next_activity": {
       "owner": "lpm-deliver-activity",
@@ -7264,6 +7313,32 @@
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
+      "renderedIn": [
+        "dist/antigravity/lpm-aish-delivery/SKILL.md",
+        "dist/claude-code/lpm-aish-delivery/SKILL.md",
+        "dist/codex/lpm-aish-delivery/SKILL.md",
+        "dist/generic/lpm-aish-delivery.md"
+      ]
+    },
+    "replace_aish_delivery_session": {
+      "owner": "lpm-aish-delivery",
+      "usedBy": [],
+      "category": "administration",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "required": [
+        "decisionThreadId",
+        "issueId",
+        "projectId",
+        "reason",
+        "sourcePlanHash",
+        "sourceSessionId",
+        "successorPlanHash",
+        "successorSessionId"
+      ],
+      "cardAuthority": "owner-only",
+      "renderedAuthority": "O",
       "renderedIn": [
         "dist/antigravity/lpm-aish-delivery/SKILL.md",
         "dist/claude-code/lpm-aish-delivery/SKILL.md",
@@ -8891,8 +8966,8 @@
     }
   ],
   "totals": {
-    "tools": 383,
-    "owned": 383,
+    "tools": 387,
+    "owned": 387,
     "pending": 0,
     "unowned": 0,
     "skills": 23,
