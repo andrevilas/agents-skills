@@ -21,9 +21,10 @@ Do not use:
 | AI model, budget or policy | {{skill:lpm-ai-cost}} |
 
 ## 2. Preconditions
-1. Connector: only {{tool:list_help_articles}}, {{tool:list_project_knowledge_items}}, {{tool:list_skills_contexts}} exist (rows 1, 4; 3 and 6 partly). Other tools need an LPM API key; deletes and skills-context writes need a `full` or `custom` profile.
-2. File-record and skills-context writes need project manage rights; note decisions need the owner or an admin.
-3. Read-only request → call no write tool in this run.
+1. Run one §4 row. CALL row: make that one call, reply with §8. Flow row: open its file, do its steps in order, reply with its Answer block only.
+2. Connector: only {{tool:list_help_articles}}, {{tool:list_project_knowledge_items}}, {{tool:list_skills_contexts}} exist (rows 1, 4; 3 and 6 partly). Other tools need an LPM API key; deletes and skills-context writes need a `full` or `custom` profile.
+3. File-record and skills-context writes need project manage rights; note decisions need the owner or an admin.
+4. Read-only request → call no write tool in this run.
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -38,7 +39,7 @@ Do not use:
 | # | If the user wants / you see | Do | Auth | Stop if |
 |---|---|---|---|---|
 | 1 | find a rule and {{tool:search_help_articles}} is not in your tool list or returned -32003 | {{tool:list_help_articles}}(projectId, limitCount=100), all pages → keyword in `name`/`summary`/`slug` (any case) → cite `slug` + `summary` | A | 0 matches → "not found in this project's help"; full text → "needs an LPM API key" |
-| 2 | find a rule, "what does the help say" | P1 | A | empty after P1 step 2 → "not found in this project's help" |
+| 2 | find a rule, "what does the help say" | find a rule (§5) | A | empty after step 2 → "not found in this project's help" |
 | 3 | list documents and files | {{tool:list_project_knowledge_items}}, {{tool:list_project_files}}(projectId); loop `nextCursor` while `hasMore` (same ids again → stop) | A | evidence → §6 row 1 |
 | 4 | help inventory (drafts, deprecated, hidden) | {{tool:list_help_articles}}(projectId, agentVisibleOnly=false, status) per status | A | — |
 | 5 | register an uploaded document or file record | {{ref:flow-register}} | A | no URL → §6 row 2 |
@@ -50,7 +51,7 @@ Do not use:
 | 11 | write, edit or rate an article; upload or read bytes | {{ref:ui-only}}: tell the web UI action | — | STOP after telling |
 
 ## 5. Procedures
-### P1 Find a rule — row 2
+### Find a rule — row 2
 1. {{tool:search_help_articles}}(projectId, query=<keyword>) → keep `items[]` (`slug`, `canonical`).
 2. Empty → step 1 once with one shorter keyword (singular, PT-BR or EN). Still empty → {{tool:list_help_articles}}(projectId, limitCount=100), all pages → keyword in `name`/`summary`/`slug`.
 3. 2+ items → read at most 3: `canonical == true` items first, then the next items in list order.
@@ -69,7 +70,7 @@ Do not use:
 ## 7. Verify
 | After | Re-read with | Pass when |
 |---|---|---|
-| P1 | step 4 results | each rule cites a `slug` read here |
+| find a rule (§5) | step 4 results | each rule cites a `slug` read here |
 | rows 5, 7–10 | the flow's § Verify | all rows pass |
 
 ## 8. Report (copy and fill)
