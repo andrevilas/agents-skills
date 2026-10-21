@@ -13,7 +13,7 @@ Load when: decision row 2 of SKILL.md (review keys, agent credentials, principal
 5. {{tool:get_workspace_repository_credential}}(workspaceId) → `status`, `revision`, `validatedAt`.
 6. projectId given → {{tool:list_project_specialist_assignments}}(projectId) → `status` per principal; {{tool:get_project_specialist_governance_summary}}(projectId) → `effectiveAssignmentCount`, `reviewState`.
 7. A -32003 on one read → report that part as "needs a full or custom key" and continue with the others; this overrides core rule 2 (no STOP) for reads in this review. Message "You do not have permission to manage or view credentials in this workspace." → report that part as "not owner or admin of this workspace" instead.
-8. Profile question: name the job, then the smallest preset from {{ref:api-key-profiles}} (`read-only` first); `roadmap-owner-*` → an `lpm_mcp_` credential ({{ref:flow-agent-identities}}).
+8. Profile question: name the job, then the smallest preset from {{ref:api-key-profiles}} (`read-only` first); `roadmap-owner-*` → an `lpm_mcp_` credential ({{ref:ref-agent-identities}}).
 9. Recommend one corrective action per flag (revoke an unused key, narrow a `full` key, rotate an expiring credential).
 
 ## Stop and ask
