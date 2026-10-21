@@ -217,6 +217,37 @@ test("V20 playbook structure and V21 CALL lines skip a legacy router (rules: scr
   assert.ok(fails(r, "V20").some((f) => /§4 row 1: Do must be "playbook \{\{ref:flow-<name>\}\}"/.test(f.message)));
 });
 
+test("V20 accepts compound 'playbook A, then playbook B' in §4 Do cell", async () => {
+  const FLOW_STUB = "# Playbook: stub\nUse when: stub\n{{partial:playbook-rules}}\n\n## You need\n| Input | Where it comes from | If missing |\n|---|---|---|\n| x | user | ask |\n\n## Steps\nEvery CALL with no error line: IF it returns an error → STOP. Say: \"failed.\"\n1. CALL {{tool:get_issue}} {\"projectId\":\"<input:x>\",\"issueId\":\"<input:x>\"} [A]\n\n## Answer (reply with exactly this block, filled in; write nothing before or after it)\n```text\nScope: x\nDone: x\nEvidence: x\nPending: none\nNext: x\n```\nNever claim a check passed that the steps did not verify.\n";
+  const r = await check(
+    prepare("v20-compound", {
+      before: (root) => {
+        const refDir = path.join(root, "skills/lpm-deliver-activity/references");
+        fs.mkdirSync(refDir, { recursive: true });
+        fs.writeFileSync(path.join(refDir, "flow-gate.md"), FLOW_STUB.replace(/stub/g, "gate"));
+        fs.writeFileSync(path.join(refDir, "flow-op.md"), FLOW_STUB.replace(/stub/g, "op"));
+        edit(root, DELIVER_SRC, (t) => {
+          t = t.replace("## 5. Procedures\n", "## 5. Procedures\n| Playbook | Use when | File |\n|---|---|---|\n| gate | gate | {{ref:flow-gate}} |\n| op | op | {{ref:flow-op}} |\n\n");
+          // Replace fixture row 2 (commit code) with compound
+          t = t.replace(
+            "| 2 | commit code for the activity | P2 | A | issueId unknown → ask |",
+            "| 2 | commit code for the activity | playbook {{ref:flow-gate}}, then playbook {{ref:flow-op}} | A | — |",
+          );
+          return t;
+        });
+        editJson(root, "skills/lpm-deliver-activity/skill.json", (j) => {
+          j.references = (j.references || []).concat([
+            { file: "references/flow-gate.md", loadWhen: "playbook gate: gate" },
+            { file: "references/flow-op.md", loadWhen: "playbook op: op" },
+          ]);
+        });
+      },
+    }),
+  );
+  const doMust = fails(r, "V20").filter((f) => /§4 row 2: Do must be/.test(f.message));
+  assert.equal(doMust.length, 0, "compound Do cell wrongly rejected: " + doMust.map((f) => f.message).join("; "));
+});
+
 test("V4g gotcha provenance: warning first, failure when the policy says fail", async () => {
   const drop = (root) =>
     editJson(root, "catalog/cards/portfolio.json", (cards) => {

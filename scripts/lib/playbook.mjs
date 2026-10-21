@@ -57,6 +57,8 @@ const CALL_RE = /^(?:VERIFY: )?CALL \{\{tool:([a-z0-9_]+)\}\} (\{.*\}) \[(A|C|O)
 const ROUTER_CALL_RE = /^CALL \{\{tool:([a-z0-9_]+)\}\} (\{(?:(?!\{\{tool:).)*\})$/;
 const ROUTER_TAGGED_CALL_RE = /^CALL \{\{tool:([a-z0-9_]+)\}\} (\{(?:(?!\{\{tool:).)*\}) \[(A|C|O)\]$/;
 const ROUTER_PLAYBOOK_RE = /^playbook \{\{ref:flow-([a-z0-9-]+)\}\}$/;
+/** §4 compound: "playbook {{ref:flow-A}}, then playbook {{ref:flow-B}}" (gate + operation). */
+const ROUTER_COMPOUND_PLAYBOOK_RE = /^playbook \{\{ref:flow-([a-z0-9-]+)\}\}, then playbook \{\{ref:flow-([a-z0-9-]+)\}\}$/;
 const DEFAULT_ERROR_RE = /^Every (CALL|CALL or RUN) with no error line: IF it returns an error → STOP\.(?: This belongs to skill \{\{skill:[a-z0-9-]+\}\}\.)? Say: ".*"$/;
 const PLACEHOLDER_RE = /<(input|saved|each):([A-Za-z][A-Za-z0-9]*)>/g;
 /** §5.7: a RUN whose command writes (git global options such as `-C <dir>` may precede the verb). */
@@ -686,10 +688,21 @@ export function checkPlaybookSkill(model, skill, opts = {}) {
     const doCell = (row[2] || "").trim();
     const auth = bare(row[3]).replace(/^\[|\]$/g, "");
     const pb = doCell.match(ROUTER_PLAYBOOK_RE);
+    const compound = !pb && doCell.match(ROUTER_COMPOUND_PLAYBOOK_RE);
     const call = doCell.match(ROUTER_CALL_RE);
     if (pb) {
       if (!info[pb[1]]) fail("V20", `${W}: playbook ${pb[1]} has no references/flow-${pb[1]}.md`);
       else if (auth !== LETTER[info[pb[1]].tag]) fail("V20", `${W}: Auth must be ${LETTER[info[pb[1]].tag]}, the strictest tag in playbook ${pb[1]} (is "${auth}")`);
+    } else if (compound) {
+      const [, first, second] = compound;
+      for (const nm of [first, second]) {
+        if (!info[nm]) fail("V20", `${W}: playbook ${nm} has no references/flow-${nm}.md`);
+      }
+      // Auth = strictest tag across both playbooks
+      if (info[first] && info[second]) {
+        const strictest = RANK[LETTER[info[first].tag]] >= RANK[LETTER[info[second].tag]] ? info[first].tag : info[second].tag;
+        if (auth !== LETTER[strictest]) fail("V20", `${W}: Auth must be ${LETTER[strictest]}, the strictest tag across playbooks ${first} and ${second} (is "${auth}")`);
+      }
     } else if (call) {
       const [, tool, json] = call;
       if (snap[tool] && !isReadTool(tool)) fail("V20", `${W}: a CALL row calls a read tool (${tool} is ${snap[tool].accessLevel}); a write needs a playbook`);
@@ -701,7 +714,7 @@ export function checkPlaybookSkill(model, skill, opts = {}) {
     } else if (ROUTER_TAGGED_CALL_RE.test(doCell)) {
       fail("V21", `${W}: CALL must read "CALL {{tool:<name>}} {json}" with no tag (the Auth column holds it)`);
     } else {
-      fail("V20", `${W}: Do must be "playbook {{ref:flow-<name>}}" or "CALL {{tool:x}} {json}"`);
+      fail("V20", `${W}: Do must be "playbook {{ref:flow-<name>}}", "playbook {{ref:flow-A}}, then playbook {{ref:flow-B}}", or "CALL {{tool:x}} {json}"`);
     }
   }
   // rule 6: no {{errors:auto}} in §9

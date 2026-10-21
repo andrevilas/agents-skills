@@ -13,7 +13,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | namesHash | `sha256:ae3fc365d392c0e85653dba9c9e3f22ed683c632a754bba3eb3b93b3c390da6e` |
 | schemaHash | `sha256:db4bd5be26a65e384da22ffb5b0d29235b74dcaa1b1e99339dfd757e6e08cb83` |
 | cliHash | `sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec` |
-| sourcesHash | `sha256:0b0ed86e5cd78314005eba4f9a55099965bf3665027bef32c0743d38641b7206` |
+| sourcesHash | `sha256:f1ed1a00e4e1ec8dda19d925f10365b0756fed540325a1865a0ae2559c8ac19d` |
 
 ## Totals
 
@@ -25,7 +25,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 
 | Skill | Pack | Kind | Owned | A/C/O | OAuth | Access | Used | Playbooks |
 |---|---|---|---|---|---|---|---|---|
-| `lpm-access` | core | tools | 21 | 7/0/14 | 0 | KEY | 6 | — |
+| `lpm-access` | core | tools | 21 | 7/0/14 | 0 | KEY | 6 | 2 |
 | `lpm-ai-cost` | core | tools | 19 | 9/1/9 | 0 | KEY | 6 | — |
 | `lpm-aish-delivery` | core | tools | 21 | 13/6/2 | 0 | KEY | 9 | — |
 | `lpm-aish-jobs` | core | tools | 30 | 16/10/4 | 0 | KEY | 3 | 10 |

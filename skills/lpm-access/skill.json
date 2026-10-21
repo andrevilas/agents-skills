@@ -187,15 +187,23 @@
       "loadWhen": "reading, setting or removing the workspace GitHub token"
     },
     {
-      "file": "references/flow-access-review.md",
+      "file": "references/flow-gate.md",
+      "loadWhen": "playbook gate: any [O] write on rows 3–8 (verify owner order and access before the operation)"
+    },
+    {
+      "file": "references/flow-api-keys.md",
+      "loadWhen": "playbook api-keys: create, change, revoke, reactivate, rotate or delete an API key (after the gate playbook)"
+    },
+    {
+      "file": "references/ref-access-review.md",
       "loadWhen": "decision row 2 (access review)"
     },
     {
-      "file": "references/flow-agent-identities.md",
-      "loadWhen": "decision rows 6–7 (agents, lpm_mcp_ credentials, specialists)"
+      "file": "references/ref-agent-identities.md",
+      "loadWhen": "decision rows 6-7 (agents, lpm_mcp_ credentials, specialists)"
     },
     {
-      "file": "references/flow-workspace-secrets.md",
+      "file": "references/ref-workspace-secrets.md",
       "loadWhen": "decision row 8 (AI provider key, GitHub token)"
     }
   ],
