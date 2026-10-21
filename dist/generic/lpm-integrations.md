@@ -4,9 +4,9 @@ Skill: `lpm-integrations` (core, v2.0.0) · Access: mixed
 Use when: LPM must send data out: outgoing webhooks (create, test, debug failed deliveries), data exports or backups (exportar dados), or the analytics bridge to BigQuery. Writes need an API key. Not for incoming GitHub commit tracking (use lpm-deliver-activity).
 > Done when: The webhook delivers (`system.test` delivered, `lastError` null), the export is ready, or the bridge run completed with per-entity results.
 
-Access: on a connector row 11 works; row 12 works only in part (its KEY tools are not on connectors); rows 1-7,9,10,13 need an LPM API key (profile full or custom); row 8 calls no LPM tool.
+Access: on a connector row 11 works; row 12 works only in part (its KEY tools are not on connectors); rows 1,2,4,5,7,10,13 need an LPM API key (profile full or custom); rows 3,6,8,9 call no LPM tool.
 
-Authority: [A] 5 · [C] 4 · [O] 3. Webhook create/update/delete are [O]; test, export and bridge runs are [C]. All writes need a full/custom key.
+Authority: [A] 5 · [C] 3 · [O] 4. Webhook create/update/delete are [O]; test, export and bridge runs are [C]. All writes need a full/custom key.
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.
@@ -37,10 +37,11 @@ Do not use:
 | an AISH execution pack or release package | `lpm-aish-delivery.md` |
 
 ## 2. Preconditions
-1. `full`/`custom` key: every webhook tool and create/process call. `read-only` also runs rows 10, 13; a connector, row 11.
-2. Webhook writes and test: `list_workspaces`() without `compact` → `access.canManage == true` for workspaceId, else §6. Error, or no row for workspaceId → no webhook write or test; report the error, STOP. Export: any row for workspaceId is enough (`canManage` does not matter); never ask about membership.
-3. Data leaves LPM only for a named recipient. A webhook secret comes only from env `LPM_WEBHOOK_SECRET`; never ask for it in chat, print or store it. A pasted secret is burned: never use or repeat it (§6).
-4. Read-only request ("status", "why", "is it working?") → no write tool; test, export and bridge runs are writes.
+1. Run one §4 row. CALL row: make that one call, reply with §8. Flow row: open its file, do its steps in order, reply with its Answer block only.
+2. `full`/`custom` key: every webhook tool and create/process call. `read-only` also runs rows 10, 13; a connector, row 11.
+3. Webhook writes and test: `list_workspaces`() without `compact` → `access.canManage == true` for workspaceId, else §6. Error, or no row for workspaceId → no webhook write or test; report the error, STOP. Export: any row for workspaceId is enough (`canManage` does not matter); never ask about membership.
+4. Data leaves LPM only for a named recipient. A webhook secret comes only from env `LPM_WEBHOOK_SECRET`; never ask for it in chat, print or store it. A pasted secret is burned: never use or repeat it (§6).
+5. Read-only request ("status", "why", "is it working?") → no write tool; test, export and bridge runs are writes.
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -55,43 +56,43 @@ Do not use:
 |---|---|---|---|---|
 | 1 | list subscriptions, deliveries | `list_webhook_subscriptions`(workspaceId) → `list_webhook_deliveries`(subscriptionId, limitCount=20) | A | — |
 | 2 | create a webhook | `lpm-integrations.flows.md` § flow-webhook-create | O | same `url` subscribed → flow step 1; secret typed in chat → §6 |
-| 3 | send a test to a webhook | P1 | C | `paused` → row 4 first |
+| 3 | send a test to a webhook | webhook test (§5) | C | `paused` → row 4 first |
 | 4 | change URL, name, events; pause or resume | `lpm-integrations.flows.md` § flow-webhook-update | O | other scope → rows 7, 2 |
 | 5 | rotate the secret | `lpm-integrations.flows.md` § flow-webhook-update | O | receiver cannot hold both secrets → ask |
-| 6 | "is it working?", deliveries fail, events not received | P2 | A | read-only |
+| 6 | "is it working?", deliveries fail, events not received | diagnose deliveries (§5) | A | read-only |
 | 7 | delete a subscription | `list_webhook_deliveries`(subscriptionId, limitCount=20) → `delete_webhook_subscription`(subscriptionId) | O | pause only → row 4 |
 | 8 | replay events; webhooks for roadmap, cycle, baseline, AISH | STOP: "LPM has no redeliver and no webhook for those events." | A | — |
-| 9 | full data export or backup | P3 | C | export `queued`/`running` → report it |
+| 9 | full data export or backup | data export (§5) | C | export `queued`/`running` → report it |
 | 10 | export status or download | `list_export_requests`(workspaceId, projectId) → `status`, `recordCounts` | A | download: web app only |
 | 11 | bridge health, recent runs | `get_analytics_bridge_observability`(workspaceId or projectId) → `list_analytics_bridge_runs`(same scope) | A | empty = no runs by this caller |
 | 12 | run, refresh or backfill the bridge | `lpm-integrations.flows.md` § flow-bridge-run | C | wide run → owner decision |
 | 13 | LPM dashboards/metrics wrong | `get_project_analytics`(projectId) → `lpm-review-health.md` | A | bridge does not feed them |
 
 ## 5. Procedures
-### P1 Test — row 3
+### Webhook test — row 3
 1. `list_webhook_subscriptions`(workspaceId) → subscriptionId `paused` → STOP: "Paused: resume first (row 4)."
 2. [C] "Send one `system.test` POST to <url host>? (yes/no)"
 3. `test_webhook_subscription`(subscriptionId) [C], once (it only queues).
 4. Wait 15 s; `list_webhook_deliveries`(subscriptionId, limitCount=5) → newest `system.test` row.
-5. `lastError` set → P2. Else repeat step 4 every 30 s (max 5); then `queued`, `attemptCount == 0` → Pending "LPM worker backlog"; `running` → Pending "LPM: stuck attempt".
+5. `lastError` set → diagnose deliveries (below). Else repeat step 4 every 30 s (max 5); then `queued`, `attemptCount == 0` → Pending "LPM worker backlog"; `running` → Pending "LPM: stuck attempt".
 6. Verify: §7 test row.
-### P2 Diagnose deliveries — row 6
+### Diagnose deliveries — row 6
 1. `list_webhook_subscriptions`(workspaceId), rows as in §3 → `id`, `projectId`, `status`, `events`.
 2. Per `id`: `list_webhook_deliveries`(subscriptionId, limitCount=50) → count by `status`; newest `lastError`, `deliveredAt`. `delivered` in 24 h → "working"; no row in 24 h → offer row 3.
 3. Event without a row → compare `events` with see `lpm-integrations.refs.md` § webhook-events (typos stored silently).
 4. Map `lastError` with its failure table → receiver, URL or LPM side. Offer row 3 or 4.
-### P3 Data export — row 9 (see `lpm-integrations.refs.md` § exports)
+### Data export — row 9 (see `lpm-integrations.refs.md` § exports)
 0. A project named → `list_workspace_projects`(workspaceId) → projectId (match `name`; 0 or 2+ → ask).
 1. `list_export_requests`(workspaceId, projectId) → same scope `queued`/`running` → STOP: report its `id`.
-2. [C] Ask exactly: "Queue a full <scope> export of <name> for <recipient>? It holds ALL records of the <scope>. Call: `create_export_request(scope="project", projectId="<id>")` (yes/no)" (workspace: `scope="workspace", workspaceId="<id>"`). Nothing else about contents.
-3. `create_export_request`(the step 2 call) [C], no `idempotencyKey` → keep `id`. Timeout → step 1.
+2. [O] Ask exactly: "Queue a full <scope> export of <name> for <recipient>? It holds ALL records of the <scope>. Call: `create_export_request(scope="project", projectId="<id>")` (yes/no)" (workspace: `scope="workspace", workspaceId="<id>"`). Nothing else about contents.
+3. `create_export_request`(the step 2 call) [O], no `idempotencyKey` → keep `id`. Timeout → step 1.
 4. Verify: `list_export_requests`(workspaceId, projectId) → row `id` every 30 s (max 10): `failed` → `errorMessage`; still `queued`/`running` → Pending "export still packing" (row 10 later).
 5. `completed` → §8 in the user's language; `checksum` as given (not "verified"); Pending: none; Next: download in the LPM web app → Settings → Integrações.
 
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
 |---|---|
-| an [O] write (create, update, `delete_webhook_subscription`) without an owner order here | send the decision request (see `lpm-integrations.refs.md` § authority-and-owner-decisions (#decision-request)) and STOP |
+| [O] write (`create_export_request`, `delete_webhook_subscription`, webhook create/update) without owner order | decision request (see `lpm-integrations.refs.md` § authority-and-owner-decisions (#decision-request)), STOP |
 | `access.canManage` not true | `list_workspace_members`(workspaceId) → owner/admin `userEmail`; STOP: "Only <them> can manage webhooks." |
 | no recipient named | "Who receives this data (system and responsible person)?" |
 | delete with recent `delivered` rows | "<name> is in use (last delivery <deliveredAt>). Deleting is permanent; no replay. Proceed?" |
@@ -101,9 +102,9 @@ Do not use:
 | After | Re-read with | Pass when |
 |---|---|---|
 | create, update | flow-webhook-create or -update § Verify | every row passes |
-| test | P1 step 4 | newest `system.test` `delivered`, `lastError == null` |
+| test | webhook test step 4 (§5) | newest `system.test` `delivered`, `lastError == null` |
 | delete | `list_webhook_subscriptions`(workspaceId) | `id` absent |
-| export | P3 step 4 | row `id` `completed` (or `failed` reported) |
+| export | data export step 4 (§5) | row `id` `completed` (or `failed` reported) |
 | bridge run | flow-bridge-run § Verify | every row passes |
 
 ## 8. Report (copy and fill)
@@ -139,7 +140,7 @@ Tools (full cards: see `lpm-integrations.tools.md`):
 | `test_webhook_subscription` | C | KEY | here | subscriptionId ← list_webhook_subscriptions -> id (or create_webhook_subscription -> id) |
 | `list_webhook_deliveries` | A | KEY | here | — |
 | `list_export_requests` | A | KEY | here | — |
-| `create_export_request` | C | KEY | here | scope ← constant |
+| `create_export_request` | O | KEY | here | scope ← constant |
 | `get_analytics_bridge_observability` | A | portfolio:read | here | — |
 | `list_analytics_bridge_runs` | A | portfolio:read | here | — |
 | `create_analytics_bridge_run` | C | KEY | here | — |

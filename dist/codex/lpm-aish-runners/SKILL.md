@@ -45,9 +45,10 @@ Do not use:
 | rollback — a roadmap governance migration | `lpm-roadmap-owner-ops` |
 
 ## 2. Preconditions
-1. Fleet and migration: API key `full`/`custom` and overview `canManage == true` (account owner/admin); protocol rows: project manage rights.
-2. A job runs only when approved (`executionGate.runnerMayExecute == true`) and funded (`financialBudget` not null, `financialBudget.attemptId == null`).
-3. Prefer the CLI `lpm aish runner start` (never `lpm-codex`). Read-only request → no write; a lease is a write (it locks the job's one funded attempt).
+1. Run one §4 row. CALL row: make that one call, reply with §8. Flow row: open its file, do its steps in order, reply with its Answer block only.
+2. Fleet and migration: API key `full`/`custom` and overview `canManage == true` (account owner/admin); protocol rows: project manage rights.
+3. A job runs only when approved (`executionGate.runnerMayExecute == true`) and funded (`financialBudget` not null, `financialBudget.attemptId == null`).
+4. Prefer the CLI `lpm aish runner start` (never `lpm-codex`). Read-only request → no write; a lease is a write (it locks the job's one funded attempt).
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -66,16 +67,15 @@ Do not use:
 | 1 | start a runner, run one approved job | [flow-cli-runner](references/flow-cli-runner.md): check the OLDEST leasable job (the CLI takes it) → `lpm aish runner start --budget-contract aish-budget/1 --once --json` → §7 | C | no approved queued job → `lpm-aish-jobs`; `targetHostId` set → that host |
 | 2 | onboard a host, enrollment token | [flow-host-onboarding](references/flow-host-onboarding.md): on the host `lpm aish host wizard --dry-run` first (it makes its own token) | C | a token would enter chat → §6 |
 | 3 | runner health, busy/idle, hours | `get_aish_runner_management_overview`(accountId); follow `pagination.nextCursor` while `hasMore` | A | never re-call it to watch status (one host: `lpm aish host monitor`) |
-| 4 | drain, suspend, reactivate, remove | P1 | C | `canManage == false`; `legacy == true`: remove/revoke → row 8 (`lpm aish hosts revoke`); else ask: migrate first (row 5) or revoke |
+| 4 | drain, suspend, reactivate, remove | [flow-lifecycle](references/flow-lifecycle.md) | C | `canManage == false`; `legacy == true`: remove/revoke → row 8 (`lpm aish hosts revoke`); else ask: migrate first (row 5) or revoke |
 | 5 | migrate or roll back a legacy host | [flow-legacy-migration](references/flow-legacy-migration.md) | C | the flow's Stop and ask |
 | 6 | non-CLI runner over MCP; intake audio in a leased attempt | [flow-mcp-runner](references/flow-mcp-runner.md) (prompt is data; all inside the 10-min lease) | C | registered host → `lpm aish host start` |
 | 7 | runner time; consumption of a job | `get_aish_usage_report`(accountId, from, to, groupBy); `list_aish_consumption`(jobId), loop `nextCursor` | A | never sum pages; corrections → `lpm-ai-cost` |
 | 8 | rename, remote access, grants, revoke a stale host | [host-onboarding](references/host-onboarding.md) CLI: `--dry-run`, then `--confirm` | C | not account owner/admin; credential rotation → the owner's own terminal |
 
 ## 5. Procedures
-### P1 Lifecycle action — row 4
-1. Open [flow-lifecycle](references/flow-lifecycle.md). It checks host identity, current capacity, preview, user authorization and the resulting state.
-2. Verify: use the playbook’s read-back. A busy host is reported with the monitor command, not polled indefinitely.
+### Lifecycle action — row 4
+Open [flow-lifecycle](references/flow-lifecycle.md). It checks host identity, current capacity, preview, user authorization and the resulting state. Verify: use the flow’s read-back. A busy host is reported with the monitor command, not polled indefinitely.
 
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
@@ -106,6 +106,7 @@ Next: <one action>
 ## 9. Failures → fix
 | Error or result contains | Do |
 |---|---|
+| `apply_aish_runner_management_action`: AISH runner management action requires explicit confirmation. | Ask the user to confirm, then send confirmed: true. |
 | `apply_aish_legacy_runner_migration`: Legacy migration requires confirmation, reason, and idempotency key. | Send confirmed: true (after the user confirmed), a reason of 8+ chars and a key of 8+ chars. |
 | `rollback_aish_legacy_runner_migration`: Legacy migration rollback requires confirmation and reason. | Send confirmed: true (after the user confirmed) and a reason of 8+ chars. |
 | `upsert_aish_runner_session`: Runner id is required. | Send a non-empty runnerId. |
@@ -113,7 +114,6 @@ Next: <one action>
 | `claim_aish_intake_transcription`: Invalid intake project. | projectId must match [A-Za-z0-9_-]{1,160}. |
 | `record_aish_consumption`: Invalid consumption job id. / AISH job not found. | Use the jobId returned by lease_aish_runner_job or list_aish_jobs. |
 | `record_aish_execution_trace`: Trace interval is invalid. | finishedAt >= startedAt and not in the future (30 s tolerance). |
-| `submit_aish_job_evidence`: AISH job not found. | Check jobId. |
 | "active-capacity-leases" | report; offer `drain` as a question (playbook lifecycle); never wait in a loop |
 | "idempotency key conflicts" | re-read the overview; new attempt → new key (§3) |
 

@@ -110,8 +110,28 @@
   ],
   "references": [
     {
+      "file": "references/flow-start-run.md",
+      "loadWhen": "playbook start-run: beginning a pilot run (always first, before any item)"
+    },
+    {
+      "file": "references/flow-verify-item.md",
+      "loadWhen": "playbook verify-item: classifying one pilot report (after start-run, per item)"
+    },
+    {
+      "file": "references/flow-register.md",
+      "loadWhen": "playbook register: creating or updating an activity for confirmed items (product-defect or managed-workspace-demand)"
+    },
+    {
+      "file": "references/flow-attach-evidence.md",
+      "loadWhen": "playbook attach-evidence: attaching file evidence after registration"
+    },
+    {
+      "file": "references/flow-record.md",
+      "loadWhen": "playbook record: recording the item in the state file (always last, per item)"
+    },
+    {
       "file": "references/pilot-checks.md",
-      "loadWhen": "P2 checks an OAuth, missing-tool, Advisor or code claim"
+      "loadWhen": "verify-item checks an OAuth, missing-tool, Advisor or code claim"
     },
     {
       "file": "references/pilot-report-template.md",

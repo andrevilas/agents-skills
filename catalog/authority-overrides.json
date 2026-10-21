@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "source": "design §2.29 (validator V5); owner decisions §10 items 2 and 6 (recommendations accepted)",
+  "source": "design §2.29 (validator V5); owner decisions §10 items 2 and 6, plus D1-D10 (2026-10-20, all recommendations accepted)",
   "renderMap": {
     "autonomous": "A",
     "confirm-with-user": "C",
@@ -17,6 +17,46 @@
       "item": 6,
       "decision": "Static [O] for the six roadmap-structure writes. In `shadow`/`enforce`, item creation runs only on the owner's explicit order (draft first); later changes go through change requests.",
       "alternativeRejected": "[C] in mode `off` and [O] otherwise; the tag would depend on state a low-reasoning agent must read correctly."
+    },
+    {
+      "item": "D1",
+      "decision": "Release order: LPM parity merge → agents-skills v2 merge → deploy candidate. E3 only for high-risk flows before merge. LEGACY_MODE_EXPIRES = deploy date + 30 days."
+    },
+    {
+      "item": "D2",
+      "decision": "[O] = only get_workspace.ownerId. Agent verifies by email via list_workspace_members role owner. Mismatch → decision request. Backlog: expose userId in get_mcp_connection_info. The rule 'never mint tokens for a real user' stays unchanged."
+    },
+    {
+      "item": "D3",
+      "decision": "(a) Item creation [O] static until create governado exists. (b) Enforce: owner order + second confirmation citing enforce mode. CR-equivalent paths stay via CR."
+    },
+    {
+      "item": "D4",
+      "decision": "review_workspace_roadmap_change: any eligible human reviewer. submit/apply/outbox: owner or admin. revise: author. withdraw: author [C], others [O]."
+    },
+    {
+      "item": "D5",
+      "decision": "delete_knowledge_item [C→O]. create_export_request workspace scope [C→O]. update_project routingProfile [C→O]. Labels: keep [C]. Host enrollment: keep [C]. Issue links: [C] without manage."
+    },
+    {
+      "item": "D6",
+      "decision": "Governance link-back is [A] when it only fills actionTargetType and actionTargetId of an existing actionable outcome."
+    },
+    {
+      "item": "D7",
+      "decision": "Pilot feedback never writes to the client's managed workspace. Classified as managed-workspace-demand with a decision request for the owner."
+    },
+    {
+      "item": "D8",
+      "decision": "Promotion to 100% needs an explicit 'yes' (not implied by 'deploy'). Merge to main before promotion. New candidate if merge changes content."
+    },
+    {
+      "item": "D9",
+      "decision": "Open all listed LPM product gaps as backlog items. Skills continue with interims."
+    },
+    {
+      "item": "D10",
+      "decision": "V14 splits generic refs. E2 keeps 23 descriptions. Manifest one agent per folder. demo-prep kept."
     }
   ],
   "sensitiveAutonomous": [
@@ -337,6 +377,22 @@
       "to": "O",
       "rule": "GOV-MAX v1",
       "reason": "Roadmap changes are proposals for the owner's decision unless the owner authorizes them. On a connector, the person who says yes may not be the owner. In `shadow`/`enforce` mode a new item is created only on the owner's explicit order (`create_workspace_roadmap_item` [O] without `lifecycle`, so it starts as a draft, or `commit_owner_roadmap_change`); later changes go through change requests. `changeType: create` is not a working path: preview needs existing item ids and apply writes nothing for it."
+    },
+    {
+      "tool": "delete_knowledge_item",
+      "card": "confirm-with-user",
+      "from": "C",
+      "to": "O",
+      "rule": "D5: guardrail/forbidden items are safety-critical",
+      "reason": "delete_knowledge_item with read access deletes any item including guardrails. Raise to [O] to prevent accidental deletion of safety rules."
+    },
+    {
+      "tool": "create_export_request",
+      "card": "confirm-with-user",
+      "from": "C",
+      "to": "O",
+      "rule": "D5: workspace-scope export is a data governance decision",
+      "reason": "A workspace-scope export contains ALL records of every project. The owner decides when to export and who receives it."
     }
   ],
   "expectedTotals": {
@@ -347,8 +403,8 @@
     },
     "rendered": {
       "A": 217,
-      "C": 95,
-      "O": 71
+      "C": 93,
+      "O": 73
     },
     "sensitiveAutonomous": {
       "total": 28,

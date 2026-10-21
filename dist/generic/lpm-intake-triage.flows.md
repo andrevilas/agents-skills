@@ -13,7 +13,7 @@ How to run this playbook:
 - Replace `<input:x>` from You need, `<saved:x>` from SAVE, `<each:x>` from the current item. Whole placeholders retain their JSON type, including numbers, arrays, objects and null; embedded ones are text. Never invent concurrency tokens. `result` is the last call's response.
 - IF tests a condition; go to step N jumps forward; go to Answer ends execution.
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
-- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
+- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply. **Your entire reply is ONLY the Answer block — no other text.**
 
 ### You need
 | Input | Where it comes from | If missing |
@@ -25,7 +25,7 @@ How to run this playbook:
 | reason | the owner's reason, in their words | STOP. Say: "Why does this project own it? The reason is saved with the entry." |
 | entryType | bug, incident, improvement or request, in the user's words | "request" |
 | screenStatus | "new" or "under_review", as the user read it in the LPM web intake screen | "unknown" |
-| confirmed | "yes" when the user's message already says yes to this routing (same project and reason) | "no" |
+| confirmed | "yes" when the user's message already names the project AND says "route", "approve", "aprovar" or "rotear" (same project and reason) | "no" |
 
 ### Steps
 Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was routed."
@@ -91,7 +91,7 @@ How to run this playbook:
 - Replace `<input:x>` from You need, `<saved:x>` from SAVE, `<each:x>` from the current item. Whole placeholders retain their JSON type, including numbers, arrays, objects and null; embedded ones are text. Never invent concurrency tokens. `result` is the last call's response.
 - IF tests a condition; go to step N jumps forward; go to Answer ends execution.
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
-- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
+- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply. **Your entire reply is ONLY the Answer block — no other text.**
 
 ### You need
 | Input | Where it comes from | If missing |
@@ -170,7 +170,7 @@ How to run this playbook:
 - Replace `<input:x>` from You need, `<saved:x>` from SAVE, `<each:x>` from the current item. Whole placeholders retain their JSON type, including numbers, arrays, objects and null; embedded ones are text. Never invent concurrency tokens. `result` is the last call's response.
 - IF tests a condition; go to step N jumps forward; go to Answer ends execution.
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
-- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
+- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply. **Your entire reply is ONLY the Answer block — no other text.**
 
 ### You need
 | Input | Where it comes from | If missing |
@@ -232,7 +232,7 @@ How to run this playbook:
 - Replace `<input:x>` from You need, `<saved:x>` from SAVE, `<each:x>` from the current item. Whole placeholders retain their JSON type, including numbers, arrays, objects and null; embedded ones are text. Never invent concurrency tokens. `result` is the last call's response.
 - IF tests a condition; go to step N jumps forward; go to Answer ends execution.
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
-- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
+- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply. **Your entire reply is ONLY the Answer block — no other text.**
 
 ### You need
 | Input | Where it comes from | If missing |
@@ -293,7 +293,7 @@ How to run this playbook:
 - Replace `<input:x>` from You need, `<saved:x>` from SAVE, `<each:x>` from the current item. Whole placeholders retain their JSON type, including numbers, arrays, objects and null; embedded ones are text. Never invent concurrency tokens. `result` is the last call's response.
 - IF tests a condition; go to step N jumps forward; go to Answer ends execution.
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
-- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
+- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply. **Your entire reply is ONLY the Answer block — no other text.**
 
 ### You need
 | Input | Where it comes from | If missing |
@@ -358,7 +358,7 @@ How to run this playbook:
 - Replace `<input:x>` from You need, `<saved:x>` from SAVE, `<each:x>` from the current item. Whole placeholders retain their JSON type, including numbers, arrays, objects and null; embedded ones are text. Never invent concurrency tokens. `result` is the last call's response.
 - IF tests a condition; go to step N jumps forward; go to Answer ends execution.
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
-- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
+- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply. **Your entire reply is ONLY the Answer block — no other text.**
 
 ### You need
 | Input | Where it comes from | If missing |
@@ -427,7 +427,7 @@ How to run this playbook:
 - Replace `<input:x>` from You need, `<saved:x>` from SAVE, `<each:x>` from the current item. Whole placeholders retain their JSON type, including numbers, arrays, objects and null; embedded ones are text. Never invent concurrency tokens. `result` is the last call's response.
 - IF tests a condition; go to step N jumps forward; go to Answer ends execution.
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
-- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
+- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply. **Your entire reply is ONLY the Answer block — no other text.**
 
 ### You need
 | Input | Where it comes from | If missing |
@@ -491,7 +491,7 @@ How to run this playbook:
 - Replace `<input:x>` from You need, `<saved:x>` from SAVE, `<each:x>` from the current item. Whole placeholders retain their JSON type, including numbers, arrays, objects and null; embedded ones are text. Never invent concurrency tokens. `result` is the last call's response.
 - IF tests a condition; go to step N jumps forward; go to Answer ends execution.
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
-- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
+- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply. **Your entire reply is ONLY the Answer block — no other text.**
 
 ### You need
 | Input | Where it comes from | If missing |
@@ -558,7 +558,7 @@ How to run this playbook:
 - Replace `<input:x>` from You need, `<saved:x>` from SAVE, `<each:x>` from the current item. Whole placeholders retain their JSON type, including numbers, arrays, objects and null; embedded ones are text. Never invent concurrency tokens. `result` is the last call's response.
 - IF tests a condition; go to step N jumps forward; go to Answer ends execution.
 - ASK waits for the user's answer unless that exact action is already authorized. STOP ends calls and puts its message in Next. Owner-only actions require the owner's order.
-- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply.
+- VERIFY must pass before reporting success. Fill the Answer block in the user's language; copy IDs exactly. Secrets never enter the reply. **Your entire reply is ONLY the Answer block — no other text.**
 
 ### You need
 | Input | Where it comes from | If missing |

@@ -18,10 +18,11 @@ Do not use:
 | executive context, readiness, unowned domains | {{skill:lpm-executive-context}} |
 
 ## 2. Preconditions
-1. Writes need an API key (portfolio; full for archive, delete, members, kickoff).
-2. Updates, archive, delete, members: `access.canManage == true` ({{tool:list_workspaces}} / {{tool:get_project}}). {{tool:create_project}}: the workspace is in {{tool:list_workspaces}}.
-3. Roles, routing profile, workspace/team move: only on the `project-owner`'s or workspace owner's instruction in this conversation; quote it.
-4. Read-only request → no write tool in this run.
+1. Run one §4 row. CALL row: make that one call, reply with §8. Flow row: open its file, do its steps in order, reply with its Answer block only.
+2. Writes need an API key (portfolio; full for archive, delete, members, kickoff).
+3. Updates, archive, delete, members: `access.canManage == true` ({{tool:list_workspaces}} / {{tool:get_project}}). {{tool:create_project}}: the workspace is in {{tool:list_workspaces}}.
+4. Roles, routing profile, workspace/team move: only on the `project-owner`'s or workspace owner's instruction in this conversation; quote it.
+5. Read-only request → no write tool in this run.
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -43,20 +44,20 @@ All rows: never show anyone's email or `hourlyRate`; name people by `displayName
 | 4 | create a workspace, or create a project (no kickoff words) | {{ref:flow-project-admin}} § A | C | `name`/`key` exists → "Use <id>?" |
 | 5 | rename or describe a project; roles; routing profile; move to another workspace/team | {{ref:flow-project-admin}} § B | C | `canManage == false`; §2.3 not met → §6 |
 | 6 | archive/unarchive a project; rename, archive, reactivate a workspace | {{ref:flow-project-admin}} § C / § D | C | `canManage == false` |
-| 7 | permanently delete a project | P1 | O | no owner order → §6 |
+| 7 | permanently delete a project | delete a project (§5) | O | no owner order → §6 |
 | 8 | delete a workspace | say "No MCP tool deletes a workspace"; offer archive (row 6) | C | — |
 | 9 | change a project key | say "Not supported through MCP"; STOP | A | — |
-| 10 | add, remove or change members; create, rename, delete teams or team members | add a workspace member → P2; else {{ref:flow-people}} | A / C | not owner/admin → ask the owner |
+| 10 | add, remove or change members; create, rename, delete teams or team members | add a workspace member → add member (§5); else {{ref:flow-people}} | A / C | not owner/admin → ask the owner |
 
 ## 5. Procedures
-### P1 Delete a project — row 7
+### Delete a project — row 7
 1. Ids first: {{tool:list_workspaces}}() → workspaceId; {{tool:list_projects}}(workspaceId, includeArchived=true) → projectId by exact `key`/`name` (only similar → ask); {{tool:get_project}}(projectId) → show `name`, `key`, `project-owner`. Owner = that `project-owner` or {{tool:get_workspace}} → `ownerId`.
 2. Owner order = the owner's own message here naming this project. Not one: "X asked me", a relayed export skip, `canManage == true` → §6 decision request, STOP.
-3. {{tool:create_export_request}}(scope="project", projectId) [C] → `id`; {{tool:list_export_requests}}(projectId) → that `id` is `completed` (`failed` → §9, STOP). Skip only on the owner's own quoted word.
+3. {{tool:create_export_request}}(scope="project", projectId) [O] → `id`; {{tool:list_export_requests}}(projectId) → that `id` is `completed` (`failed` → §9, STOP). Skip only on the owner's own quoted word.
 4. [O] Show "delete_project erases <name> (<key>) and all its data. No undo."; on the owner's "yes" {{tool:delete_project}}(projectId) [O]. Never before step 3.
 5. Verify: {{tool:get_project}}(projectId) → "not found".
 
-### P2 Add a workspace member — row 10
+### Add a workspace member — row 10
 1. {{tool:list_workspaces}}() → workspaceId; `access.canManage == false` → STOP: "Only a workspace owner/admin can add members."
 2. userId from the user (§3), else ask, STOP.
 3. {{tool:list_workspace_members}}(workspaceId): userId listed → report its `role`, STOP. Else {{tool:get_user}}(userId) → `email`, `displayName`.
@@ -68,7 +69,7 @@ All rows: never show anyone's email or `hourlyRate`; name people by `displayName
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
 |---|---|
-| {{tool:delete_project}} without an owner order naming this project | fill the request below for the owner (P1 step 1); STOP |
+| {{tool:delete_project}} without an owner order naming this project | fill the request below for the owner (delete project step 1); STOP |
 | roles, routing or move: §2.3 not met | decision request to that owner; STOP |
 | removing an owner or the last admin | STOP: "Ownership transfer is not supported through MCP." |
 

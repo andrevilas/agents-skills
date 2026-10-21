@@ -132,7 +132,7 @@ Gotchas:
 - Never put secrets in any field.
 Pairs with: `list_project_knowledge_items`, `delete_knowledge_item`
 
-### `delete_knowledge_item` [C] · destructive · KEY · profiles: full, custom · sensitive: yes · idempotency: naturally idempotent
+### `delete_knowledge_item` [O] · destructive · KEY · profiles: full, custom · sensitive: yes · idempotency: naturally idempotent
 Purpose: Permanently deletes one entry (document or help article) from the project knowledge base.
 Use when: The user explicitly asks to remove a specific knowledge-base document or article    Avoid when: Deleting a project file: delete_project_file; Deleting activity evidence: delete_activity_attachment; Fixing an outdated help article: there is no update tool; ask the user before deleting it
 | Param | Req | Source (call → field) | Notes |

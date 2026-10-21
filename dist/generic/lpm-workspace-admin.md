@@ -4,7 +4,7 @@ Skill: `lpm-workspace-admin` (core, v2.0.0) · Access: mostly KEY
 Use when: creating or kicking off (kickoff, novo projeto) an LPM project or workspace, changing its settings, roles, routing profile, archive or delete, or managing members and teams. Not for cycles, milestones or labels alone (use lpm-plan-work) or credentials (use lpm-access).
 > Done when: The change is visible on re-read; a delete came only after a completed export or the owner's quoted skip; a kickoff passes every flow-kickoff.md exit criterion.
 
-Access: on a connector row 1 works; rows 2,3,10 work only in part (their KEY tools are not on connectors); rows 4-7 need an LPM API key (profile full or custom); rows 8,9 call no LPM tool.
+Access: on a connector row 1 works; rows 2,3,10 work only in part (their KEY tools are not on connectors); rows 4-6 need an LPM API key (profile full or custom); rows 7-9 call no LPM tool.
 
 Authority: [A] 6 · [C] 12 · [O] 1. Creates and settings [C], team create [A]; roles, routing and moves need an owner instruction; delete_project [O].
 
@@ -35,10 +35,11 @@ Do not use:
 | executive context, readiness, unowned domains | `lpm-executive-context.md` |
 
 ## 2. Preconditions
-1. Writes need an API key (portfolio; full for archive, delete, members, kickoff).
-2. Updates, archive, delete, members: `access.canManage == true` (`list_workspaces` / `get_project`). `create_project`: the workspace is in `list_workspaces`.
-3. Roles, routing profile, workspace/team move: only on the `project-owner`'s or workspace owner's instruction in this conversation; quote it.
-4. Read-only request → no write tool in this run.
+1. Run one §4 row. CALL row: make that one call, reply with §8. Flow row: open its file, do its steps in order, reply with its Answer block only.
+2. Writes need an API key (portfolio; full for archive, delete, members, kickoff).
+3. Updates, archive, delete, members: `access.canManage == true` (`list_workspaces` / `get_project`). `create_project`: the workspace is in `list_workspaces`.
+4. Roles, routing profile, workspace/team move: only on the `project-owner`'s or workspace owner's instruction in this conversation; quote it.
+5. Read-only request → no write tool in this run.
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -60,20 +61,20 @@ All rows: never show anyone's email or `hourlyRate`; name people by `displayName
 | 4 | create a workspace, or create a project (no kickoff words) | `lpm-workspace-admin.flows.md` § flow-project-admin § A | C | `name`/`key` exists → "Use <id>?" |
 | 5 | rename or describe a project; roles; routing profile; move to another workspace/team | `lpm-workspace-admin.flows.md` § flow-project-admin § B | C | `canManage == false`; §2.3 not met → §6 |
 | 6 | archive/unarchive a project; rename, archive, reactivate a workspace | `lpm-workspace-admin.flows.md` § flow-project-admin § C / § D | C | `canManage == false` |
-| 7 | permanently delete a project | P1 | O | no owner order → §6 |
+| 7 | permanently delete a project | delete a project (§5) | O | no owner order → §6 |
 | 8 | delete a workspace | say "No MCP tool deletes a workspace"; offer archive (row 6) | C | — |
 | 9 | change a project key | say "Not supported through MCP"; STOP | A | — |
-| 10 | add, remove or change members; create, rename, delete teams or team members | add a workspace member → P2; else see `lpm-workspace-admin.flows.md` § flow-people | A / C | not owner/admin → ask the owner |
+| 10 | add, remove or change members; create, rename, delete teams or team members | add a workspace member → add member (§5); else see `lpm-workspace-admin.flows.md` § flow-people | A / C | not owner/admin → ask the owner |
 
 ## 5. Procedures
-### P1 Delete a project — row 7
+### Delete a project — row 7
 1. Ids first: `list_workspaces`() → workspaceId; `list_projects`(workspaceId, includeArchived=true) → projectId by exact `key`/`name` (only similar → ask); `get_project`(projectId) → show `name`, `key`, `project-owner`. Owner = that `project-owner` or `get_workspace` → `ownerId`.
 2. Owner order = the owner's own message here naming this project. Not one: "X asked me", a relayed export skip, `canManage == true` → §6 decision request, STOP.
-3. `create_export_request`(scope="project", projectId) [C] → `id`; `list_export_requests`(projectId) → that `id` is `completed` (`failed` → §9, STOP). Skip only on the owner's own quoted word.
+3. `create_export_request`(scope="project", projectId) [O] → `id`; `list_export_requests`(projectId) → that `id` is `completed` (`failed` → §9, STOP). Skip only on the owner's own quoted word.
 4. [O] Show "delete_project erases <name> (<key>) and all its data. No undo."; on the owner's "yes" `delete_project`(projectId) [O]. Never before step 3.
 5. Verify: `get_project`(projectId) → "not found".
 
-### P2 Add a workspace member — row 10
+### Add a workspace member — row 10
 1. `list_workspaces`() → workspaceId; `access.canManage == false` → STOP: "Only a workspace owner/admin can add members."
 2. userId from the user (§3), else ask, STOP.
 3. `list_workspace_members`(workspaceId): userId listed → report its `role`, STOP. Else `get_user`(userId) → `email`, `displayName`.
@@ -85,7 +86,7 @@ All rows: never show anyone's email or `hourlyRate`; name people by `displayName
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
 |---|---|
-| `delete_project` without an owner order naming this project | fill the request below for the owner (P1 step 1); STOP |
+| `delete_project` without an owner order naming this project | fill the request below for the owner (delete project step 1); STOP |
 | roles, routing or move: §2.3 not met | decision request to that owner; STOP |
 | removing an owner or the last admin | STOP: "Ownership transfer is not supported through MCP." |
 

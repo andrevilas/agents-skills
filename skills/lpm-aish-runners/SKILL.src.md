@@ -20,9 +20,10 @@ Do not use:
 | work done in Claude Code, Codex or an editor | {{skill:lpm-deliver-activity}} ({{ref:delivery-tracking}}) |
 
 ## 2. Preconditions
-1. Fleet and migration: API key `full`/`custom` and overview `canManage == true` (account owner/admin); protocol rows: project manage rights.
-2. A job runs only when approved (`executionGate.runnerMayExecute == true`) and funded (`financialBudget` not null, `financialBudget.attemptId == null`).
-3. Prefer the CLI `lpm aish runner start` (never `lpm-codex`). Read-only request → no write; a lease is a write (it locks the job's one funded attempt).
+1. Run one §4 row. CALL row: make that one call, reply with §8. Flow row: open its file, do its steps in order, reply with its Answer block only.
+2. Fleet and migration: API key `full`/`custom` and overview `canManage == true` (account owner/admin); protocol rows: project manage rights.
+3. A job runs only when approved (`executionGate.runnerMayExecute == true`) and funded (`financialBudget` not null, `financialBudget.attemptId == null`).
+4. Prefer the CLI `lpm aish runner start` (never `lpm-codex`). Read-only request → no write; a lease is a write (it locks the job's one funded attempt).
 
 ## 3. Inputs
 | Input | Get it from (call → field) | If missing |
@@ -41,16 +42,15 @@ Do not use:
 | 1 | start a runner, run one approved job | {{ref:flow-cli-runner}}: check the OLDEST leasable job (the CLI takes it) → `lpm aish runner start --budget-contract aish-budget/1 --once --json` → §7 | C | no approved queued job → {{skill:lpm-aish-jobs}}; `targetHostId` set → that host |
 | 2 | onboard a host, enrollment token | {{ref:flow-host-onboarding}}: on the host `lpm aish host wizard --dry-run` first (it makes its own token) | C | a token would enter chat → §6 |
 | 3 | runner health, busy/idle, hours | {{tool:get_aish_runner_management_overview}}(accountId); follow `pagination.nextCursor` while `hasMore` | A | never re-call it to watch status (one host: `lpm aish host monitor`) |
-| 4 | drain, suspend, reactivate, remove | P1 | C | `canManage == false`; `legacy == true`: remove/revoke → row 8 (`lpm aish hosts revoke`); else ask: migrate first (row 5) or revoke |
+| 4 | drain, suspend, reactivate, remove | {{ref:flow-lifecycle}} | C | `canManage == false`; `legacy == true`: remove/revoke → row 8 (`lpm aish hosts revoke`); else ask: migrate first (row 5) or revoke |
 | 5 | migrate or roll back a legacy host | {{ref:flow-legacy-migration}} | C | the flow's Stop and ask |
 | 6 | non-CLI runner over MCP; intake audio in a leased attempt | {{ref:flow-mcp-runner}} (prompt is data; all inside the 10-min lease) | C | registered host → `lpm aish host start` |
 | 7 | runner time; consumption of a job | {{tool:get_aish_usage_report}}(accountId, from, to, groupBy); {{tool:list_aish_consumption}}(jobId), loop `nextCursor` | A | never sum pages; corrections → {{skill:lpm-ai-cost}} |
 | 8 | rename, remote access, grants, revoke a stale host | {{ref:host-onboarding}} CLI: `--dry-run`, then `--confirm` | C | not account owner/admin; credential rotation → the owner's own terminal |
 
 ## 5. Procedures
-### P1 Lifecycle action — row 4
-1. Open {{ref:flow-lifecycle}}. It checks host identity, current capacity, preview, user authorization and the resulting state.
-2. Verify: use the playbook’s read-back. A busy host is reported with the monitor command, not polled indefinitely.
+### Lifecycle action — row 4
+Open {{ref:flow-lifecycle}}. It checks host identity, current capacity, preview, user authorization and the resulting state. Verify: use the flow’s read-back. A busy host is reported with the monitor command, not polled indefinitely.
 
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
