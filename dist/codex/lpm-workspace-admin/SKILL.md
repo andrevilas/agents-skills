@@ -76,7 +76,7 @@ All rows: never show anyone's email or `hourlyRate`; name people by `displayName
 ### Delete a project — row 7
 1. Ids first: `list_workspaces`() → workspaceId; `list_projects`(workspaceId, includeArchived=true) → projectId by exact `key`/`name` (only similar → ask); `get_project`(projectId) → show `name`, `key`, `project-owner`. Owner = that `project-owner` or `get_workspace` → `ownerId`.
 2. Owner order = the owner's own message here naming this project. Not one: "X asked me", a relayed export skip, `canManage == true` → §6 decision request, STOP.
-3. `create_export_request`(scope="project", projectId) [C] → `id`; `list_export_requests`(projectId) → that `id` is `completed` (`failed` → §9, STOP). Skip only on the owner's own quoted word.
+3. `create_export_request`(scope="project", projectId) [O] → `id`; `list_export_requests`(projectId) → that `id` is `completed` (`failed` → §9, STOP). Skip only on the owner's own quoted word.
 4. [O] Show "delete_project erases <name> (<key>) and all its data. No undo."; on the owner's "yes" `delete_project`(projectId) [O]. Never before step 3.
 5. Verify: `get_project`(projectId) → "not found".
 

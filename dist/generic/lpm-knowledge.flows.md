@@ -15,8 +15,9 @@ Load when: decision row 7
 ### Steps
 1. Resolve the id and keep `name`, kind and, for an article, `slug`. kind = document (from `list_project_knowledge_items`), article or file record; never show the raw `kind` field value ("asset"). Document: `list_project_knowledge_items`(projectId). Article: `list_help_articles`(projectId, agentVisibleOnly=false, limitCount=100) once per status (`draft`, `published`, `deprecated`). File: `list_project_files`(projectId). All pages each; 0 or 2+ name matches → Stop and ask row 2.
 2. Document only: `list_requirement_baselines`(projectId) → for EVERY baseline `id` (isCurrent true AND false; list each `list_requirements` call you make): `list_requirements`(projectId, baselineId) → a `sourceDocumentId == itemId` → STOP: Stop and ask row 1. End the turn. Report Done: nothing deleted; Pending: your decision on deleting <id>. A yes to row 1 is not the step-3 confirmation: still show step 3 and wait for a second "yes". A result with `truncated: true` → Stop and ask row 3. No baseline → say "no baseline to check".
-3. [C] Show "Delete <name> (<kind>, id <id>)? No undo; the stored file stays." Document: add "Requirements not yet in a baseline cannot be checked." Article: add "No MCP tool can recreate it." Wait for "yes".
-4. `delete_knowledge_item`(projectId, itemId) [C] or `delete_project_file`(projectId, fileId) [C] (these two tools take no idempotencyKey; send only projectId and itemId/fileId). "not found" → re-list; no retry.
+3. ONLY IF the owner ordered it in this conversation (quote the order); otherwise STOP. Say: "Deleting knowledge items needs the owner's order."
+   Show "Delete <name> (<kind>, id <id>)? No undo; the stored file stays." Document: add "Requirements not yet in a baseline cannot be checked." Article: add "No MCP tool can recreate it." Wait for "yes".
+4. `delete_knowledge_item`(projectId, itemId) [O] or `delete_project_file`(projectId, fileId) [O] (these two tools take no idempotencyKey; send only projectId and itemId/fileId). "not found" → re-list; no retry.
 5. Verify: run § Verify (call the tool again; never reuse the step 1 list).
 
 ### Stop and ask

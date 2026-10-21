@@ -13,7 +13,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | namesHash | `sha256:ae3fc365d392c0e85653dba9c9e3f22ed683c632a754bba3eb3b93b3c390da6e` |
 | schemaHash | `sha256:db4bd5be26a65e384da22ffb5b0d29235b74dcaa1b1e99339dfd757e6e08cb83` |
 | cliHash | `sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec` |
-| sourcesHash | `sha256:e3c55d20ec88febdbee5ead840b2cbcb3b30f4b2d470d2452e9f534bd7271d1c` |
+| sourcesHash | `sha256:0b0ed86e5cd78314005eba4f9a55099965bf3665027bef32c0743d38641b7206` |
 
 ## Totals
 
@@ -36,8 +36,8 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `lpm-executive-context` | core | tools | 10 | 9/0/1 | 4 | mixed | 6 | 6 |
 | `lpm-governance-decisions` | core | tools | 18 | 15/1/2 | 4 | mixed | 13 | 9 |
 | `lpm-intake-triage` | core | tools | 16 | 9/7/0 | 0 | KEY | 9 | 9 |
-| `lpm-integrations` | core | tools | 12 | 5/4/3 | 2 | mixed | 4 | — |
-| `lpm-knowledge` | core | tools | 18 | 11/7/0 | 3 | mixed | 7 | — |
+| `lpm-integrations` | core | tools | 12 | 5/3/4 | 2 | mixed | 4 | — |
+| `lpm-knowledge` | core | tools | 18 | 11/6/1 | 3 | mixed | 7 | — |
 | `lpm-pilot-feedback` | internal | process | 0 | 0/0/0 | 0 | process skill | 13 | 5 |
 | `lpm-plan-work` | core | tools | 31 | 17/14/0 | 7 | mixed | 10 | 10 |
 | `lpm-release-product` | internal | process | 0 | 0/0/0 | 0 | process skill | 8 | — |
@@ -78,7 +78,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `create_aish_release` | `lpm-aish-delivery` | C | KEY | — |
 | `create_api_key` | `lpm-access` | O | KEY | — |
 | `create_copilot_conversation` | `lpm-aish-jobs` | A | KEY | — |
-| `create_export_request` | `lpm-integrations` | C | KEY | `lpm-workspace-admin` |
+| `create_export_request` | `lpm-integrations` | O | KEY | `lpm-workspace-admin` |
 | `create_notification` | `lpm-plan-work` | C | KEY | — |
 | `create_project_specialist_assignment` | `lpm-access` | O | KEY | — |
 | `create_skills_context` | `lpm-knowledge` | C | KEY | — |
@@ -415,7 +415,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | `create_requirement` | `lpm-requirements-scope` | C | KEY | `lpm-governance-decisions`, `lpm-workspace-admin` |
 | `create_requirement_baseline` | `lpm-requirements-scope` | O | KEY | `lpm-workspace-admin` |
 | `create_requirement_group` | `lpm-requirements-scope` | A | KEY | — |
-| `delete_knowledge_item` | `lpm-knowledge` | C | KEY | — |
+| `delete_knowledge_item` | `lpm-knowledge` | O | KEY | — |
 | `delete_requirement` | `lpm-requirements-scope` | C | KEY | — |
 | `delete_requirement_baseline` | `lpm-requirements-scope` | O | KEY | — |
 | `delete_requirement_group` | `lpm-requirements-scope` | C | KEY | — |

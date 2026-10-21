@@ -12,7 +12,7 @@ metadata:
 
 Access: on a connector row 11 works; row 12 works only in part (its KEY tools are not on connectors); rows 1,2,4,5,7,10,13 need an LPM API key (profile full or custom); rows 3,6,8,9 call no LPM tool.
 
-Authority: [A] 5 · [C] 4 · [O] 3. Webhook create/update/delete are [O]; test, export and bridge runs are [C]. All writes need a full/custom key.
+Authority: [A] 5 · [C] 3 · [O] 4. Webhook create/update/delete are [O]; test, export and bridge runs are [C]. All writes need a full/custom key.
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.
@@ -90,15 +90,15 @@ Do not use:
 ### Data export — row 9 ([exports](references/exports.md))
 0. A project named → `list_workspace_projects`(workspaceId) → projectId (match `name`; 0 or 2+ → ask).
 1. `list_export_requests`(workspaceId, projectId) → same scope `queued`/`running` → STOP: report its `id`.
-2. [C] Ask exactly: "Queue a full <scope> export of <name> for <recipient>? It holds ALL records of the <scope>. Call: `create_export_request(scope="project", projectId="<id>")` (yes/no)" (workspace: `scope="workspace", workspaceId="<id>"`). Nothing else about contents.
-3. `create_export_request`(the step 2 call) [C], no `idempotencyKey` → keep `id`. Timeout → step 1.
+2. [O] Ask exactly: "Queue a full <scope> export of <name> for <recipient>? It holds ALL records of the <scope>. Call: `create_export_request(scope="project", projectId="<id>")` (yes/no)" (workspace: `scope="workspace", workspaceId="<id>"`). Nothing else about contents.
+3. `create_export_request`(the step 2 call) [O], no `idempotencyKey` → keep `id`. Timeout → step 1.
 4. Verify: `list_export_requests`(workspaceId, projectId) → row `id` every 30 s (max 10): `failed` → `errorMessage`; still `queued`/`running` → Pending "export still packing" (row 10 later).
 5. `completed` → §8 in the user's language; `checksum` as given (not "verified"); Pending: none; Next: download in the LPM web app → Settings → Integrações.
 
 ## 6. Stop and ask
 | Situation | Do / ask exactly |
 |---|---|
-| an [O] write (create, update, `delete_webhook_subscription`) without an owner order here | send the decision request ([authority-and-owner-decisions](references/authority-and-owner-decisions.md#decision-request)) and STOP |
+| [O] write (`create_export_request`, `delete_webhook_subscription`, webhook create/update) without owner order | decision request ([authority-and-owner-decisions](references/authority-and-owner-decisions.md#decision-request)), STOP |
 | `access.canManage` not true | `list_workspace_members`(workspaceId) → owner/admin `userEmail`; STOP: "Only <them> can manage webhooks." |
 | no recipient named | "Who receives this data (system and responsible person)?" |
 | delete with recent `delivered` rows | "<name> is in use (last delivery <deliveredAt>). Deleting is permanent; no replay. Proceed?" |
@@ -144,7 +144,7 @@ Owned tools (full cards: [tools](references/tools.md)):
 - `test_webhook_subscription` [C] · KEY · Queues one 'system.test' POST to a subscription's URL…
 - `list_webhook_deliveries` [A] · KEY · Lists recent outgoing webhook deliveries with their…
 - `list_export_requests` [A] · KEY · Lists the data-export jobs the caller requested…
-- `create_export_request` [C] · KEY · Queues a background job that packages all data of a…
+- `create_export_request` [O] · KEY · Queues a background job that packages all data of a…
 - `get_analytics_bridge_observability` [A] · portfolio:read · Shows the state of the analytics export pipeline…
 - `list_analytics_bridge_runs` [A] · portfolio:read · Lists the caller's own recent analytics bridge runs…
 - `create_analytics_bridge_run` [C] · KEY · Queues a new analytics export run (status 'queued')…

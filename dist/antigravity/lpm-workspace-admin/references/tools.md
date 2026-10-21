@@ -506,7 +506,7 @@ Gotchas:
 - alignmentIssues usually means a project's routingProfile.workspaceId is stale: re-save the routingProfile with update_project.
 Pairs with: `list_workspace_projects`, `update_project`, `validate_workspace_project_alignment`
 
-### `create_export_request` [C] · write · KEY · owner `lpm-integrations` · profiles: full, custom · sensitive: yes · idempotency: not idempotent
+### `create_export_request` [O] · write · KEY · owner `lpm-integrations` · profiles: full, custom · sensitive: yes · idempotency: not idempotent
 Purpose: Queues a background job that packages all data of a workspace or of one project into a JSON zip for download in the LPM web app.
 Use when: The user explicitly asks for a backup or full data export of a workspace or project.    Avoid when: You only need some records: use the matching list_/get_ tools.; You need analytics: use get_project_analytics or get_operational_analytics.; An export for the same scope is already queued or running (check list_export_requests).
 | Param | Req | Source (call → field) | Notes |

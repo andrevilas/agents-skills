@@ -8,7 +8,7 @@ description: "Use when reading or curating LPM guidance: search help articles (a
 
 Access: on a connector rows 1,4 work; rows 3,5-8 work only in part (their KEY tools are not on connectors); rows 9,10 need an LPM API key (profile full or custom); rows 2,11 call no LPM tool.
 
-Authority: [A] 11 · [C] 7 · [O] 0. Reads and registrations are [A]; deletes, skills-context writes and roadmap-knowledge accept/reject are [C]; defaultModel changes are the owner's.
+Authority: [A] 11 · [C] 6 · [O] 1. Reads and registrations are [A]; deletes, skills-context writes and roadmap-knowledge accept/reject are [C]; defaultModel changes are the owner's.
 
 Core rules. STOP ends calls and reports the blocker.
 1. Use the tools named here, without a server prefix.

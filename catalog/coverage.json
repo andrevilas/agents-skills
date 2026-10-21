@@ -3,7 +3,7 @@
   "generatedBy": "agents-skills scripts/skills.mjs build",
   "source": {
     "repo": "andrevilas/agents-skills",
-    "sourcesHash": "sha256:e3c55d20ec88febdbee5ead840b2cbcb3b30f4b2d470d2452e9f534bd7271d1c"
+    "sourcesHash": "sha256:0b0ed86e5cd78314005eba4f9a55099965bf3665027bef32c0743d38641b7206"
   },
   "snapshot": {
     "lpmCommit": "48930f89b6c686037b56549edec9a9d046312cda",
@@ -2294,7 +2294,7 @@
         "scope"
       ],
       "cardAuthority": "confirm-with-user",
-      "renderedAuthority": "C",
+      "renderedAuthority": "O",
       "renderedIn": [
         "dist/antigravity/lpm-integrations/SKILL.md",
         "dist/antigravity/lpm-workspace-admin/SKILL.md",
@@ -3057,7 +3057,7 @@
         "projectId"
       ],
       "cardAuthority": "confirm-with-user",
-      "renderedAuthority": "C",
+      "renderedAuthority": "O",
       "renderedIn": [
         "dist/antigravity/lpm-knowledge/SKILL.md",
         "dist/claude-code/lpm-knowledge/SKILL.md",
