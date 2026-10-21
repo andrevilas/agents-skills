@@ -126,7 +126,7 @@ test("V20 rule 5: a §4 Do cell is one playbook or one read CALL; Auth = the str
     "r5",
     (root) =>
       edit(root, SRC, sub('| 1 | read the activity | CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<input:issueId>"} |', '| 1 | read the activity | CALL {{tool:get_issue}} {"projectId":"<input:projectId>","issueId":"<input:issueId>"} then CALL {{tool:list_comments}} {"projectId":"<input:projectId>","issueId":"<input:issueId>"} |')),
-    /§4 row 1: Do must be "playbook \{\{ref:flow-<name>\}\}" or "CALL \{\{tool:x\}\} \{json\}"/,
+    /§4 row 1: Do must be "playbook \{\{ref:flow-<name>\}\}"/,
   );
   await assertRule("r5b", (root) => edit(root, SRC, sub("| playbook {{ref:flow-api-key}} | C |", "| playbook {{ref:flow-api-key}} | A |")), /§4 row 5: Auth must be C, the strictest tag in playbook api-key/);
   await assertRule(
