@@ -12,7 +12,7 @@ Use when: route an intake to one project the owner chose
 | reason | the owner's reason, in their words | STOP. Say: "Why does this project own it? The reason is saved with the entry." |
 | entryType | bug, incident, improvement or request, in the user's words | "request" |
 | screenStatus | "new" or "under_review", as the user read it in the LPM web intake screen | "unknown" |
-| confirmed | "yes" when the user's message already says yes to this routing (same project and reason) | "no" |
+| confirmed | "yes" when the user's message already names the project AND says "route", "approve", "aprovar" or "rotear" (same project and reason) | "no" |
 
 ## Steps
 Every CALL with no error line: IF it returns an error → STOP. Say: "<tool> failed: <error text>. Nothing was routed."

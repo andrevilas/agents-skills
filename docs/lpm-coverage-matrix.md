@@ -13,7 +13,7 @@ Generated from `catalog/coverage.json` by `node scripts/skills.mjs build`. Every
 | namesHash | `sha256:ae3fc365d392c0e85653dba9c9e3f22ed683c632a754bba3eb3b93b3c390da6e` |
 | schemaHash | `sha256:db4bd5be26a65e384da22ffb5b0d29235b74dcaa1b1e99339dfd757e6e08cb83` |
 | cliHash | `sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec` |
-| sourcesHash | `sha256:6c8600d89c77e26edb9c6d5dfe275fb282d67b2a16eff8187f4128b4a0097b69` |
+| sourcesHash | `sha256:e3c55d20ec88febdbee5ead840b2cbcb3b30f4b2d470d2452e9f534bd7271d1c` |
 
 ## Totals
 
