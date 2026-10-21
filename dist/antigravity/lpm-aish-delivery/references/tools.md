@@ -530,6 +530,26 @@ Gotchas:
 Pairs with: `get_aish_automation_delivery`, `tick_aish_automation`
 CLI: `lpm aish command requeue_aish_automation --file <payload.json> [--transport mcp]`
 
+### `cancel_aish_automation` [C] · write · KEY · profiles: full, custom · sensitive: yes · idempotency: keyed by commandId
+Purpose: Cancel one unfulfilled automation delivery (queued or dead-lettered). Does not cancel the job, schedule, or future slots. CAS on generation + totalAttempts.
+Use when: the owner or manager wants to stop a scheduled delivery before it runs; a dead-lettered delivery should not be retried    Avoid when: the delivery already succeeded (use disposition instead); the intent is to deactivate the whole schedule (no such tool yet)
+| Param | Req | Source (call → field) | Notes |
+|---|---|---|---|
+| projectId | yes | the project that owns the job | string |
+| jobId | yes | the AISH job id | string |
+| deliveryId | yes | get_aish_automation_delivery or tick result | sha256 identity |
+| commandId | yes | caller-generated, unique per decision | idempotency key; reuse = replay |
+| expectedGeneration | yes | delivery.generation from the last read | CAS: must match current |
+| expectedTotalAttempts | yes | delivery.totalAttempts from the last read | CAS: must match current |
+| reason | yes | the user's reason (8+ chars, redacted to 500) | stored in audit and history |
+Errors → fix:
+| When | Fix |
+|---|---|
+|  | The commandId was used with different arguments; ask the owner if this is a new decision |
+|  | The delivery already succeeded or was already canceled; check status first |
+|  | Generation or totalAttempts changed since your read; re-read the delivery and confirm with the owner |
+|  | Agent credentials cannot cancel; the owner must use their own API key |
+
 ### `set_aish_completed_job_disposition` [C] · destructive · KEY · profiles: full, custom · sensitive: yes · idempotency: naturally idempotent
 Purpose: Permanently classify a completed AISH job as partial, superseded or invalidated, adding an audit evidence note, without changing its linked LPM activity.
 Use when: A completed AISH job delivered only part of the requested work (outcome=partial); A completed job's result was replaced by a newer job (outcome=superseded); A completed job's result must no longer be trusted (outcome=invalidated); The user stated the outcome and the reason to record    Avoid when: Job is failed or canceled: no MCP tool; use CLI 'lpm aish jobs resolve' (failure resolution) or 'lpm aish jobs close' (administrative closure); The job's linked activity was deleted/missing: use repair_aish_completed_job_lineage (a disposition cannot hide a missing issue); Job is still queued/leased/running: wait and check with get_aish_job; You only want to read the job: get_aish_job

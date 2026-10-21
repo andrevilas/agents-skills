@@ -1,5 +1,88 @@
 [
   {
+    "name": "cancel_aish_automation",
+    "status": "active",
+    "purpose": "Cancel one unfulfilled automation delivery (queued or dead-lettered). Does not cancel the job, schedule, or future slots. CAS on generation + totalAttempts.",
+    "effect": "write",
+    "authority": "confirm-with-user",
+    "useWhen": [
+      "the owner or manager wants to stop a scheduled delivery before it runs",
+      "a dead-lettered delivery should not be retried"
+    ],
+    "avoidWhen": [
+      "the delivery already succeeded (use disposition instead)",
+      "the intent is to deactivate the whole schedule (no such tool yet)"
+    ],
+    "inputs": [
+      {
+        "param": "projectId",
+        "required": true,
+        "source": "the project that owns the job",
+        "notes": "string"
+      },
+      {
+        "param": "jobId",
+        "required": true,
+        "source": "the AISH job id",
+        "notes": "string"
+      },
+      {
+        "param": "deliveryId",
+        "required": true,
+        "source": "get_aish_automation_delivery or tick result",
+        "notes": "sha256 identity"
+      },
+      {
+        "param": "commandId",
+        "required": true,
+        "source": "caller-generated, unique per decision",
+        "notes": "idempotency key; reuse = replay"
+      },
+      {
+        "param": "expectedGeneration",
+        "required": true,
+        "source": "delivery.generation from the last read",
+        "notes": "CAS: must match current"
+      },
+      {
+        "param": "expectedTotalAttempts",
+        "required": true,
+        "source": "delivery.totalAttempts from the last read",
+        "notes": "CAS: must match current"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "the user's reason (8+ chars, redacted to 500)",
+        "notes": "stored in audit and history"
+      }
+    ],
+    "output": {
+      "delivery": "the updated delivery with status=canceled, canceledAt, canceledBy, cancelReason, history event",
+      "reused": "true if the commandId was already applied"
+    },
+    "errors": [
+      {
+        "code": "Cancellation replay conflicts",
+        "fix": "The commandId was used with different arguments; ask the owner if this is a new decision"
+      },
+      {
+        "code": "Only an unfulfilled automation delivery can be canceled",
+        "fix": "The delivery already succeeded or was already canceled; check status first"
+      },
+      {
+        "code": "Automation delivery changed",
+        "fix": "Generation or totalAttempts changed since your read; re-read the delivery and confirm with the owner"
+      },
+      {
+        "code": "requires a managing user",
+        "fix": "Agent credentials cannot cancel; the owner must use their own API key"
+      }
+    ],
+    "governanceNote": "Cancellation is permanent and irreversible. The audit record includes actorId, reason, generation and totalAttempts. A canceled delivery's tick returns reused:true without side effects.",
+    "idempotency": "keyed by commandId"
+  },
+  {
     "name": "get_aish_session_content",
     "purpose": "Read bounded redacted session content pages or export a selection.",
     "useWhen": [
