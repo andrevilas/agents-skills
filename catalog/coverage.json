@@ -3,14 +3,14 @@
   "generatedBy": "agents-skills scripts/skills.mjs build",
   "source": {
     "repo": "andrevilas/agents-skills",
-    "sourcesHash": "sha256:dbadd4b7eef3f60098660e5468c6d74ccd651279ba5b43fbe9520f94e2d8810d"
+    "sourcesHash": "sha256:f4d9009ce9c63e1845773370d5b4b402a0f42391724f66e943d37a8cbf9a4984"
   },
   "snapshot": {
-    "lpmCommit": "b44de88234c725e2b446b6211af56d2fc75b3c28",
-    "toolCount": 388,
+    "lpmCommit": "73cbcc7b7dda7d82fc963a8c9e6ff4ded699164d",
+    "toolCount": 390,
     "cliCount": 152,
-    "namesHash": "sha256:e9fc6af798d73df72ed0038b121c7951e86e21452977b29850924eeeddb0663d",
-    "schemaHash": "sha256:aab1d1d1dc40b5418d97bc090728875524741d6ebf46f18b905cc81e4d041010",
+    "namesHash": "sha256:4390c59b51d3437b211cde6704414bb35b8d605444659741881487322f1695b4",
+    "schemaHash": "sha256:d94e9f34a322fea37b25e69807a38d0d2622aadc27d3e493fe59605506d974c2",
     "cliHash": "sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec"
   },
   "policy": {
@@ -116,6 +116,7 @@
         "audit_aish_issue_delivery",
         "cancel_aish_automation",
         "claim_aish_release",
+        "close_aish_job_administratively",
         "collect_aish_execution_pack",
         "complete_aish_release",
         "create_aish_release",
@@ -131,6 +132,7 @@
         "repair_aish_completed_job_lineage",
         "replace_aish_delivery_session",
         "requeue_aish_automation",
+        "resolve_aish_failed_job",
         "set_aish_completed_job_disposition",
         "tick_aish_automation",
         "upload_aish_delivery_artifact"
@@ -1832,6 +1834,27 @@
         "budgetVersion",
         "executorId",
         "releaseId"
+      ],
+      "cardAuthority": "confirm-with-user",
+      "renderedAuthority": "C",
+      "renderedIn": [
+        "dist/antigravity/lpm-aish-delivery/SKILL.md",
+        "dist/claude-code/lpm-aish-delivery/SKILL.md",
+        "dist/codex/lpm-aish-delivery/SKILL.md",
+        "dist/generic/lpm-aish-delivery.md"
+      ]
+    },
+    "close_aish_job_administratively": {
+      "owner": "lpm-aish-delivery",
+      "usedBy": [],
+      "category": "administration",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "required": [
+        "jobId",
+        "outcome",
+        "reason"
       ],
       "cardAuthority": "confirm-with-user",
       "renderedAuthority": "C",
@@ -7424,6 +7447,27 @@
       "renderedAuthority": "O",
       "renderedIn": []
     },
+    "resolve_aish_failed_job": {
+      "owner": "lpm-aish-delivery",
+      "usedBy": [],
+      "category": "administration",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "required": [
+        "jobId",
+        "outcome",
+        "reason"
+      ],
+      "cardAuthority": "confirm-with-user",
+      "renderedAuthority": "C",
+      "renderedIn": [
+        "dist/antigravity/lpm-aish-delivery/SKILL.md",
+        "dist/claude-code/lpm-aish-delivery/SKILL.md",
+        "dist/codex/lpm-aish-delivery/SKILL.md",
+        "dist/generic/lpm-aish-delivery.md"
+      ]
+    },
     "resolve_governance_thread_with_decision": {
       "owner": "lpm-governance-decisions",
       "usedBy": [],
@@ -8930,8 +8974,8 @@
     }
   ],
   "totals": {
-    "tools": 388,
-    "owned": 388,
+    "tools": 390,
+    "owned": 390,
     "pending": 0,
     "unowned": 0,
     "skills": 23,

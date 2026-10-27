@@ -83,6 +83,87 @@
     "idempotency": "keyed by commandId"
   },
   {
+    "name": "close_aish_job_administratively",
+    "status": "active",
+    "purpose": "Administratively close a queued or expired-lease AISH job with an auditable closure outcome, clearing its terminal-issue mismatch signal.",
+    "useWhen": [
+      "A queued AISH job is linked to an issue already done or canceled (outcome=obsolete or superseded)",
+      "A queued job was replaced by a governed retry (outcome=superseded)",
+      "A queued job's purpose was compensated by non-AISH delivery (outcome=compensated)",
+      "An expired-lease AISH job must be closed to unblock the workflow"
+    ],
+    "avoidWhen": [
+      "Job is completed: use set_aish_completed_job_disposition instead",
+      "Job is failed: use resolve_aish_failed_job instead",
+      "Job is running or has an active lease: wait for it to finish or expire",
+      "You only want to read the job: use get_aish_job"
+    ],
+    "inputs": [
+      {
+        "param": "jobId",
+        "required": true,
+        "source": "list_aish_jobs -> id (or get_aish_job -> id)",
+        "notes": "AISH job id, max 160 chars"
+      },
+      {
+        "param": "outcome",
+        "required": true,
+        "source": "user",
+        "notes": "enum: superseded | compensated | obsolete | canceled"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8-2000 chars"
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the job's project",
+      "job.status == 'queued' or expired lease"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": null,
+    "returns": "Full job (get_aish_job shape). job.administrativeClosure = {outcome, reason, closedBy, closedAt, previousStatus, evidenceIdsSnapshot, linkedEvidenceId}; new manual-note evidence id appended to job.evidenceIds.",
+    "pairsWith": [
+      "get_aish_job",
+      "list_aish_jobs",
+      "get_project_analytics"
+    ],
+    "errors": [
+      {
+        "when": "Invalid AISH administrative closure outcome.",
+        "fix": "Use exactly superseded, compensated, obsolete, or canceled."
+      },
+      {
+        "when": "AISH administrative closure reason is required.",
+        "fix": "Send a reason of at least 8 characters."
+      },
+      {
+        "when": "AISH job not found.",
+        "fix": "Re-check jobId with list_aish_jobs."
+      },
+      {
+        "when": "Only queued or expired leased AISH jobs can be administratively closed.",
+        "fix": "Check status with get_aish_job. Completed jobs use set_aish_completed_job_disposition; failed jobs use resolve_aish_failed_job."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "The job status changes to canceled after closure.",
+        "verifiedFrom": "server.ts closeAishJobAdministrativelyCommand"
+      },
+      {
+        "text": "Workflow reconciliation is triggered after closure.",
+        "verifiedFrom": "server.ts closeAishJobAdministrativelyCommand"
+      }
+    ],
+    "verifiedFrom": "closeAishJobAdministrativelyCommand (server.ts)"
+  },
+  {
     "name": "get_aish_session_content",
     "purpose": "Read bounded redacted session content pages or export a selection.",
     "useWhen": [
@@ -444,5 +525,85 @@
       }
     ],
     "verifiedFrom": "server.ts:replaceAishDeliverySessionCommand; src/server/aishDeliveryStore.ts:replaceDeliverySession; src/server/aishDeliveryReplacement.ts"
+  },
+  {
+    "name": "resolve_aish_failed_job",
+    "status": "active",
+    "purpose": "Resolve a failed AISH job with an auditable resolution outcome (compensated, historical, or ignored), clearing its terminal-issue mismatch signal.",
+    "useWhen": [
+      "A failed AISH job is linked to an issue already done (outcome=historical: issue was delivered by another path)",
+      "A failed job's work was compensated by a successful replacement (outcome=compensated)",
+      "A failed job's failure is acceptable and should be recorded as ignored (outcome=ignored)"
+    ],
+    "avoidWhen": [
+      "Job is completed: use set_aish_completed_job_disposition instead",
+      "Job is queued: use close_aish_job_administratively instead",
+      "Job is running: wait for it to finish",
+      "You only want to read the job: use get_aish_job"
+    ],
+    "inputs": [
+      {
+        "param": "jobId",
+        "required": true,
+        "source": "list_aish_jobs -> id (or get_aish_job -> id)",
+        "notes": "AISH job id, max 160 chars"
+      },
+      {
+        "param": "outcome",
+        "required": true,
+        "source": "user",
+        "notes": "enum: compensated | historical | ignored"
+      },
+      {
+        "param": "reason",
+        "required": true,
+        "source": "user",
+        "notes": "8-2000 chars"
+      }
+    ],
+    "preconditions": [
+      "Caller can manage the job's project",
+      "job.status == 'failed'"
+    ],
+    "effect": "destructive",
+    "authority": "confirm-with-user",
+    "idempotency": null,
+    "returns": "Full job (get_aish_job shape). job.failureResolution = {outcome, reason, resolvedBy, resolvedAt, evidenceIdsSnapshot}; new manual-note evidence id appended to job.evidenceIds.",
+    "pairsWith": [
+      "get_aish_job",
+      "list_aish_jobs",
+      "get_project_analytics"
+    ],
+    "errors": [
+      {
+        "when": "Invalid AISH failed job resolution outcome.",
+        "fix": "Use exactly compensated, historical, or ignored."
+      },
+      {
+        "when": "AISH failed job resolution reason is required.",
+        "fix": "Send a reason of at least 8 characters."
+      },
+      {
+        "when": "AISH job not found.",
+        "fix": "Re-check jobId with list_aish_jobs."
+      },
+      {
+        "when": "Only failed AISH jobs can be resolved.",
+        "fix": "Check status with get_aish_job. Completed jobs use set_aish_completed_job_disposition; queued jobs use close_aish_job_administratively."
+      }
+    ],
+    "oauthScope": null,
+    "cli": null,
+    "gotchas": [
+      {
+        "text": "No prior evidence required: the resolution evidence itself is included in the snapshot.",
+        "verifiedFrom": "server.ts resolveAishFailedJobCommand"
+      },
+      {
+        "text": "The job status stays 'failed'; the failureResolution field marks it as resolved.",
+        "verifiedFrom": "server.ts resolveAishFailedJobCommand"
+      }
+    ],
+    "verifiedFrom": "resolveAishFailedJobCommand (server.ts)"
   }
 ]

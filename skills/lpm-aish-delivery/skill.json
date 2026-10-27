@@ -165,6 +165,8 @@
     "get_aish_automation_delivery",
     "requeue_aish_automation",
     "cancel_aish_automation",
+    "resolve_aish_failed_job",
+    "close_aish_job_administratively",
     "set_aish_completed_job_disposition",
     "repair_aish_completed_job_lineage"
   ],

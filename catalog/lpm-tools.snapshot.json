@@ -962,6 +962,28 @@
       "descriptionSha": "sha256:864ef3959b0390d966b03900c66f85095fd419e25ec3cf6812cc86d6484b822b"
     },
     {
+      "name": "close_aish_job_administratively",
+      "category": "administration",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "profiles": [
+        "full",
+        "custom"
+      ],
+      "required": [
+        "jobId",
+        "outcome",
+        "reason"
+      ],
+      "params": {
+        "jobId": "string",
+        "outcome": "string",
+        "reason": "string"
+      },
+      "descriptionSha": "sha256:6f3c7f93cec84b0be40786d5b61fc89018bb440f4f414264f4114c810a0b8a9b"
+    },
+    {
       "name": "collect_aish_execution_pack",
       "category": "administration",
       "accessLevel": "write",
@@ -7559,6 +7581,28 @@
       "descriptionSha": "sha256:c72bc509632039a3540736271aa78824baba00095148fb0ea641cb5d73d1400f"
     },
     {
+      "name": "resolve_aish_failed_job",
+      "category": "administration",
+      "accessLevel": "write",
+      "sensitive": true,
+      "oauthScope": null,
+      "profiles": [
+        "full",
+        "custom"
+      ],
+      "required": [
+        "jobId",
+        "outcome",
+        "reason"
+      ],
+      "params": {
+        "jobId": "string",
+        "outcome": "string",
+        "reason": "string"
+      },
+      "descriptionSha": "sha256:fad597e16d01c19dfca26515afe93a519ad8fadd4526a883bf845a5a6d6cd9f3"
+    },
+    {
       "name": "resolve_governance_thread_with_decision",
       "category": "requirements",
       "accessLevel": "write",
@@ -9447,8 +9491,8 @@
     }
   ],
   "hashes": {
-    "namesHash": "sha256:e9fc6af798d73df72ed0038b121c7951e86e21452977b29850924eeeddb0663d",
-    "schemaHash": "sha256:aab1d1d1dc40b5418d97bc090728875524741d6ebf46f18b905cc81e4d041010",
+    "namesHash": "sha256:4390c59b51d3437b211cde6704414bb35b8d605444659741881487322f1695b4",
+    "schemaHash": "sha256:d94e9f34a322fea37b25e69807a38d0d2622aadc27d3e493fe59605506d974c2",
     "cliHash": "sha256:79d07277a1147cfcf2b753051e4e641a8caf8d71b07f0671e225469883ab91ec"
   }
 }

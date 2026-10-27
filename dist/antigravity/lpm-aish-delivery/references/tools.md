@@ -550,6 +550,50 @@ Errors → fix:
 |  | Generation or totalAttempts changed since your read; re-read the delivery and confirm with the owner |
 |  | Agent credentials cannot cancel; the owner must use their own API key |
 
+### `resolve_aish_failed_job` [C] · destructive · KEY · profiles: full, custom · sensitive: yes · idempotency: unknown
+Purpose: Resolve a failed AISH job with an auditable resolution outcome (compensated, historical, or ignored), clearing its terminal-issue mismatch signal.
+Use when: A failed AISH job is linked to an issue already done (outcome=historical: issue was delivered by another path); A failed job's work was compensated by a successful replacement (outcome=compensated); A failed job's failure is acceptable and should be recorded as ignored (outcome=ignored)    Avoid when: Job is completed: use set_aish_completed_job_disposition instead; Job is queued: use close_aish_job_administratively instead; Job is running: wait for it to finish; You only want to read the job: use get_aish_job
+| Param | Req | Source (call → field) | Notes |
+|---|---|---|---|
+| jobId | yes | list_aish_jobs -> id (or get_aish_job -> id) | AISH job id, max 160 chars |
+| outcome | yes | user | enum: compensated \| historical \| ignored |
+| reason | yes | user | 8-2000 chars |
+Preconditions: Caller can manage the job's project; job.status == 'failed'
+Returns: Full job (get_aish_job shape). job.failureResolution = {outcome, reason, resolvedBy, resolvedAt, evidenceIdsSnapshot}; new manual-note evidence id appended to job.evidenceIds.
+Errors → fix:
+| When | Fix |
+|---|---|
+| Invalid AISH failed job resolution outcome. | Use exactly compensated, historical, or ignored. |
+| AISH failed job resolution reason is required. | Send a reason of at least 8 characters. |
+| AISH job not found. | Re-check jobId with list_aish_jobs. |
+| Only failed AISH jobs can be resolved. | Check status with get_aish_job. Completed jobs use set_aish_completed_job_disposition; queued jobs use close_aish_job_administratively. |
+Gotchas:
+- No prior evidence required: the resolution evidence itself is included in the snapshot.
+- The job status stays 'failed'; the failureResolution field marks it as resolved.
+Pairs with: `get_aish_job`, `list_aish_jobs`, `get_project_analytics`
+
+### `close_aish_job_administratively` [C] · destructive · KEY · profiles: full, custom · sensitive: yes · idempotency: unknown
+Purpose: Administratively close a queued or expired-lease AISH job with an auditable closure outcome, clearing its terminal-issue mismatch signal.
+Use when: A queued AISH job is linked to an issue already done or canceled (outcome=obsolete or superseded); A queued job was replaced by a governed retry (outcome=superseded); A queued job's purpose was compensated by non-AISH delivery (outcome=compensated); An expired-lease AISH job must be closed to unblock the workflow    Avoid when: Job is completed: use set_aish_completed_job_disposition instead; Job is failed: use resolve_aish_failed_job instead; Job is running or has an active lease: wait for it to finish or expire; You only want to read the job: use get_aish_job
+| Param | Req | Source (call → field) | Notes |
+|---|---|---|---|
+| jobId | yes | list_aish_jobs -> id (or get_aish_job -> id) | AISH job id, max 160 chars |
+| outcome | yes | user | enum: superseded \| compensated \| obsolete \| canceled |
+| reason | yes | user | 8-2000 chars |
+Preconditions: Caller can manage the job's project; job.status == 'queued' or expired lease
+Returns: Full job (get_aish_job shape). job.administrativeClosure = {outcome, reason, closedBy, closedAt, previousStatus, evidenceIdsSnapshot, linkedEvidenceId}; new manual-note evidence id appended to job.evidenceIds.
+Errors → fix:
+| When | Fix |
+|---|---|
+| Invalid AISH administrative closure outcome. | Use exactly superseded, compensated, obsolete, or canceled. |
+| AISH administrative closure reason is required. | Send a reason of at least 8 characters. |
+| AISH job not found. | Re-check jobId with list_aish_jobs. |
+| Only queued or expired leased AISH jobs can be administratively closed. | Check status with get_aish_job. Completed jobs use set_aish_completed_job_disposition; failed jobs use resolve_aish_failed_job. |
+Gotchas:
+- The job status changes to canceled after closure.
+- Workflow reconciliation is triggered after closure.
+Pairs with: `get_aish_job`, `list_aish_jobs`, `get_project_analytics`
+
 ### `set_aish_completed_job_disposition` [C] · destructive · KEY · profiles: full, custom · sensitive: yes · idempotency: naturally idempotent
 Purpose: Permanently classify a completed AISH job as partial, superseded or invalidated, adding an audit evidence note, without changing its linked LPM activity.
 Use when: A completed AISH job delivered only part of the requested work (outcome=partial); A completed job's result was replaced by a newer job (outcome=superseded); A completed job's result must no longer be trusted (outcome=invalidated); The user stated the outcome and the reason to record    Avoid when: Job is failed or canceled: no MCP tool; use CLI 'lpm aish jobs resolve' (failure resolution) or 'lpm aish jobs close' (administrative closure); The job's linked activity was deleted/missing: use repair_aish_completed_job_lineage (a disposition cannot hide a missing issue); Job is still queued/leased/running: wait and check with get_aish_job; You only want to read the job: get_aish_job
